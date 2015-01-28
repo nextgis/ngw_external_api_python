@@ -1,2 +1,2 @@
-# ngw_python_api
-NextGIS Web Python API
+# ngw_external_api_python
+NextGIS Web External Python API
