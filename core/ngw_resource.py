@@ -35,7 +35,7 @@ LIST_DICT_TO_LIST_OBJ = lambda l: [Wrapper(**el) for el in l]
 class NGWResource():
 
     type_id = 'resource'
-    icon_path = path.join(path.pardir(path.dirname(__file__)), 'icons/', 'resource.svg')
+    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'resource.svg')
     type_title = 'NGW Resource'
 
 

@@ -25,7 +25,7 @@ from ngw_resource import NGWResource
 class NGWGroupResource(NGWResource):
 
     type_id = 'resource_group'
-    icon_path = path.join(path.pardir(path.dirname(__file__)), 'icons/', 'group.png')
+    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'group.png')
     type_title = 'NGW Group resource'
 
     def __init__(self, resource_factory, resource_json):

@@ -25,7 +25,7 @@ from ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 class NGWWfsService(NGWResource):
 
     type_id = 'wfsserver_service'
-    icon_path = path.join(path.pardir(path.dirname(__file__)), 'icons/', 'wfs.svg')
+    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'wfs.svg')
     type_title = 'NGW WFS Service'
 
     def _construct(self):
