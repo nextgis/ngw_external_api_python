@@ -20,18 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings
+from common_plugin_settings import PluginSettings
 from ..core.ngw_connection_settings import NGWConnectionSettings
 
 
-class PluginSettings():
+class NgwPluginSettings(PluginSettings):
+    '''
+    Settings class for working with ngw connection settings
+    '''
 
-    _company_name = 'AnyCompany'
-    _product = 'AnyPlugin'
-
-    @classmethod
-    def get_settings(cls):
-        return QSettings(cls._company_name, cls._product)
+    _company_name = 'NextGIS'
+    _product = 'NextGIS WEB API'
 
     @classmethod
     def remove_ngw_connection(cls, connection_name):
