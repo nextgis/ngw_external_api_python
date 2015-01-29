@@ -20,7 +20,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from common_plugin_settings import PluginSettings
+from .common_plugin_settings import PluginSettings
 from ..core.ngw_connection_settings import NGWConnectionSettings
 
 
