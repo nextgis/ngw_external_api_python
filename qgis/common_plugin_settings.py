@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 /***************************************************************************
- Plugins settings
-                                 A QGIS plugin
- Compulink QGIS tools
+ Common Plugins settings
+
+ NextGIS WEB API
                              -------------------
         begin                : 2014-10-31
         git sha              : $Format:%H$
