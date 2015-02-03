@@ -18,22 +18,20 @@
  *                                                                         *
  ***************************************************************************/
 """
-from os import path
-from ngw_resource import NGWResource
+from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsMapLayer
+from ngw_api.core.ngw_error import NGWError
+from ngw_api.core.ngw_vector_layer import NGWVectorLayer
 
 
-class NGWVectorLayer(NGWResource):
+def add_resource_as_geojson(resource, return_extent=False):
+    if not isinstance(resource, NGWVectorLayer):
+        raise NGWError('Resource type is not VectorLayer!')
 
-    type_id = 'vector_layer'
-    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'vector_layer.svg')
-    type_title = 'NGW Vector Layer'
+    qgs_geojson_layer = QgsVectorLayer(resource.get_geojson_url(), 'ogr')
 
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)
+    QgsMapLayerRegistry.instance().addMapLayer(qgs_geojson_layer)
 
-    def get_geojson_url(self):
-        return '%s/%s/' % (
-            self.get_absolute_url_with_auth(),
-            'geojson'
-        )
-
+    if return_extent:
+        if qgs_geojson_layer.extent().isEmpty() and qgs_geojson_layer.type() == QgsMapLayer.VectorLayer:
+            qgs_geojson_layer.updateExtents()
+            return qgs_geojson_layer.extent()

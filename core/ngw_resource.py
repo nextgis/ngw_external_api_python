@@ -96,3 +96,7 @@ class NGWResource():
 
     def get_absolute_url(self):
         return self._res_factory.connection.server_url + RESOURCE_URL(self.common.id)
+
+    def get_absolute_url_with_auth(self):
+        creds = self._res_factory.connection.get_auth()
+        return self._res_factory.connection.server_url.replace('://', '://%s:%s@' % creds) + RESOURCE_URL(self.common.id)
