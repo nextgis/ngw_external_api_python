@@ -19,15 +19,18 @@
  ***************************************************************************/
 """
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsMapLayer
-from ngw_api.core.ngw_error import NGWError
-from ngw_api.core.ngw_vector_layer import NGWVectorLayer
+from ..core.ngw_error import NGWError
+from ..core.ngw_vector_layer import NGWVectorLayer
 
 
 def add_resource_as_geojson(resource, return_extent=False):
     if not isinstance(resource, NGWVectorLayer):
         raise NGWError('Resource type is not VectorLayer!')
 
-    qgs_geojson_layer = QgsVectorLayer(resource.get_geojson_url(), 'ogr')
+    qgs_geojson_layer = QgsVectorLayer(resource.get_geojson_url(), resource.common.display_name, 'ogr')
+
+    if not qgs_geojson_layer.isValid():
+        raise NGWError('Layer %s can\'t be added to the map!' % resource.alias)
 
     QgsMapLayerRegistry.instance().addMapLayer(qgs_geojson_layer)
 
