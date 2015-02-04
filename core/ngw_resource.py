@@ -100,3 +100,12 @@ class NGWResource():
     def get_absolute_url_with_auth(self):
         creds = self._res_factory.connection.get_auth()
         return self._res_factory.connection.server_url.replace('://', '://%s:%s@' % creds) + RESOURCE_URL(self.common.id)
+
+    def get_relative_url(self):
+        return RESOURCE_URL(self.common.id)
+
+    def get_relative_api_url(self):
+        return API_RESOURCE_URL(self.common.id)
+
+    def get_api_collection_url(self):
+        return API_COLLECTION_URL
