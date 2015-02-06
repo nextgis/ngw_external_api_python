@@ -18,6 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+from ngw_webmap import NGWWebMap
 from ngw_mapserver_style import NGWMapServerStyle
 from ngw_wms_service import NGWWmsService
 from ngw_vector_layer import NGWVectorLayer
@@ -37,6 +38,7 @@ class NGWResourceFactory():
             NGWGroupResource.type_id: NGWGroupResource,
             NGWVectorLayer.type_id: NGWVectorLayer,
             NGWMapServerStyle.type_id: NGWMapServerStyle,
+            NGWWebMap.type_id: NGWWebMap,
         }
         self.__default_type = NGWResource.type_id
         self.__conn = NGWConnection(conn_settings)
