@@ -30,3 +30,9 @@ class NGWWebMap(NGWResource):
 
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
+
+    def get_display_url(self):
+        return '%s/%s' % (
+            self.get_absolute_url_with_auth(),
+            'display'
+        )
