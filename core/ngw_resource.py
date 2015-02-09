@@ -52,7 +52,7 @@ class NGWResource():
         """
         :rtype : json obj
         """
-        return ngw_con.get("%s/?parent=%s" % (API_COLLECTION_URL, res_id))
+        return ngw_con.get("%s?parent=%s" % (API_COLLECTION_URL, res_id))
 
 
     # INSTANCE
