@@ -33,6 +33,8 @@ def add_resource_as_geojson(resource, return_extent=False):
     if not qgs_geojson_layer.isValid():
         raise NGWError('Layer %s can\'t be added to the map!' % resource.alias)
 
+    qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
+
     QgsMapLayerRegistry.instance().addMapLayer(qgs_geojson_layer)
 
     if return_extent:
