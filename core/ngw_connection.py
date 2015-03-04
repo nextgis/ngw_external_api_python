@@ -23,6 +23,7 @@ import requests
 import json
 from ngw_error import NGWError
 
+UPLOAD_ATTACHMENT_URL = '/api/component/file_upload/upload'
 
 class NGWConnection():
 
@@ -49,13 +50,17 @@ class NGWConnection():
         payload = None
         if params:
             payload = json.dumps(params)
-
+            
         if 'data' in kwargs:
             payload = kwargs['data']
-
-        req = requests.Request(method, self.server_url + url, data=payload)
+        
+        json_data = None
+        if 'json' in kwargs:
+            json_data = kwargs['json']
+        
+        req = requests.Request(method, self.server_url + url, data=payload, json=json_data)
         prep = self.__session.prepare_request(req)
-
+        
         try:
             resp = self.__session.send(prep)
         except requests.exceptions.RequestException, e:
@@ -63,7 +68,7 @@ class NGWConnection():
 
         if resp.status_code / 100 != 2:
             raise NGWError(resp.content)
-
+        
         return resp.json()
 
     def get(self, url, params=None, **kwargs):
@@ -74,3 +79,14 @@ class NGWConnection():
 
     def put(self, url, params=None, **kwargs):
         return self.__request(url, 'PUT', params, **kwargs)
+    
+    def delete(self, url, params=None, **kwargs):
+        return self.__request(url, 'DELETE', params, **kwargs)
+    
+    def get_upload_attachment_url(self):
+        return UPLOAD_ATTACHMENT_URL
+    
+    def upload_attachment(self, filename):
+        with open(filename, 'rb') as fd:
+            upload_info = self.put(self.get_upload_attachment_url(), data=fd) 
+            return upload_info
