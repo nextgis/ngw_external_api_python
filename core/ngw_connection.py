@@ -23,7 +23,7 @@ import requests
 import json
 from ngw_error import NGWError
 
-UPLOAD_ATTACHMENT_URL = '/api/component/file_upload/upload'
+UPLOAD_FILE_URL = '/api/component/file_upload/upload'
 
 class NGWConnection():
 
@@ -83,10 +83,24 @@ class NGWConnection():
     def delete(self, url, params=None, **kwargs):
         return self.__request(url, 'DELETE', params, **kwargs)
     
-    def get_upload_attachment_url(self):
-        return UPLOAD_ATTACHMENT_URL
+    def get_upload_file_url(self):
+        return UPLOAD_FILE_URL
     
-    def upload_attachment(self, filename):
+    def upload_file(self, filename):
         with open(filename, 'rb') as fd:
-            upload_info = self.put(self.get_upload_attachment_url(), data=fd) 
+            upload_info = self.put(self.get_upload_file_url(), data=fd) 
             return upload_info
+    
+    def download_file(self, url):
+        req = requests.Request('GET', self.server_url + url)
+        prep = self.__session.prepare_request(req)
+        
+        try:
+            resp = self.__session.send(prep, stream=True)
+        except requests.exceptions.RequestException, e:
+            raise NGWError(e.message.args[0])
+
+        if resp.status_code / 100 != 2:
+            raise NGWError(resp.content)
+        
+        return resp.content

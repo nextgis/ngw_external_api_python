@@ -41,3 +41,6 @@ class NGWWfsService(NGWResource):
             '/wfs?SERVICE=WFS&TYPENAME=%s' % layer_keyname,
             '&username=%s&password=%s' % self._res_factory.connection.get_auth()
         )
+    
+    def get_layers(self):
+        return self._json["wfsserver_service"]["layers"]

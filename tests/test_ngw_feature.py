@@ -10,6 +10,7 @@ from core.ngw_resource import NGWResource
 from core.ngw_vector_layer import NGWVectorLayer
 
 from core.ngw_feature import NGWFeature
+from core.ngw_attachment import NGWAttachment
 
 if __name__=="__main__":    
     ngw_resources_id = 1881
@@ -22,13 +23,24 @@ if __name__=="__main__":
     ngwResource = NGWVectorLayer(ngwResourceFactory, NGWResource.receive_resource_obj(ngwConnection, ngw_resources_id))
     ngwFeature = NGWFeature(ngw_feature_id, ngwResource)
     
-    attachment_info = ngwConnection.upload_attachment(
-          os.path.join(os.path.dirname(__file__), 'media', 'plaza-1.jpg')
-    )
-    ngwFeature.link_attachment(attachment_info)
+    #files = [os.path.join(os.path.dirname(__file__), 'media', 'plaza-1.jpg')]
+    files = [
+        "d:\\Development\\NextGIS\\D-Day\\foto\\plaza-1.jpg",
+        #"d:\\Development\\NextGIS\\D-Day\\foto\\plaza-2.jpg",
+        #"d:\\Development\\NextGIS\\D-Day\\foto\\plaza-3.jpg",
+        #"d:\\Development\\NextGIS\\D-Day\\foto\\plaza-4.jpg",
+        #"d:\\Development\\NextGIS\\D-Day\\foto\\plaza-5.jpg",
+        #"d:\\Development\\NextGIS\\D-Day\\foto\\plaza-6.jpg",
+             ]
     
-    attachments = ngwFeature.get_attachments_ids()
+    for file_name in files:
+        attachment_info = ngwConnection.upload_file( file_name )
+        id = ngwFeature.link_attachment(attachment_info)
+        print "link attachment with id %s"%str(id)
+    
+    attachments = ngwFeature.get_attachments()
     for attachment in attachments:
         if attachment[u'is_image'] == True:
-            print ngwFeature.get_image_full_url( attachment[u'id'] )
-            ngwFeature.unlink_attachment( attachment[u'id'] )
+            ngw_attachment = NGWAttachment( attachment[u'id'], ngwFeature)
+            print ngw_attachment.get_image_full_url()
+            #ngwFeature.unlink_attachment( attachment[u'id'] )
