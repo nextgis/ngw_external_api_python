@@ -25,14 +25,14 @@ from ngw_error import NGWError
 
 UPLOAD_FILE_URL = '/api/component/file_upload/upload'
 
-class NGWConnection():
+class NGWConnection(object):
 
     def __init__(self):
-        self.server_url = None
+        self.__server_url = None
         self.__session = requests.Session()
 
     def __init__(self, conn_settings):
-        self.server_url = None
+        self.__server_url = None
         self.__session = requests.Session()
         self.set_from_settings(conn_settings)
 
@@ -40,13 +40,24 @@ class NGWConnection():
         self.server_url = conn_settings.server_url
         self.set_auth(conn_settings.username, conn_settings.password)
 
+    @property
+    def server_url(self):
+        return self.__server_url
+
+    @server_url.setter
+    def server_url(self, value):
+        if isinstance(value, (str, unicode)):
+            self.__server_url = value.strip().rstrip('\\\/')
+        else:
+            self.__server_url = value
+
     def set_auth(self, username, password):
         self.__session.auth = (username, password)
 
     def get_auth(self):
         return self.__session.auth
 
-    def __request(self, url, method, params=None, **kwargs):
+    def __request(self, sub_url, method, params=None, **kwargs):
         payload = None
         if params:
             payload = json.dumps(params)
@@ -58,7 +69,7 @@ class NGWConnection():
         if 'json' in kwargs:
             json_data = kwargs['json']
         
-        req = requests.Request(method, self.server_url + url, data=payload, json=json_data)
+        req = requests.Request(method, self.server_url + sub_url, data=payload, json=json_data)
         prep = self.__session.prepare_request(req)
         
         try:
@@ -71,17 +82,17 @@ class NGWConnection():
         
         return resp.json()
 
-    def get(self, url, params=None, **kwargs):
-        return self.__request(url, 'GET', params, **kwargs)
+    def get(self, sub_url, params=None, **kwargs):
+        return self.__request(sub_url, 'GET', params, **kwargs)
 
-    def post(self, url, params=None, **kwargs):
-        return self.__request(url, 'POST', params, **kwargs)
+    def post(self, sub_url, params=None, **kwargs):
+        return self.__request(sub_url, 'POST', params, **kwargs)
 
-    def put(self, url, params=None, **kwargs):
-        return self.__request(url, 'PUT', params, **kwargs)
+    def put(self, sub_url, params=None, **kwargs):
+        return self.__request(sub_url, 'PUT', params, **kwargs)
     
-    def delete(self, url, params=None, **kwargs):
-        return self.__request(url, 'DELETE', params, **kwargs)
+    def delete(self, sub_url, params=None, **kwargs):
+        return self.__request(sub_url, 'DELETE', params, **kwargs)
     
     def get_upload_file_url(self):
         return UPLOAD_FILE_URL
