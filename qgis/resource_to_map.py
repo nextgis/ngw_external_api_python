@@ -31,7 +31,7 @@ def add_resource_as_geojson(resource, return_extent=False):
     qgs_geojson_layer = QgsVectorLayer(resource.get_geojson_url(), resource.common.display_name, 'ogr')
 
     if not qgs_geojson_layer.isValid():
-        raise NGWError('Layer %s can\'t be added to the map!' % resource.alias)
+        raise NGWError('Layer %s can\'t be added to the map!' % resource.common.display_name)
 
     qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
 
