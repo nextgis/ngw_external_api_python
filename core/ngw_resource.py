@@ -78,7 +78,8 @@ class NGWResource():
         if self.common.owner_user:
             self.common.owner_user = DICT_TO_OBJ(self.common.owner_user)
         #resmeta
-        self.metadata = DICT_TO_OBJ(self._json['resmeta'])
+        if 'resmeta' in self._json:
+            self.metadata = DICT_TO_OBJ(self._json['resmeta'])
 
     def get_parent(self):
         if self.common.parent:
