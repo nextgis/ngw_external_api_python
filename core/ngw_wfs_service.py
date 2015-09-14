@@ -37,7 +37,7 @@ class NGWWfsService(NGWResource):
 
     def get_wfs_url(self, layer_keyname):
         return '%s%s%s' % (
-            self.get_absolute_url(),
+            self.get_absolute_api_url(),
             '/wfs?SERVICE=WFS&TYPENAME=%s' % layer_keyname,
             '&username=%s&password=%s' % self._res_factory.connection.get_auth()
         )
