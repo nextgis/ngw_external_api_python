@@ -19,7 +19,9 @@
  ***************************************************************************/
 """
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QIcon
+from PyQt4.QtGui import QIcon, QTreeWidgetItem
+
+# from qgis.core import QgsMessageLog
 
 
 class QNGWResourceItem():
@@ -75,3 +77,23 @@ class QNGWResourceItem():
             return self._ngw_resource.type_title
         if role == Qt.UserRole:
             return self._ngw_resource
+
+
+class QNGWResourceItemExt(QTreeWidgetItem):
+    CHILDREN_NOT_LOAD = 1
+    CHILDREN_LOADING = 2
+    CHILDREN_LOADED = 3
+
+    def __init__(self, ngw_resource):
+        QTreeWidgetItem.__init__(self)
+        #QgsMessageLog.logMessage("Create QNGWResourceItemExt: " + ngw_resource.common.display_name + " > " + ngw_resource.type_title)
+        self.setText(0, ngw_resource.common.display_name)
+        self.setIcon(0, QIcon(ngw_resource.icon_path))
+        self.setToolTip(0, ngw_resource.type_title)
+        self.setData(0, Qt.UserRole, ngw_resource)
+        self._ngw_resource = ngw_resource
+
+        self.setData(0, Qt.UserRole + 1, self.CHILDREN_NOT_LOAD)
+
+    def has_children(self):
+        return self._ngw_resource.common.children

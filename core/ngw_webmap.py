@@ -36,3 +36,71 @@ class NGWWebMap(NGWResource):
             self.get_absolute_url_with_auth(),
             'display'
         )
+
+
+class NGWWebMapItem(object):
+    ITEM_TYPE_ROOT = "root"
+    ITEM_TYPE_LAYER = "layer"
+    ITEM_TYPE_GROUP = "group"
+
+    def __init__(self, item_type):
+        self.item_type = item_type
+        self.children = []
+
+    def appendChild(self, ngw_web_map_item):
+        self.children.append(ngw_web_map_item)
+
+    def toDict(self):
+        struct = dict(
+            item_type=self.item_type,
+            children=[]
+        )
+        struct.update(self._attributes())
+
+        for child in self.children:
+            struct["children"].append(
+                child.toDict()
+            )
+
+        return struct
+
+    def _attributes(self):
+        return NotImplementedError
+
+
+class NGWWebMapRoot(NGWWebMapItem):
+    def __init__(self):
+        NGWWebMapItem.__init__(self, NGWWebMapItem.ITEM_TYPE_ROOT)
+
+    def __attributes(self):
+        return dict()
+
+
+class NGWWebMapLayer(NGWWebMapItem):
+    def __init__(self, layer_style_id, display_name):
+        NGWWebMapItem.__init__(self, NGWWebMapItem.ITEM_TYPE_LAYER)
+        self.layer_style_id = layer_style_id
+        self.display_name = display_name
+
+    def _attributes(self):
+        return dict(
+            layer_style_id=self.layer_style_id,
+            display_name=self.display_name,
+            layer_adapter="image",
+            layer_enabled=True,
+            layer_max_scale_denom=None,
+            layer_min_scale_denom=None,
+            layer_transparency=None
+        )
+
+
+class NGWWebMapGroup(NGWWebMapItem):
+    def __init__(self, display_name):
+        NGWWebMapItem.__init__(self, NGWWebMapItem.ITEM_TYPE_GROUP)
+        self.display_name = display_name
+
+    def _attributes(self):
+        return dict(
+            display_name=self.display_name,
+            group_expanded=None,
+        )
