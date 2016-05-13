@@ -44,7 +44,7 @@ class ResourceCreator():
 
         try:
             result = connection.post(url, params=params)
-            ngw_resource = NGWResource(
+            ngw_resource = NGWGroupResource(
                 parent_ngw_resource._res_factory,
                 NGWResource.receive_resource_obj(
                     connection,

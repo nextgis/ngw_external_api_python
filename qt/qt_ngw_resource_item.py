@@ -84,16 +84,24 @@ class QNGWResourceItemExt(QTreeWidgetItem):
     CHILDREN_LOADING = 2
     CHILDREN_LOADED = 3
 
+    NGWResourceRole = Qt.UserRole
+    NGWResourceChildrenLoadRole = Qt.UserRole + 1
+
     def __init__(self, ngw_resource):
         QTreeWidgetItem.__init__(self)
-        #QgsMessageLog.logMessage("Create QNGWResourceItemExt: " + ngw_resource.common.display_name + " > " + ngw_resource.type_title)
-        self.setText(0, ngw_resource.common.display_name)
-        self.setIcon(0, QIcon(ngw_resource.icon_path))
-        self.setToolTip(0, ngw_resource.type_title)
-        self.setData(0, Qt.UserRole, ngw_resource)
-        self._ngw_resource = ngw_resource
 
-        self.setData(0, Qt.UserRole + 1, self.CHILDREN_NOT_LOAD)
+        if ngw_resource is not None:
+            self.setText(0, ngw_resource.common.display_name)
+            self.setIcon(0, QIcon(ngw_resource.icon_path))
+            self.setToolTip(0, ngw_resource.type_title)
+            self.setData(0, self.NGWResourceRole, ngw_resource)
+
+        self.setData(0, self.NGWResourceChildrenLoadRole, self.CHILDREN_NOT_LOAD)
 
     def has_children(self):
-        return self._ngw_resource.common.children
+        return self.data(0, self.NGWResourceRole).common.children
+
+
+class AuxiliaryItem(QTreeWidgetItem):
+    def __init__(self, info):
+        QTreeWidgetItem.__init__(self, [info])
