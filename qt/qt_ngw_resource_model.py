@@ -25,12 +25,12 @@ from PyQt4.QtCore import Qt, QAbstractItemModel, QModelIndex, QVariant, QObject,
 from qt_ngw_resource_item import QNGWResourceItemExt, AuxiliaryItem
 from ..core.ngw_error import NGWError
 from ..core.ngw_resource import NGWResource
+from ..core.ngw_group_resource import NGWGroupResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
 
+#from qgis.core import QgsMessageLog
 
-from qgis.core import *
-from qgis.gui import *
 
 class QNGWResourcesModel(QAbstractItemModel):
     def __init__(self, tree_item):
@@ -53,7 +53,7 @@ class QNGWResourcesModel(QAbstractItemModel):
         return self.createIndex(parent_item.row(), 0, parent_item) #??? WHY parent
 
     def rowCount(self, parent_index=None, *args, **kwargs):
-        #QgsMessageLog.logMessage(">>> rowCount parent_index=(%d, %d)" % (parent_index.row(), parent_index.column()))
+        # QgsMessageLog.logMessage(">>> rowCount parent_index=(%d, %d)" % (parent_index.row(), parent_index.column()))
         parent_item = self._item_by_index(parent_index)
         return parent_item.get_children_count()
 
@@ -75,31 +75,42 @@ class QNGWResourcesModel(QAbstractItemModel):
             return self.root
 
 
-class QNGWResourcesModelExt(QAbstractItemModel):
-    def __init__(self, ngw_connection_settings):
-        QAbstractItemModel.__init__(self)
+class QNGWResourceModelError:
+    NoError = 0
+    LoadResourceError = 1
+    CreateGroupError = 2
+    CreateLayerError = 3
 
-        self.__resetModel(ngw_connection_settings)
+
+class QNGWResourcesModelExt(QAbstractItemModel):
+    errorOccurred = pyqtSignal(int, unicode)
+
+    def __init__(self):
+        QAbstractItemModel.__init__(self)
+        self.workers = []
+        self.threads = []
 
     def resetModel(self, ngw_connection_settings):
+        # QgsMessageLog.logMessage(">>> resetModel")
         self.beginResetModel()
-        self.__clear()
+        # TODO clear all items
         self.__resetModel(ngw_connection_settings)
         self.endResetModel()
         self.modelReset.emit()
 
     def __resetModel(self, ngw_connection_settings):
-        rsc_factory = NGWResourceFactory(ngw_connection_settings)
-        ngw_root_resource = rsc_factory.get_root_resource()
-
-        self.root_item = AuxiliaryItem("Qt root item")
-        self.root_item.addChild(
-            QNGWResourceItemExt(ngw_root_resource)
-        )
-
         # TODO stop all workers
-        self.workers = []
-        self.threads = []
+
+        self.root_item = AuxiliaryItem("Qt model root item")
+        try:
+            rsc_factory = NGWResourceFactory(ngw_connection_settings)
+            ngw_root_resource = rsc_factory.get_root_resource()
+
+            self.root_item.addChild(
+                QNGWResourceItemExt(ngw_root_resource)
+            )
+        except NGWError as e:
+            self.errorOccurred.emit(QNGWResourceModelError.LoadResourceError, e.message)
 
     def index(self, row, column, parent):
         if not self.hasIndex(row, column, parent):
@@ -138,15 +149,42 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         else:
             parent_item = parent.internalPointer()
 
-        if isinstance(parent_item, QNGWResourceItemExt):
-            if parent_item.data(0, parent_item.NGWResourceChildrenLoadRole) == parent_item.CHILDREN_NOT_LOAD:
-                parent_item.addChild(
-                    AuxiliaryItem(self.tr("loading..."))
-                )
-                self.startLoadChildren(parent)
-                parent_item.setData(0, parent_item.NGWResourceChildrenLoadRole, parent_item.CHILDREN_LOADED)
-
         return parent_item.childCount()
+
+    def canFetchMore(self, parent):
+        if not parent.isValid():
+            parent_item = self.root_item
+        else:
+            parent_item = parent.internalPointer()
+
+        # QgsMessageLog.logMessage("canFetchMore (%s)" % parent_item.data(0, Qt.DisplayRole))
+        if isinstance(parent_item, QNGWResourceItemExt):
+            ngw_resource = parent_item.data(0, QNGWResourceItemExt.NGWResourceRole)
+            children_count = ngw_resource.common.children
+            # QgsMessageLog.logMessage("children_count (%s): %d" % (parent_item.data(0, Qt.DisplayRole), children_count))
+            # childern_loading_status = parent_item.data(0, QNGWResourceItemExt.NGWResourceChildrenLoadRole)
+            # if children_count > 0 and childern_loading_status == parent_item.CHILDREN_NOT_LOAD:
+            #     return True
+            return children_count > parent_item.childCount()
+        return False
+
+    def fetchMore(self, parent):
+        if not parent.isValid():
+            parent_item = self.root_item
+        else:
+            parent_item = parent.internalPointer()
+
+        # QgsMessageLog.logMessage("fetchMore (%s)" % parent_item.data(0, Qt.DisplayRole))
+        if isinstance(parent_item, QNGWResourceItemExt):
+            # parent_item.setData(0, parent_item.NGWResourceChildrenLoadRole, parent_item.CHILDREN_LOADING)
+            self.beginInsertRows(parent, 0, 0)
+            # QgsMessageLog.logMessage(">>> start loading (%s)" % (parent_item.data(0, Qt.DisplayRole),))
+            parent_item.addChild(
+                AuxiliaryItem("loading...")
+            )
+            self.endInsertRows()
+            self.rowsInserted.emit(parent, 0, 0)
+            self.startLoadChildren(parent)
 
     def columnCount(self, parent=None):
         return 1
@@ -164,18 +202,22 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         else:
             parent_item = parent.internalPointer()
 
-        if parent_item == self.root_item:
-            return True
+        # QgsMessageLog.logMessage("hasChildren (%s)" % parent_item.data(0, Qt.DisplayRole))
 
-        if isinstance(parent_item, AuxiliaryItem):
-            return False
+        if isinstance(parent_item, QNGWResourceItemExt):
+            ngw_resource = parent_item.data(0, QNGWResourceItemExt.NGWResourceRole)
+            children_count = ngw_resource.common.children
+            # QgsMessageLog.logMessage("children_count (%s): %d" % (parent_item.data(0, Qt.DisplayRole), children_count))
+            return children_count > 0
 
-        return parent_item.has_children()
+        return parent_item.childCount() > 0
 
     def startLoadChildren(self, index):
+        # QgsMessageLog.logMessage(">>> startLoadChildren")
+
         item = index.internalPointer()
 
-        worker = NGQResourcesLoader(item.data(0, Qt.UserRole))
+        worker = NGWResourcesLoader(item.data(0, Qt.UserRole))
         thread = QThread(self)
 
         worker.moveToThread(thread)
@@ -184,159 +226,140 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         worker.resourcesReceived.connect(
             functools.partial(self.proccessChildrenReceived, index)
         )
+        worker.errorOccurred.connect(
+            functools.partial(self.errorOccurred.emit, QNGWResourceModelError.LoadResourceError)
+        )
         worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
         worker.finished.connect(thread.deleteLater)
-        worker.finished.connect(lambda: QgsMessageLog.logMessage("Worker finished"))
+
         thread.start()
 
         self.threads.append(thread)
         self.workers.append(worker)
 
-    def proccessChildrenReceived(self, index, ngw_resources):
+    def proccessChildrenReceived(self, index, ngw_resource_parent, ngw_resources):
         item = index.internalPointer()
 
-        # Remove servise item - loading...
-        item.removeChild(item.child(0))
+        item.set_ngw_resource(ngw_resource_parent)
 
+        ngwr = item.data(0, QNGWResourceItemExt.NGWResourceRole)
+        children_count = ngwr.common.children
+        # QgsMessageLog.logMessage("proccessChildrenReceived (%s): %d" % (item.data(0, Qt.DisplayRole), children_count))
+
+        self.dataChanged.emit(index, index)
+        # item.setData(0, item.NGWResourceChildrenLoadRole, item.CHILDREN_LOADED)
+        # Remove servise item - loading...
+        for i in range(0, item.childCount()):
+            if isinstance(item.child(i), AuxiliaryItem):
+                item.removeChild(item.child(i))
+                self.rowsRemoved.emit(index, i, i)
+
+        self.beginInsertRows(index, 0, len(ngw_resources) - 1)
         item.addChildren(
             [QNGWResourceItemExt(ngw_resource) for ngw_resource in ngw_resources]
         )
-
-        self.rowsInserted.emit(index, 0, len(ngw_resources))
-
-    def createGroupInResource(self, new_group_name, parent_index):
-        self.rowCount(parent_index)
-
-        parent_item = parent_index.internalPointer()
-        ngw_resource_parent = parent_item.data(0, Qt.UserRole)
-
-        existing_chd_names = [ch.common.display_name for ch in ngw_resource_parent.get_children()]
-        existing_chd_count = len(existing_chd_names)
-
-        if new_group_name in existing_chd_names:
-            id = 1
-            while(new_group_name + str(id) in existing_chd_names):
-                id += 1
-            new_group_name += str(id)
-
-        try:
-            ngw_group_resource = ResourceCreator.create_group(
-                ngw_resource_parent,
-                new_group_name
-            )
-        except NGWError:
-            # error_mes = ex.message or ''
-            return None
-
-        self.beginInsertRows(parent_index, existing_chd_count + 1, existing_chd_count + 1)
-        item = QNGWResourceItemExt(ngw_group_resource)
-        parent_item.addChild(item)
         self.endInsertRows()
+        self.rowsInserted.emit(index, 0, len(ngw_resources) - 1)
 
-        self.rowsInserted.emit(parent_index, existing_chd_count + 1, existing_chd_count + 1)
-
-        ngw_group_index = self.createIndex(existing_chd_count + 1, parent_index.column(), item)
-
-        QgsMessageLog.logMessage("ngw_group_index: %s" % str(ngw_group_index))
-        QgsMessageLog.logMessage("ngw_group_index.internalPointer: %s" % str(ngw_group_index.internalPointer()))
-
-        return (ngw_group_resource, ngw_group_index)
-
-    def createNGWLayer(self, qgs_map_layer, parent_index):
-        import os, tempfile, glob, zipfile
-
-        def export_to_shapefile(qgs_vector_layer):
-            tmp = tempfile.mktemp('.shp')
-            QgsVectorFileWriter.writeAsVectorFormat(
-                qgs_vector_layer,
-                tmp,
-                'utf-8',
-                qgs_vector_layer.crs()
-            )
-            return tmp
-
-
-        def compress_shapefile(filepath):
-            tmp = tempfile.mktemp('.zip')
-            basePath = os.path.splitext(filepath)[0]
-            baseName = os.path.splitext(os.path.basename(filepath))[0]
-
-            zf = zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED)
-            for i in glob.iglob(basePath + '.*'):
-                ext = os.path.splitext(i)[1]
-                zf.write(i, baseName + ext)
-
-            zf.close()
-            return tmp
-
-        self.rowCount(parent_index)
+    def tryCreateNGWGroup(self, new_group_name, parent_index):
         parent_item = parent_index.internalPointer()
-        ngw_resource_parent = parent_item.data(0, Qt.UserRole)
-        childer_count = len(ngw_resource_parent.get_children())
- 
-        layer_type = qgs_map_layer.type()
-        if layer_type == qgs_map_layer.VectorLayer:
-            layer_provider = qgs_map_layer.providerType()
-            if layer_provider == 'ogr':
-                source = export_to_shapefile(qgs_map_layer)
-                filepath = compress_shapefile(source)
+        ngw_resource_parent = parent_item.data(0, parent_item.NGWResourceRole)
 
-                ngw_vector_layer = ResourceCreator.create_vector_layer(
-                    ngw_resource_parent,
-                    filepath,
-                    qgs_map_layer.name()
-                )
+        if ngw_resource_parent is None:
+            return False
 
-                os.remove(source)
-                os.remove(filepath)
+        worker = NGWGroupCreater(new_group_name, ngw_resource_parent)
+        thread = QThread(self)
 
-                self.beginInsertRows(parent_index, childer_count + 1, childer_count + 1)
-                item = QNGWResourceItemExt(ngw_vector_layer)
-                parent_item.addChild(item)
-                self.endInsertRows()
-                self.rowsInserted.emit(parent_index, childer_count + 1, childer_count + 1)
+        worker.moveToThread(thread)
 
-                return (ngw_vector_layer, item)
+        thread.started.connect(worker.run)
+        worker.groupAdded.connect(
+            functools.partial(self.__proccessGroupAdded, parent_index)
+        )
+        worker.errorOccurred.connect(
+            functools.partial(self.errorOccurred.emit, QNGWResourceModelError.CreateGroupError)
+        )
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        worker.finished.connect(thread.deleteLater)
+        thread.start()
 
-        return None
+        self.threads.append(thread)
+        self.workers.append(worker)
+
+    def __proccessGroupAdded(self, parent_index, ngw_resource_group, ngw_parent_resource_group):
+        parent_item = parent_index.internalPointer()
+        parent_item.set_ngw_resource(ngw_parent_resource_group)
+        self.dataChanged.emit(parent_index, parent_index)
+
+        self._reloadChildren(parent_index)
+
+    def _reloadChildren(self, parent):
+        parent_item = parent.internalPointer()
+        childCount = parent_item.childCount()
+
+        # QgsMessageLog.logMessage(">>> childCount: %d" % childCount)
+        if childCount > 0:
+            self.beginRemoveRows(parent, 0, childCount - 1)
+            for i in range(childCount - 1, -1, -1):
+                parent_item.removeChild(parent_item.child(i))
+            self.endRemoveRows()
+            self.rowsRemoved.emit(parent, 0, childCount - 1)
+
+        if self.hasChildren(parent):
+            self.beginInsertRows(parent, 0, 0)
+            parent_item.addChild(
+                AuxiliaryItem("loading...")
+            )
+            self.endInsertRows()
+            self.rowsInserted.emit(parent, 0, 0)
+
+            self.startLoadChildren(parent)
 
     def deleteResource(self, index):
         item = index.internalPointer()
+
         parent_index = self.parent(index)
         parent_item = parent_index.internalPointer()
 
-        if index.isValid():
-            ngw_resource = index.data(Qt.UserRole)
-            try:
-                NGWResource.delete_resource(ngw_resource)
-                self.beginRemoveRows(
-                    parent_index,
-                    index.row(),
-                    index.row()
-                )
-                parent_item.removeChild(item)
-                self.endRemoveRows()
-                self.rowsRemoved.emit(
-                    parent_index,
-                    index.row(),
-                    index.row()
-                )
+        ngw_resource = item.data(0, item.NGWResourceRole)
+        ngw_resource_parent = parent_item.data(0, parent_item.NGWResourceRole)
 
-            except NGWError:
-                # print 'Unable to delete resource  with id %d: %s' % (ngw_resource.common.id, e.message)
-                # QgsMessageLog.logMessage(
-                #     'Unable to delete resource  with id %d: %s' % (ngw_resource.common.id, e.message),
-                #     'NGW Connect',
-                #     QgsMessageLog.CRITICAL
-                # )
-                pass
+        worker = NGWResourceDelete(ngw_resource, ngw_resource_parent)
+        thread = QThread(self)
+
+        worker.moveToThread(thread)
+
+        thread.started.connect(worker.run)
+        worker.resourceDeleted.connect(
+            functools.partial(self.__proccessResourceDeleted, parent_index)
+        )
+        worker.errorOccurred.connect(
+            functools.partial(self.errorOccurred.emit, QNGWResourceModelError.CreateGroupError)
+        )
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        worker.finished.connect(thread.deleteLater)
+        thread.start()
+
+        self.threads.append(thread)
+        self.workers.append(worker)
+
+    def __proccessResourceDeleted(self, parent_index, ngw_parent_resource):
+        parent_item = parent_index.internalPointer()
+        parent_item.set_ngw_resource(ngw_parent_resource)
+        self.dataChanged.emit(parent_index, parent_index)
+
+        self._reloadChildren(parent_index)
 
 
-class NGQResourcesLoader(QObject):
+class NGWResourcesLoader(QObject):
 
     started = pyqtSignal()
-    resourcesReceived = pyqtSignal(list)
+    resourcesReceived = pyqtSignal(object, list)
+    errorOccurred = pyqtSignal(unicode)
     finished = pyqtSignal()
 
     def __init__(self, ngw_resource):
@@ -344,15 +367,104 @@ class NGQResourcesLoader(QObject):
         self.ngw_resource = ngw_resource
 
     def loadNGWResourceChildren(self):
-        ngw_resource_children = self.ngw_resource.get_children()
-        if len(ngw_resource_children) == 0:
-            return
+        try:
+            update_ngw_resource = self.ngw_resource._res_factory.get_resource_by_json(
+                NGWResource.receive_resource_obj(
+                    self.ngw_resource._res_factory.connection,
+                    self.ngw_resource.common.id
+                )
+            )
 
-        self.resourcesReceived.emit(ngw_resource_children)
+            ngw_resource_children = self.ngw_resource.get_children()
+            if len(ngw_resource_children) == 0:
+                return
+
+            self.resourcesReceived.emit(update_ngw_resource, ngw_resource_children)
+        except NGWError as e:
+            self.errorOccurred.emit(e.message)
+        except Exception as e:
+            self.errorOccurred.emit(unicode(e))
 
     def run(self):
         self.started.emit()
-
         self.loadNGWResourceChildren()
+        self.finished.emit()
+
+
+class NGWGroupCreater(QObject):
+    started = pyqtSignal()
+    groupAdded = pyqtSignal(object, object)
+    errorOccurred = pyqtSignal(unicode)
+    finished = pyqtSignal()
+
+    def __init__(self, new_group_name, ngw_resource_parent):
+        QObject.__init__(self)
+        self.new_group_name = new_group_name
+        self.ngw_resource_parent = ngw_resource_parent
+
+    def run(self):
+        self.started.emit()
+        try:
+            chd_names = [ch.common.display_name for ch in self.ngw_resource_parent.get_children()]
+
+            if self.new_group_name in chd_names:
+                id = 1
+                while(self.new_group_name + str(id) in chd_names):
+                    id += 1
+                self.new_group_name += str(id)
+
+            ngw_group_resource = ResourceCreator.create_group(
+                self.ngw_resource_parent,
+                self.new_group_name
+            )
+
+            update_ngw_resource = self.ngw_resource_parent._res_factory.get_resource_by_json(
+                NGWResource.receive_resource_obj(
+                    self.ngw_resource_parent._res_factory.connection,
+                    self.ngw_resource_parent.common.id
+                )
+            )
+
+            self.groupAdded.emit(ngw_group_resource, update_ngw_resource)
+
+        except NGWError as e:
+            self.errorOccurred.emit(e.message)
+
+        except Exception as e:
+            self.errorOccurred.emit(str(e))
+
+        self.finished.emit()
+
+
+class NGWResourceDelete(QObject):
+    started = pyqtSignal()
+    resourceDeleted = pyqtSignal(object)
+    errorOccurred = pyqtSignal(unicode)
+    finished = pyqtSignal()
+
+    def __init__(self, ngw_resource, ngw_parent_resource):
+        QObject.__init__(self)
+        self.ngw_resource = ngw_resource
+        self.ngw_parent_resource = ngw_parent_resource
+
+    def run(self):
+        self.started.emit()
+        try:
+            NGWResource.delete_resource(self.ngw_resource)
+
+            ngw_parent_resource = self.ngw_parent_resource._res_factory.get_resource_by_json(
+                NGWResource.receive_resource_obj(
+                    self.ngw_parent_resource._res_factory.connection,
+                    self.ngw_parent_resource.common.id
+                )
+            )
+
+            self.resourceDeleted.emit(ngw_parent_resource)
+
+        except NGWError as e:
+            self.errorOccurred.emit(e.message)
+
+        except Exception as e:
+            self.errorOccurred.emit(str(e))
 
         self.finished.emit()

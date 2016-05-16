@@ -89,7 +89,9 @@ class QNGWResourceItemExt(QTreeWidgetItem):
 
     def __init__(self, ngw_resource):
         QTreeWidgetItem.__init__(self)
+        self.set_ngw_resource(ngw_resource)
 
+    def set_ngw_resource(self, ngw_resource):
         if ngw_resource is not None:
             self.setText(0, ngw_resource.common.display_name)
             self.setIcon(0, QIcon(ngw_resource.icon_path))
@@ -98,8 +100,11 @@ class QNGWResourceItemExt(QTreeWidgetItem):
 
         self.setData(0, self.NGWResourceChildrenLoadRole, self.CHILDREN_NOT_LOAD)
 
-    def has_children(self):
-        return self.data(0, self.NGWResourceRole).common.children
+    # def has_children(self):
+    #     ngw_resource = self.data(0, self.NGWResourceRole)
+    #     if ngw_resource is None:
+    #         return False
+    #     return ngw_resource.common.children
 
 
 class AuxiliaryItem(QTreeWidgetItem):
