@@ -24,6 +24,7 @@ from .ngw_error import NGWError
 from .ngw_resource import NGWResource
 from .ngw_group_resource import NGWGroupResource
 from .ngw_vector_layer import NGWVectorLayer
+from .ngw_raster_layer import NGWRasterLayer
 from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_webmap import NGWWebMap
 
@@ -56,11 +57,11 @@ class ResourceCreator():
             raise NGWError('Cannot create resource. Server response:\n%s' % e.message)
 
     @staticmethod
-    def create_vector_layer(parent_ngw_resource, ziped_shape_filename, layer_name):
+    def create_vector_layer(parent_ngw_resource, filename, layer_name):
         connection = parent_ngw_resource._res_factory.connection
 
         try:
-            with open(ziped_shape_filename, 'rb') as f:
+            with open(filename, 'rb') as f:
                 shape_file_desc = connection.put('/file_upload/upload', data=f)
                 # print " shape_file_desc: ", shape_file_desc
         except requests.exceptions.RequestException, e:
@@ -128,7 +129,72 @@ class ResourceCreator():
 
             return ngw_resource
         except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create vector layer. Server response:\n%s' % e.message)
+            raise NGWError('Cannot create vector layer style. Server response:\n%s' % e.message)
+
+    @staticmethod
+    def create_raster_layer(parent_ngw_resource, filename, layer_name):
+        connection = parent_ngw_resource._res_factory.connection
+
+        try:
+            with open(filename, 'rb') as f:
+                raster_file_desc = connection.put('/file_upload/upload', data=f)
+
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create raster layer. Server response:\n%s' % e.message)
+
+        url = parent_ngw_resource.get_api_collection_url()
+        params = dict(
+            resource=dict(
+                cls=NGWRasterLayer.type_id,
+                parent=dict(id=parent_ngw_resource.common.id),
+                display_name=layer_name
+            ),
+            raster_layer=dict(
+                srs=dict(id=3857),
+                source=raster_file_desc
+            )
+        )
+
+        try:
+            result = connection.post(url, params=params)
+            # print "add vector_layer resource result: ", result
+            ngw_resource = NGWResource.receive_resource_obj(
+                connection,
+                result['id']
+            )
+
+            return NGWRasterLayer(parent_ngw_resource._res_factory, ngw_resource)
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create raster layer. Server response:\n%s' % e.message)
+
+    @staticmethod
+    def create_raster_layer_style(ngw_raster_layer, layer_name):
+        connection = ngw_raster_layer._res_factory.connection
+        style_name = layer_name + '-style'
+
+        url = ngw_raster_layer.get_api_collection_url()
+        params = dict(
+            resource=dict(
+                cls="raster_style",
+                parent=dict(id=ngw_raster_layer.common.id),
+                display_name=style_name
+            ),
+        )
+
+        try:
+            result = connection.post(url, params=params)
+            # print "add qgis_vector_style resource result: ", result
+            ngw_resource = NGWResource(
+                ngw_raster_layer._res_factory,
+                NGWResource.receive_resource_obj(
+                    connection,
+                    result['id']
+                )
+            )
+
+            return ngw_resource
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create raster layer style. Server response:\n%s' % e.message)
 
     @staticmethod
     def create_webmap(parent_ngw_resource, ngw_webmap_name, ngw_webmap_items, bbox=[-180, 180, 90, -90]):

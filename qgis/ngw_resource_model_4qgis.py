@@ -24,6 +24,7 @@ import os
 import glob
 import zipfile
 import tempfile
+import functools
 
 from PyQt4 import QtCore
 
@@ -41,6 +42,9 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
     qgisProjectImportStarted = QtCore.pyqtSignal()
     qgisProjectImportFinished = QtCore.pyqtSignal()
 
+    JOB_IMPORT_QGIS_RESOURCE = 10
+    JOB_IMPORT_QGIS_PROJECT = 11
+
     def __init__(self):
         QNGWResourcesModelExt.__init__(self)
 
@@ -48,13 +52,69 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
         if not parent_index.isValid():
             parent_index = self.index(0, 0, parent_index)
 
-        def export_to_shapefile(qgs_vector_layer):
-            tmp = tempfile.mktemp('.shp')
+        parent_item = parent_index.internalPointer()
+        ngw_parent_resource = parent_item.data(0, Qt.UserRole)
+
+        worker = QGISResourceImporter(qgs_map_layer, ngw_parent_resource)
+        self._stratJobUnderNGWResource(
+            worker,
+            self.JOB_IMPORT_QGIS_RESOURCE,
+            functools.partial(self.__resourceImportFinished, parent_index),
+            parent_index
+        )
+
+    def __resourceImportFinished(self, parent_index, ngw_resource):
+        self._reloadChildren(parent_index)
+
+    def tryImportCurentQGISProject(self, ngw_group_name, parent_index, iface):
+        if not parent_index.isValid():
+            parent_index = self.index(0, 0, parent_index)
+
+        parent_item = parent_index.internalPointer()
+        ngw_resource_parent = parent_item.data(0, parent_item.NGWResourceRole)
+
+        worker = CurrentQGISProjectImporter(ngw_group_name, ngw_resource_parent, iface)
+        self._stratJobUnderNGWResource(
+            worker,
+            self.JOB_IMPORT_QGIS_PROJECT,
+            functools.partial(self.__importFinished, parent_index),
+            parent_index
+        )
+
+    def __importFinished(self, parent_index):
+        self._reloadChildren(parent_index)
+
+
+class QGISResourceJob(NGWResourceModelJob):
+    def __init__(self):
+        NGWResourceModelJob.__init__(self)
+
+    def importQGISMapLayer(self, qgs_map_layer, ngw_parent_resource):
+        def export_to_json(qgs_vector_layer):
+            tmp = tempfile.mktemp('.geojson')
+            import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
+            QgsMessageLog.logMessage("export_to_shapefile: %s" % qgs_vector_layer.crs().authid())
+            QgsMessageLog.logMessage("export_to_shapefile: %s" % import_crs.authid())
             QgsVectorFileWriter.writeAsVectorFormat(
                 qgs_vector_layer,
                 tmp,
                 'utf-8',
-                qgs_vector_layer.crs()
+                import_crs,
+                'GeoJSON'
+            )
+            return tmp
+
+        def export_to_shapefile(qgs_vector_layer):
+            tmp = tempfile.mktemp('.shp')
+
+            import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
+            QgsMessageLog.logMessage("export_to_shapefile: %s" % qgs_vector_layer.crs().authid())
+            QgsMessageLog.logMessage("export_to_shapefile: %s" % import_crs.authid())
+            QgsVectorFileWriter.writeAsVectorFormat(
+                qgs_vector_layer,
+                tmp,
+                'utf-8',
+                import_crs,
             )
             return tmp
 
@@ -71,78 +131,116 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
             zf.close()
             return tmp
 
-        parent_item = parent_index.internalPointer()
-        ngw_resource_parent = parent_item.data(0, Qt.UserRole)
-        childer_count = len(ngw_resource_parent.get_children())
+        layer_name = qgs_map_layer.name()
+        chd_names = [ch.common.display_name for ch in ngw_parent_resource.get_children()]
+        new_layer_name = self.generate_unique_name(layer_name, chd_names)
 
         layer_type = qgs_map_layer.type()
+        QgsMessageLog.logMessage("export_to_shapefile layer_type: %d (%d)" % (layer_type, qgs_map_layer.VectorLayer))
         if layer_type == qgs_map_layer.VectorLayer:
             layer_provider = qgs_map_layer.providerType()
+            QgsMessageLog.logMessage("export_to_shapefile layer_provider: %s" % layer_provider)
             if layer_provider == 'ogr':
-                source = export_to_shapefile(qgs_map_layer)
-                filepath = compress_shapefile(source)
+                # Import as shape ----
+                # source = export_to_shapefile(qgs_map_layer)
+                # QgsMessageLog.logMessage("export_to_shapefile source: %s" % source)
+                # filepath = compress_shapefile(source)
+                # QgsMessageLog.logMessage("export_to_shapefile filepath: %s" % filepath)
+
+                # Import as GeoJSON ----
+                filepath = export_to_json(qgs_map_layer)
 
                 ngw_vector_layer = ResourceCreator.create_vector_layer(
-                    ngw_resource_parent,
+                    ngw_parent_resource,
                     filepath,
-                    qgs_map_layer.name()
+                    new_layer_name
                 )
 
-                os.remove(source)
+                # os.remove(source)
                 os.remove(filepath)
 
-                self.beginInsertRows(parent_index, childer_count + 1, childer_count + 1)
-                item = QNGWResourceItemExt(ngw_vector_layer)
-                parent_item.addChild(item)
-                self.endInsertRows()
-                self.rowsInserted.emit(parent_index, childer_count + 1, childer_count + 1)
+                return ngw_vector_layer
+        elif layer_type == QgsMapLayer.RasterLayer:
+            layer_provider = qgs_map_layer.providerType()
+            if layer_provider == 'gdal':
+                filepath = qgs_map_layer.source()
+                ngw_raster_layer = ResourceCreator.create_raster_layer(
+                    ngw_parent_resource,
+                    filepath,
+                    new_layer_name
+                )
 
-                return (ngw_vector_layer, item)
+                return ngw_raster_layer
 
         return None
 
-    def tryImportCurentQGISProject(self, ngw_group_name, parent_index):
-        if not parent_index.isValid():
-            parent_index = self.index(0, 0, parent_index)
+    def addStyle(self, qgs_map_layer, ngw_layer_resource):
+        layer_type = qgs_map_layer.type()
+        if layer_type == QgsMapLayer.VectorLayer:
+            tmp = tempfile.mktemp('.qml')
+            msg, saved = qgs_map_layer.saveNamedStyle(tmp)
 
-        parent_item = parent_index.internalPointer()
-        ngw_resource_parent = parent_item.data(0, parent_item.NGWResourceRole)
+            ngw_resource = ResourceCreator.create_vector_layer_style(
+                ngw_layer_resource,
+                tmp,
+                qgs_map_layer.name()
+            )
 
-        worker = CurrentQGISProjectImporter(ngw_group_name, ngw_resource_parent)
-        thread = QThread(self)
+            os.remove(tmp)
+            return ngw_resource
+        elif layer_type == QgsMapLayer.RasterLayer:
+            layer_provider = qgs_map_layer.providerType()
+            if layer_provider == 'gdal':
+                ngw_resource = ResourceCreator.create_raster_layer_style(
+                    ngw_layer_resource,
+                    qgs_map_layer.name()
+                )
+                return ngw_resource
 
-        worker.moveToThread(thread)
-
-        thread.started.connect(worker.run)
-        worker.started.connect(self.qgisProjectImportStarted.emit)
-        worker.errorOccurred.connect(
-            functools.partial(self.errorOccurred.emit, QNGWResourceModelError.CreateGroupError)
-        )
-        worker.finished.connect(self.qgisProjectImportFinished.emit)
-        worker.finished.connect(thread.quit)
-        worker.finished.connect(
-            functools.partial(self.importFinished, parent_index)
-        )
-        # worker.finished.connect(worker.deleteLater)
-        # worker.finished.connect(thread.deleteLater)
-        thread.start()
-
-        self.threads.append(thread)
-        self.workers.append(worker)
-
-    def importFinished(self, parent_index):
-        self._reloadChildren(parent_index)
+        return None
 
 
-class CurrentQGISProjectImporter(QObject):
-    started = pyqtSignal()
-    errorOccurred = pyqtSignal(unicode)
-    finished = pyqtSignal()
+class QGISResourceImporter(QGISResourceJob):
+    done = pyqtSignal(object)
 
-    def __init__(self, new_group_name, ngw_resource_parent):
-        QObject.__init__(self)
+    def __init__(self, qgs_map_layer, ngw_parent_resource):
+        QGISResourceJob.__init__(self)
+        self.qgs_map_layer = qgs_map_layer
+        self.ngw_parent_resource = ngw_parent_resource
+
+    def run(self):
+        self.started.emit()
+
+        try:
+            ngw_resource = self.importQGISMapLayer(
+                self.qgs_map_layer,
+                self.ngw_parent_resource
+            )
+
+            self.addStyle(
+                self.qgs_map_layer,
+                ngw_resource
+            )
+
+            self.done.emit(ngw_resource)
+
+        except NGWError as e:
+            self.errorOccurred.emit(e.message)
+
+        except Exception as e:
+            self.errorOccurred.emit(str(e))
+
+        self.finished.emit()
+
+
+class CurrentQGISProjectImporter(QGISResourceJob):
+    done = pyqtSignal()
+
+    def __init__(self, new_group_name, ngw_resource_parent, iface):
+        QGISResourceJob.__init__(self)
         self.new_group_name = new_group_name
         self.ngw_resource_parent = ngw_resource_parent
+        self.iface = iface
 
     def run(self):
         self.started.emit()
@@ -152,15 +250,11 @@ class CurrentQGISProjectImporter(QObject):
         try:
             chd_names = [ch.common.display_name for ch in self.ngw_resource_parent.get_children()]
 
-            if self.new_group_name in chd_names:
-                id = 1
-                while(self.new_group_name + str(id) in chd_names):
-                    id += 1
-                self.new_group_name += str(id)
+            new_group_name = self.generate_unique_name(self.new_group_name, chd_names)
 
             ngw_group_resource = ResourceCreator.create_group(
                 self.ngw_resource_parent,
-                self.new_group_name
+                new_group_name
             )
 
             ngw_webmap_root_group = NGWWebMapRoot()
@@ -169,19 +263,20 @@ class CurrentQGISProjectImporter(QObject):
                 for qgsLayerTreeItem in qgsLayerTreeItems:
 
                     if isinstance(qgsLayerTreeItem, QgsLayerTreeLayer):
+                        self.statusChanged.emit("Import curent qgis project: layer %s" % qgsLayerTreeItem.layer().name())
                         QgsMessageLog.logMessage("Import curent qgis project: layer %s" % qgsLayerTreeItem.layer().name())
                         # progressDlg.setMessage(self.tr("Import layer %s") % qgsLayerTreeItem.layer().name())
-                        ngw_vector_layer = self.add_layer(
+                        ngw_layer_resource = self.importQGISMapLayer(
                             qgsLayerTreeItem.layer(),
                             ngw_resource_group
                         )
 
-                        if ngw_vector_layer is None:
+                        if ngw_layer_resource is None:
                             continue
 
-                        ngw_style_resource = self.add_style(
+                        ngw_style_resource = self.addStyle(
                             qgsLayerTreeItem.layer(),
-                            ngw_vector_layer
+                            ngw_layer_resource
                         )
 
                         if ngw_style_resource is None:
@@ -198,6 +293,7 @@ class CurrentQGISProjectImporter(QObject):
                         chd_names = [ch.common.display_name for ch in ngw_resource_group.get_children()]
 
                         group_name = qgsLayerTreeItem.name()
+                        self.statusChanged.emit("Import curent qgis project: folder %s" % group_name)
 
                         if group_name in chd_names:
                             id = 1
@@ -227,11 +323,14 @@ class CurrentQGISProjectImporter(QObject):
                 ngw_webmap_root_group
             )
 
-            ngw_webmap_resource = self.add_webmap(
+            self.statusChanged.emit("Import curent qgis project: create webmap")
+            self.add_webmap(
                 ngw_group_resource,
                 self.new_group_name + u"-webmap",
                 ngw_webmap_root_group.children
             )
+
+            self.done.emit()
 
         except NGWError as e:
             self.errorOccurred.emit(e.message)
@@ -241,72 +340,25 @@ class CurrentQGISProjectImporter(QObject):
 
         self.finished.emit()
 
-    def add_layer(self, qgs_map_layer, ngw_resource):
-        layer_type = qgs_map_layer.type()
-        if layer_type == QgsMapLayer.VectorLayer:
-            layer_provider = qgs_map_layer.providerType()
-            if layer_provider == 'ogr':
-                source = self.export_to_shapefile(qgs_map_layer)
-                filepath = self.compress_shapefile(source)
-
-                ngw_vector_layer = ResourceCreator.create_vector_layer(
-                    ngw_resource,
-                    filepath,
-                    qgs_map_layer.name()
-                )
-
-                os.remove(source)
-                os.remove(filepath)
-                return ngw_vector_layer
-
-        return None
-
-    def export_to_shapefile(self, qgs_vector_layer):
-        tmp = tempfile.mktemp('.shp')
-        QgsVectorFileWriter.writeAsVectorFormat(
-            qgs_vector_layer,
-            tmp,
-            'utf-8',
-            qgs_vector_layer.crs()
-        )
-        return tmp
-
-    def compress_shapefile(self, filepath):
-        tmp = tempfile.mktemp('.zip')
-        basePath = os.path.splitext(filepath)[0]
-        baseName = os.path.splitext(os.path.basename(filepath))[0]
-
-        zf = zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED)
-        for i in glob.iglob(basePath + '.*'):
-            ext = os.path.splitext(i)[1]
-            zf.write(i, baseName + ext)
-
-        zf.close()
-        return tmp
-
-    def add_style(self, qgs_map_layer, ngw_vector_layer):
-        layer_type = qgs_map_layer.type()
-        if layer_type == QgsMapLayer.VectorLayer:
-            tmp = tempfile.mktemp('.qml')
-            msg, saved = qgs_map_layer.saveNamedStyle(tmp)
-
-            ngw_resource = ResourceCreator.create_vector_layer_style(
-                ngw_vector_layer,
-                tmp,
-                qgs_map_layer.name()
-            )
-
-            os.remove(tmp)
-            return ngw_resource
-
-        return None
-
     def add_webmap(self, ngw_resource, ngw_webmap_name, ngw_webmap_items):
+        rectangle = self.iface.mapCanvas().extent()
+        ct = QgsCoordinateTransform(
+            self.iface.mapCanvas().mapRenderer().destinationCrs(),
+            QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
+        )
+        rectangle = ct.transform(rectangle)
+
         ngw_webmap_items_as_dicts = [item.toDict() for item in ngw_webmap_items]
         ngw_resource = ResourceCreator.create_webmap(
             ngw_resource,
             ngw_webmap_name,
             ngw_webmap_items_as_dicts,
+            [
+                rectangle.xMinimum(),
+                rectangle.xMaximum(),
+                rectangle.yMaximum(),
+                rectangle.yMinimum(),
+            ]
         )
 
         return ngw_resource
