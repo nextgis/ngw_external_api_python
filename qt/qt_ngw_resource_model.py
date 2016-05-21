@@ -75,15 +75,8 @@ class QNGWResourcesModel(QAbstractItemModel):
             return self.root
 
 
-class QNGWResourceModelError:
-    NoError = 0
-    LoadResourceError = 1
-    CreateGroupError = 2
-    CreateLayerError = 3
-
-
 class QNGWResourcesModelExt(QAbstractItemModel):
-    errorOccurred = pyqtSignal(int, unicode)
+    errorOccurred = pyqtSignal(int, object)
 
     jobStarted = pyqtSignal(int)
     jobStatusChanged = pyqtSignal(int, unicode)
@@ -93,6 +86,7 @@ class QNGWResourcesModelExt(QAbstractItemModel):
     JOB_LOAD_NGW_RESOURCE_CHILDREN = 1
     JOB_CREATE_NGW_GROUP_RESOURCE = 2
     JOB_DELETE_NGW_RESOURCE = 3
+    JOB_CREATE_NGW_WFS_SERVICE = 4
 
     def __init__(self):
         QAbstractItemModel.__init__(self)
@@ -122,8 +116,8 @@ class QNGWResourcesModelExt(QAbstractItemModel):
             self.root_item.addChild(
                 QNGWResourceItemExt(ngw_root_resource)
             )
-        except NGWError as e:
-            self.errorOccurred.emit(QNGWResourceModelError.LoadResourceError, e.message)
+        except Exception as e:
+            self.errorOccurred.emit(self.JOB_LOAD_NGW_RESOURCE_CHILDREN, e)
 
     def index(self, row, column, parent):
         if not self.hasIndex(row, column, parent):
@@ -215,6 +209,17 @@ class QNGWResourcesModelExt(QAbstractItemModel):
 
         return parent_item.childCount() > 0
 
+    def _nearest_ngw_group_resource_parent(self, index):
+        checking_index = index
+        item = checking_index.internalPointer()
+        ngw_resource = item.data(0, QNGWResourceItemExt.NGWResourceRole)
+        while not isinstance(ngw_resource, NGWGroupResource):
+            checking_index = self.parent(checking_index)
+            checking_item = checking_index.internalPointer()
+            ngw_resource = checking_item.data(0, QNGWResourceItemExt.NGWResourceRole)
+
+        return checking_index
+
     def _stratJobUnderNGWResource(self, qobject_worker, job, callback, parent_index):
         # TODO clean stoped threads
 
@@ -233,7 +238,7 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         )
 
         qobject_worker.errorOccurred.connect(
-            functools.partial(self.errorOccurred.emit, QNGWResourceModelError.LoadResourceError)
+            functools.partial(self.errorOccurred.emit, job)
         )
 
         if job == self.JOB_NGW_RESOURCE_UPDATE:
@@ -359,11 +364,34 @@ class QNGWResourcesModelExt(QAbstractItemModel):
     def __proccessResourceDeleted(self, parent_index):
         self._reloadChildren(parent_index)
 
+    def createWFSForVector(self, index):
+        if not index.isValid():
+            index = self.index(0, 0, index)
+
+        parent_index = self._nearest_ngw_group_resource_parent(index)
+
+        parent_item = parent_index.internalPointer()
+        ngw_parent_resource = parent_item.data(0, Qt.UserRole)
+
+        item = index.internalPointer()
+        ngw_resource = item.data(0, Qt.UserRole)
+
+        worker = NGWCreateWFSForVector(ngw_resource, ngw_parent_resource)
+        self._stratJobUnderNGWResource(
+            worker,
+            self.JOB_CREATE_NGW_WFS_SERVICE,
+            functools.partial(self.__proccessWFSCreate, parent_index),
+            parent_index
+        )
+
+    def __proccessWFSCreate(self, parent_index):
+        self._reloadChildren(parent_index)
+
 
 class NGWResourceModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
-    errorOccurred = pyqtSignal(unicode)
+    errorOccurred = pyqtSignal(object)
     finished = pyqtSignal()
 
     def __init__(self):
@@ -397,10 +425,9 @@ class NGWResourceUpdate(NGWResourceModelJob):
                 )
             )
             self.done.emit(ngw_resource)
-        except NGWError as e:
-            self.errorOccurred.emit(e.message)
+
         except Exception as e:
-            self.errorOccurred.emit(unicode(e))
+            self.errorOccurred.emit(e)
 
         self.finished.emit()
 
@@ -419,10 +446,8 @@ class NGWResourcesLoader(NGWResourceModelJob):
                 return
 
             self.done.emit(ngw_resource_children)
-        except NGWError as e:
-            self.errorOccurred.emit(e.message)
         except Exception as e:
-            self.errorOccurred.emit(unicode(e))
+            self.errorOccurred.emit(e)
 
     def run(self):
         self.started.emit()
@@ -452,11 +477,8 @@ class NGWGroupCreater(NGWResourceModelJob):
 
             self.done.emit(ngw_group_resource)
 
-        except NGWError as e:
-            self.errorOccurred.emit(e.message)
-
         except Exception as e:
-            self.errorOccurred.emit(str(e))
+            self.errorOccurred.emit(e)
 
         self.finished.emit()
 
@@ -475,10 +497,39 @@ class NGWResourceDelete(NGWResourceModelJob):
 
             self.done.emit()
 
-        except NGWError as e:
-            self.errorOccurred.emit(e.message)
+        except Exception as e:
+            self.errorOccurred.emit(e)
+
+        self.finished.emit()
+
+
+class NGWCreateWFSForVector(NGWResourceModelJob):
+    done = pyqtSignal()
+
+    def __init__(self, ngw_vector_layer, ngw_group_resource):
+        NGWResourceModelJob.__init__(self)
+        self.ngw_vector_layer = ngw_vector_layer
+        self.ngw_group_resource = ngw_group_resource
+
+    def run(self):
+        self.started.emit()
+
+        try:
+            ngw_wfs_service_name = self.ngw_vector_layer.common.display_name + "-wfs-service"
+
+            chd_names = [ch.common.display_name for ch in self.ngw_group_resource.get_children()]
+
+            ngw_wfs_service_name = self.generate_unique_name(ngw_wfs_service_name, chd_names)
+
+            ResourceCreator.create_wfs_service(
+                ngw_wfs_service_name,
+                self.ngw_group_resource,
+                [self.ngw_vector_layer]
+            )
+
+            self.done.emit()
 
         except Exception as e:
-            self.errorOccurred.emit(str(e))
+            self.errorOccurred.emit(e)
 
         self.finished.emit()

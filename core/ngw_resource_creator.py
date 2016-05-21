@@ -26,6 +26,7 @@ from .ngw_group_resource import NGWGroupResource
 from .ngw_vector_layer import NGWVectorLayer
 from .ngw_raster_layer import NGWRasterLayer
 from .ngw_mapserver_style import NGWMapServerStyle
+from .ngw_wfs_service import NGWWfsService
 from .ngw_webmap import NGWWebMap
 
 
@@ -238,3 +239,38 @@ class ResourceCreator():
             return ngw_resource
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create webmap. Server response:\n%s' % e.message)
+
+    @staticmethod
+    def create_wfs_service(name, ngw_group_resource, ngw_layers):
+        connection = ngw_group_resource._res_factory.connection
+        url = ngw_group_resource.get_api_collection_url()
+
+        params_layers = []
+        for ngw_layer in ngw_layers:
+            ngw_layer_name = ngw_layer.common.display_name
+            params_layer = dict(
+                display_name=ngw_layer_name,
+                keyname=ngw_layer_name.lower().replace(' ', '_'),
+                resource_id=ngw_layer.common.id,
+                maxfeatures=1000
+            )
+            params_layers.append(params_layer)
+
+        params = dict(
+            resource=dict(
+                cls=NGWWfsService.type_id,
+                display_name=name,
+                parent=dict(
+                    id=ngw_group_resource.common.id
+                )
+            ),
+            wfsserver_service=dict(
+                layers=params_layers
+            )
+        )
+
+        try:
+            connection.post(url, params=params)
+
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create wfs service. Server response:\n%s' % e.message)

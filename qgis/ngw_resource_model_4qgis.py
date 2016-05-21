@@ -42,8 +42,8 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
     qgisProjectImportStarted = QtCore.pyqtSignal()
     qgisProjectImportFinished = QtCore.pyqtSignal()
 
-    JOB_IMPORT_QGIS_RESOURCE = 10
-    JOB_IMPORT_QGIS_PROJECT = 11
+    JOB_IMPORT_QGIS_RESOURCE = 100
+    JOB_IMPORT_QGIS_PROJECT = 101
 
     def __init__(self):
         QNGWResourcesModelExt.__init__(self)
@@ -51,6 +51,8 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
     def createNGWLayer(self, qgs_map_layer, parent_index):
         if not parent_index.isValid():
             parent_index = self.index(0, 0, parent_index)
+
+        parent_index = self._nearest_ngw_group_resource_parent(parent_index)
 
         parent_item = parent_index.internalPointer()
         ngw_parent_resource = parent_item.data(0, Qt.UserRole)
@@ -69,6 +71,8 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
     def tryImportCurentQGISProject(self, ngw_group_name, parent_index, iface):
         if not parent_index.isValid():
             parent_index = self.index(0, 0, parent_index)
+
+        parent_index = self._nearest_ngw_group_resource_parent(parent_index)
 
         parent_item = parent_index.internalPointer()
         ngw_resource_parent = parent_item.data(0, parent_item.NGWResourceRole)
@@ -93,8 +97,8 @@ class QGISResourceJob(NGWResourceModelJob):
         def export_to_json(qgs_vector_layer):
             tmp = tempfile.mktemp('.geojson')
             import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
-            QgsMessageLog.logMessage("export_to_shapefile: %s" % qgs_vector_layer.crs().authid())
-            QgsMessageLog.logMessage("export_to_shapefile: %s" % import_crs.authid())
+            # QgsMessageLog.logMessage("export_to_shapefile: %s" % qgs_vector_layer.crs().authid())
+            # QgsMessageLog.logMessage("export_to_shapefile: %s" % import_crs.authid())
             QgsVectorFileWriter.writeAsVectorFormat(
                 qgs_vector_layer,
                 tmp,
@@ -149,6 +153,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
                 # Import as GeoJSON ----
                 filepath = export_to_json(qgs_map_layer)
+                # QgsMessageLog.logMessage("export_to_shapefile filepath: %s" % filepath)
 
                 ngw_vector_layer = ResourceCreator.create_vector_layer(
                     ngw_parent_resource,
