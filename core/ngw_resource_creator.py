@@ -241,7 +241,7 @@ class ResourceCreator():
             raise NGWError('Cannot create webmap. Server response:\n%s' % e.message)
 
     @staticmethod
-    def create_wfs_service(name, ngw_group_resource, ngw_layers):
+    def create_wfs_service(name, ngw_group_resource, ngw_layers, ret_obj_num):
         connection = ngw_group_resource._res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
 
@@ -252,7 +252,7 @@ class ResourceCreator():
                 display_name=ngw_layer_name,
                 keyname=ngw_layer_name.lower().replace(' ', '_'),
                 resource_id=ngw_layer.common.id,
-                maxfeatures=1000
+                maxfeatures=ret_obj_num
             )
             params_layers.append(params_layer)
 

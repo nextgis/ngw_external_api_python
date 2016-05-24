@@ -58,7 +58,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
         ngw_parent_resource = parent_item.data(0, Qt.UserRole)
 
         worker = QGISResourceImporter(qgs_map_layer, ngw_parent_resource)
-        self._stratJobUnderNGWResource(
+        self._stratJobOnNGWResource(
             worker,
             self.JOB_IMPORT_QGIS_RESOURCE,
             functools.partial(self.__resourceImportFinished, parent_index),
@@ -78,7 +78,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
         ngw_resource_parent = parent_item.data(0, parent_item.NGWResourceRole)
 
         worker = CurrentQGISProjectImporter(ngw_group_name, ngw_resource_parent, iface)
-        self._stratJobUnderNGWResource(
+        self._stratJobOnNGWResource(
             worker,
             self.JOB_IMPORT_QGIS_PROJECT,
             functools.partial(self.__importFinished, parent_index),

@@ -29,8 +29,6 @@ from ..core.ngw_group_resource import NGWGroupResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
 
-#from qgis.core import QgsMessageLog
-
 
 class QNGWResourcesModel(QAbstractItemModel):
     def __init__(self, tree_item):
@@ -45,7 +43,6 @@ class QNGWResourcesModel(QAbstractItemModel):
         return QModelIndex()
 
     def parent(self, index=None):
-        # QgsMessageLog.logMessage(">>> QNGWResourcesModel:parent")
         child_item = self._item_by_index(index)
         parent_item = child_item.parent()
         if parent_item == self.root or not parent_item:
@@ -53,7 +50,6 @@ class QNGWResourcesModel(QAbstractItemModel):
         return self.createIndex(parent_item.row(), 0, parent_item) #??? WHY parent
 
     def rowCount(self, parent_index=None, *args, **kwargs):
-        # QgsMessageLog.logMessage(">>> rowCount parent_index=(%d, %d)" % (parent_index.row(), parent_index.column()))
         parent_item = self._item_by_index(parent_index)
         return parent_item.get_children_count()
 
@@ -204,7 +200,6 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         if isinstance(parent_item, QNGWResourceItemExt):
             ngw_resource = parent_item.data(0, QNGWResourceItemExt.NGWResourceRole)
             children_count = ngw_resource.common.children
-            # QgsMessageLog.logMessage("children_count (%s): %d" % (parent_item.data(0, Qt.DisplayRole), children_count))
             return children_count > 0
 
         return parent_item.childCount() > 0
@@ -220,7 +215,7 @@ class QNGWResourcesModelExt(QAbstractItemModel):
 
         return checking_index
 
-    def _stratJobUnderNGWResource(self, qobject_worker, job, callback, parent_index):
+    def _stratJobOnNGWResource(self, qobject_worker, job, callback, parent_index):
         # TODO clean stoped threads
 
         thread = QThread(self)
@@ -243,7 +238,6 @@ class QNGWResourcesModelExt(QAbstractItemModel):
 
         if job == self.JOB_NGW_RESOURCE_UPDATE:
             def processDoneJob(callback, index, ngw_resource):
-                # QgsMessageLog.logMessage("processDoneJob JOB_NGW_RESOURCE_UPDATE")
                 item = index.internalPointer()
                 item.set_ngw_resource(ngw_resource)
                 self.dataChanged.emit(index, index)
@@ -254,11 +248,10 @@ class QNGWResourcesModelExt(QAbstractItemModel):
             )
         else:
             def processDoneJob(callback, index, *args):
-                # QgsMessageLog.logMessage("processDoneJob")
                 item = index.internalPointer()
                 ngw_resource = item.data(0, item.NGWResourceRole)
                 worker = NGWResourceUpdate(ngw_resource)
-                self._stratJobUnderNGWResource(
+                self._stratJobOnNGWResource(
                     worker,
                     self.JOB_NGW_RESOURCE_UPDATE,
                     functools.partial(
@@ -283,7 +276,7 @@ class QNGWResourcesModelExt(QAbstractItemModel):
     def startLoadChildren(self, index):
         item = index.internalPointer()
         worker = NGWResourcesLoader(item.data(0, Qt.UserRole))
-        self._stratJobUnderNGWResource(
+        self._stratJobOnNGWResource(
             worker,
             self.JOB_LOAD_NGW_RESOURCE_CHILDREN,
             functools.partial(self.__proccessChildrenReceived, index),
@@ -291,7 +284,6 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         )
 
     def __proccessChildrenReceived(self, index, ngw_resources):
-        # QgsMessageLog.logMessage("proccessChildrenReceived")
         item = index.internalPointer()
 
         # Remove servise item - loading...
@@ -316,7 +308,7 @@ class QNGWResourcesModelExt(QAbstractItemModel):
             return False
 
         worker = NGWGroupCreater(new_group_name, ngw_resource_parent)
-        self._stratJobUnderNGWResource(
+        self._stratJobOnNGWResource(
             worker,
             self.JOB_CREATE_NGW_GROUP_RESOURCE,
             functools.partial(self.__proccessGroupAdded, parent_index),
@@ -354,7 +346,7 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         ngw_resource = item.data(0, item.NGWResourceRole)
 
         worker = NGWResourceDelete(ngw_resource)
-        self._stratJobUnderNGWResource(
+        self._stratJobOnNGWResource(
             worker,
             self.JOB_DELETE_NGW_RESOURCE,
             functools.partial(self.__proccessResourceDeleted, parent_index),
@@ -364,7 +356,7 @@ class QNGWResourcesModelExt(QAbstractItemModel):
     def __proccessResourceDeleted(self, parent_index):
         self._reloadChildren(parent_index)
 
-    def createWFSForVector(self, index):
+    def createWFSForVector(self, index, ret_obj_num):
         if not index.isValid():
             index = self.index(0, 0, index)
 
@@ -376,8 +368,8 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         item = index.internalPointer()
         ngw_resource = item.data(0, Qt.UserRole)
 
-        worker = NGWCreateWFSForVector(ngw_resource, ngw_parent_resource)
-        self._stratJobUnderNGWResource(
+        worker = NGWCreateWFSForVector(ngw_resource, ngw_parent_resource, ret_obj_num)
+        self._stratJobOnNGWResource(
             worker,
             self.JOB_CREATE_NGW_WFS_SERVICE,
             functools.partial(self.__proccessWFSCreate, parent_index),
@@ -401,8 +393,8 @@ class NGWResourceModelJob(QObject):
         new_name = name
         id = 1
         if new_name in present_names:
-            new_name = name + "(%d)" % id
             while(new_name in present_names):
+                new_name = name + "(%d)" % id
                 id += 1
         return new_name
 
@@ -506,10 +498,11 @@ class NGWResourceDelete(NGWResourceModelJob):
 class NGWCreateWFSForVector(NGWResourceModelJob):
     done = pyqtSignal()
 
-    def __init__(self, ngw_vector_layer, ngw_group_resource):
+    def __init__(self, ngw_vector_layer, ngw_group_resource, ret_obj_num):
         NGWResourceModelJob.__init__(self)
         self.ngw_vector_layer = ngw_vector_layer
         self.ngw_group_resource = ngw_group_resource
+        self.ret_obj_num = ret_obj_num
 
     def run(self):
         self.started.emit()
@@ -524,7 +517,8 @@ class NGWCreateWFSForVector(NGWResourceModelJob):
             ResourceCreator.create_wfs_service(
                 ngw_wfs_service_name,
                 self.ngw_group_resource,
-                [self.ngw_vector_layer]
+                [self.ngw_vector_layer],
+                self.ret_obj_num
             )
 
             self.done.emit()
