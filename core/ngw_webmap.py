@@ -77,17 +77,18 @@ class NGWWebMapRoot(NGWWebMapItem):
 
 
 class NGWWebMapLayer(NGWWebMapItem):
-    def __init__(self, layer_style_id, display_name):
+    def __init__(self, layer_style_id, display_name, is_visible):
         NGWWebMapItem.__init__(self, NGWWebMapItem.ITEM_TYPE_LAYER)
         self.layer_style_id = layer_style_id
         self.display_name = display_name
+        self.is_visible = is_visible
 
     def _attributes(self):
         return dict(
             layer_style_id=self.layer_style_id,
             display_name=self.display_name,
             layer_adapter="image",
-            layer_enabled=True,
+            layer_enabled=self.is_visible,
             layer_max_scale_denom=None,
             layer_min_scale_denom=None,
             layer_transparency=None

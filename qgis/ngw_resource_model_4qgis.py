@@ -96,7 +96,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def importQGISMapLayer(self, qgs_map_layer, ngw_parent_resource):
         def export_to_json(qgs_vector_layer):
             tmp = tempfile.mktemp('.geojson')
-            import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
+            import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
             # QgsMessageLog.logMessage("export_to_shapefile: %s" % qgs_vector_layer.crs().authid())
             # QgsMessageLog.logMessage("export_to_shapefile: %s" % import_crs.authid())
             QgsVectorFileWriter.writeAsVectorFormat(
@@ -111,7 +111,7 @@ class QGISResourceJob(NGWResourceModelJob):
         def export_to_shapefile(qgs_vector_layer):
             tmp = tempfile.mktemp('.shp')
 
-            import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
+            import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
             QgsMessageLog.logMessage("export_to_shapefile: %s" % qgs_vector_layer.crs().authid())
             QgsMessageLog.logMessage("export_to_shapefile: %s" % import_crs.authid())
             QgsVectorFileWriter.writeAsVectorFormat(
@@ -290,7 +290,8 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                         ngw_webmap_item.appendChild(
                             NGWWebMapLayer(
                                 ngw_style_resource.common.id,
-                                qgsLayerTreeItem.layer().name()
+                                qgsLayerTreeItem.layer().name(),
+                                qgsLayerTreeItem.isVisible() == QtCore.Qt.Checked
                             )
                         )
 

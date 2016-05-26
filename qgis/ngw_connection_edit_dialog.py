@@ -69,9 +69,12 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         return self.ngw_conn_sett
 
     def accept(self):
+        url = self.leUrl.text()
+        if url[0:7] != "http://":
+           url = "http://%s" % url 
         self.ngw_conn_sett = NGWConnectionSettings(
             self.leName.text(),
-            self.leUrl.text(),
+            url,
             self.leUser.text(),
             self.lePassword.text())
 
