@@ -54,6 +54,11 @@ class NGWResource():
         """
         return ngw_con.get("%s?parent=%s" % (API_COLLECTION_URL, res_id))
 
+    @classmethod
+    def delete_resource(cls, ngw_resource):
+        ngw_con = ngw_resource._res_factory.connection
+        url = API_RESOURCE_URL(ngw_resource.common.id)
+        ngw_con.delete(url)
 
     # INSTANCE
     def __init__(self, resource_factory, resource_json):
