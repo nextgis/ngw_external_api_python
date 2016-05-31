@@ -97,13 +97,16 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         self.endResetModel()
         self.modelReset.emit()
 
-    def __resetModel(self, ngw_connection_settings):
-        # TODO stop all workers
+    def cleanModel(self):
         c = self.root_item.childCount()
         self.beginRemoveRows(QModelIndex(), 0, c - 1)
         for i in range(c - 1, -1, -1):
             self.root_item.removeChild(self.root_item.child(i))
         self.endRemoveRows()
+
+    def __resetModel(self, ngw_connection_settings):
+        # TODO stop all workers
+        self.cleanModel()
 
         try:
             rsc_factory = NGWResourceFactory(ngw_connection_settings)

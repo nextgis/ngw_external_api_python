@@ -23,7 +23,10 @@
  ***************************************************************************/
 """
 import os
+from urlparse import urlparse
+
 from PyQt4 import uic
+from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QDialog
 from ..core.ngw_connection_settings import NGWConnectionSettings
 
@@ -54,28 +57,80 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
     def __init__(self, parent=None, ngw_connection_settings=None):
         super(NGWConnectionEditDialog, self).__init__(parent)
         self.setupUi(self)
-        self.setFixedSize(self.size())
+        # self.setFixedSize(self.size())
+
+        self.cbAsGuest.stateChanged.connect(self.__cbAsGuestChecked)
+        self.lbAdvansedSettings.linkActivated.connect(self.__advancedSettingsLinkActivate)
+
+        self.__cbAsGuestChecked(self.cbAsGuest.checkState())
 
         self.ngw_conn_sett = ngw_connection_settings
 
+        self.__advansedSettingsShown = False
         if self.ngw_conn_sett is not None:
-            self.leName.setText(self.ngw_conn_sett.connection_name)
-            self.leUrl.setText(self.ngw_conn_sett.server_url)
-            self.leUser.setText(self.ngw_conn_sett.username)
-            self.lePassword.setText(self.ngw_conn_sett.password)
+            o = urlparse(self.ngw_conn_sett.server_url)
+            if o.hostname.find("nextgis.com") != -1:
+                self.leWebGIS.setText(o.hostname.split('.')[0])
+            else:
+                self.__advansedSettingsShown = True
+                self.leName.setText(self.ngw_conn_sett.connection_name)
+                self.leUrl.setText(self.ngw_conn_sett.server_url)
+
+            if self.ngw_conn_sett.username == "":
+                self.cbAsGuest.setCheckState(Qt.Checked)
+                self.leUser.setText("administrator")
+            else:
+                self.cbAsGuest.setCheckState(Qt.Unchecked)
+                self.leUser.setText(self.ngw_conn_sett.username)
+                self.lePassword.setText(self.ngw_conn_sett.password)
+        else:
+            self.leUser.setText("administrator")
+
+        self.__showHideAdvancedSettings()
+
+    def __cbAsGuestChecked(self, state):
+        self.leUser.setEnabled(state != Qt.Checked)
+        self.lbUser.setEnabled(state != Qt.Checked)
+        self.lePassword.setEnabled(state != Qt.Checked)
+        self.lbPassword.setEnabled(state != Qt.Checked)
+
+    def __advancedSettingsLinkActivate(self, link):
+        self.__advansedSettingsShown = not self.__advansedSettingsShown
+        self.__showHideAdvancedSettings()
+
+    def __showHideAdvancedSettings(self):
+        self.lbWebGIS.setVisible(not self.__advansedSettingsShown)
+        self.leWebGIS.setVisible(not self.__advansedSettingsShown)
+        self.lbName.setVisible(self.__advansedSettingsShown)
+        self.leName.setVisible(self.__advansedSettingsShown)
+        self.lbUrl.setVisible(self.__advansedSettingsShown)
+        self.leUrl.setVisible(self.__advansedSettingsShown)
 
     @property
     def ngw_connection_settings(self):
         return self.ngw_conn_sett
 
     def accept(self):
-        url = self.leUrl.text()
+        if not self.__advansedSettingsShown:
+            url = "%s.nextgis.com" % self.leWebGIS.text()
+            name = self.leWebGIS.text()
+        else:
+            url = self.leUrl.text()
+            name = self.leName.text()
+
         if url[0:7] != "http://":
-           url = "http://%s" % url 
+            url = "http://%s" % url
+
+        user = ""
+        passward = ""
+        if self.cbAsGuest.checkState() == Qt.Unchecked:
+            user = self.leUser.text()
+            passward = self.lePassword.text()
+
         self.ngw_conn_sett = NGWConnectionSettings(
-            self.leName.text(),
+            name,
             url,
-            self.leUser.text(),
-            self.lePassword.text())
+            user,
+            passward)
 
         QDialog.accept(self)
