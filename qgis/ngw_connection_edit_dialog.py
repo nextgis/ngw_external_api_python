@@ -60,19 +60,19 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         # self.setFixedSize(self.size())
 
         self.cbAsGuest.stateChanged.connect(self.__cbAsGuestChecked)
-        self.lbAdvansedSettings.linkActivated.connect(self.__advancedSettingsLinkActivate)
+        self.lbAdvancedSettings.linkActivated.connect(self.__advancedSettingsLinkActivate)
 
         self.__cbAsGuestChecked(self.cbAsGuest.checkState())
 
         self.ngw_conn_sett = ngw_connection_settings
 
-        self.__advansedSettingsShown = False
+        self.__advancedSettingsShown = False
         if self.ngw_conn_sett is not None:
             o = urlparse(self.ngw_conn_sett.server_url)
             if o.hostname.find("nextgis.com") != -1:
                 self.leWebGIS.setText(o.hostname.split('.')[0])
             else:
-                self.__advansedSettingsShown = True
+                self.__advancedSettingsShown = True
                 self.leName.setText(self.ngw_conn_sett.connection_name)
                 self.leUrl.setText(self.ngw_conn_sett.server_url)
 
@@ -95,23 +95,23 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.lbPassword.setEnabled(state != Qt.Checked)
 
     def __advancedSettingsLinkActivate(self, link):
-        self.__advansedSettingsShown = not self.__advansedSettingsShown
+        self.__advancedSettingsShown = not self.__advancedSettingsShown
         self.__showHideAdvancedSettings()
 
     def __showHideAdvancedSettings(self):
-        self.lbWebGIS.setVisible(not self.__advansedSettingsShown)
-        self.leWebGIS.setVisible(not self.__advansedSettingsShown)
-        self.lbName.setVisible(self.__advansedSettingsShown)
-        self.leName.setVisible(self.__advansedSettingsShown)
-        self.lbUrl.setVisible(self.__advansedSettingsShown)
-        self.leUrl.setVisible(self.__advansedSettingsShown)
+        self.lbWebGIS.setVisible(not self.__advancedSettingsShown)
+        self.leWebGIS.setVisible(not self.__advancedSettingsShown)
+        self.lbName.setVisible(self.__advancedSettingsShown)
+        self.leName.setVisible(self.__advancedSettingsShown)
+        self.lbUrl.setVisible(self.__advancedSettingsShown)
+        self.leUrl.setVisible(self.__advancedSettingsShown)
 
     @property
     def ngw_connection_settings(self):
         return self.ngw_conn_sett
 
     def accept(self):
-        if not self.__advansedSettingsShown:
+        if not self.__advancedSettingsShown:
             url = "%s.nextgis.com" % self.leWebGIS.text()
             name = self.leWebGIS.text()
         else:
