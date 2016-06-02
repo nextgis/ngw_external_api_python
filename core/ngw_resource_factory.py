@@ -20,6 +20,7 @@
 """
 from ngw_webmap import NGWWebMap
 from ngw_mapserver_style import NGWMapServerStyle
+from ngw_qgis_vector_style import NGWQGISVectorStyle
 from ngw_wms_service import NGWWmsService
 from ngw_vector_layer import NGWVectorLayer
 from ngw_group_resource import NGWGroupResource
@@ -38,6 +39,7 @@ class NGWResourceFactory():
             NGWGroupResource.type_id: NGWGroupResource,
             NGWVectorLayer.type_id: NGWVectorLayer,
             NGWMapServerStyle.type_id: NGWMapServerStyle,
+            NGWQGISVectorStyle.type_id: NGWQGISVectorStyle,
             NGWWebMap.type_id: NGWWebMap,
         }
         self.__default_type = NGWResource.type_id
