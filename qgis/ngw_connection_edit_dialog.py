@@ -27,7 +27,7 @@ from urlparse import urlparse
 
 from PyQt4 import uic
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QDialog
+from PyQt4.QtGui import QDialog, QStringListModel, QCompleter
 from ..core.ngw_connection_settings import NGWConnectionSettings
 
 __author__ = 'NextGIS'
@@ -56,25 +56,32 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
     """
     def __init__(self, parent=None, ngw_connection_settings=None):
         super(NGWConnectionEditDialog, self).__init__(parent)
+
+        self._default_server_suffix = ".nextgis.com"
+        self.__user_try_accept = False
+
         self.setupUi(self)
-        # self.setFixedSize(self.size())
+
+        self.completer_model = QStringListModel()
+        completer = QCompleter()
+        completer.setModel(self.completer_model)
+        self.leUrl.setCompleter(completer)
 
         self.cbAsGuest.stateChanged.connect(self.__cbAsGuestChecked)
-        self.lbAdvancedSettings.linkActivated.connect(self.__advancedSettingsLinkActivate)
+        self.leUrl.textChanged.connect(self.__autocomplete_url)
+        self.leUrl.textChanged.connect(self.__fill_conneection_name)
+
+        self.leName.textChanged.connect(self.__name_changed_process)
+        self.__user_change_connection_name = False
+        self.leName.editingFinished.connect(self.__name_changed_finished)
 
         self.__cbAsGuestChecked(self.cbAsGuest.checkState())
 
         self.ngw_conn_sett = ngw_connection_settings
 
-        self.__advancedSettingsShown = False
         if self.ngw_conn_sett is not None:
-            o = urlparse(self.ngw_conn_sett.server_url)
-            if o.hostname.find("nextgis.com") != -1:
-                self.leWebGIS.setText(o.hostname.split('.')[0])
-            else:
-                self.__advancedSettingsShown = True
-                self.leName.setText(self.ngw_conn_sett.connection_name)
-                self.leUrl.setText(self.ngw_conn_sett.server_url)
+            self.leUrl.setText(self.ngw_conn_sett.server_url)
+            self.leName.setText(self.ngw_conn_sett.connection_name)
 
             if self.ngw_conn_sett.username == "":
                 self.cbAsGuest.setCheckState(Qt.Checked)
@@ -86,7 +93,40 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         else:
             self.leUser.setText("administrator")
 
-        self.__showHideAdvancedSettings()
+    def __autocomplete_url(self, text):
+        text_complete = self._default_server_suffix
+
+        first_point_pos = text.find('.')
+        if first_point_pos != -1:
+            text_after_point = text[first_point_pos:]
+
+            if text_complete.find(text_after_point) == 0:
+                text_complete = text_complete[len(text_after_point):]
+            else:
+                return
+        self.completer_model.setStringList([text + text_complete])
+        self.__validate_fields()
+
+    def __make_valid_url(self, url):
+        o = urlparse(url)
+        hostname = o.hostname
+        if hostname is None:
+            hostname = "http://"
+            return hostname + url
+        return url
+
+    def __fill_conneection_name(self, url):
+        if self.__user_change_connection_name is True:
+            return
+
+        url = self.__make_valid_url(url)
+
+        o = urlparse(url)
+        connection_name = o.netloc
+        if connection_name.find(self._default_server_suffix) != -1:
+            connection_name = connection_name.split('.')[0]
+
+        self.leName.setText(connection_name)
 
     def __cbAsGuestChecked(self, state):
         self.leUser.setEnabled(state != Qt.Checked)
@@ -94,32 +134,49 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.lePassword.setEnabled(state != Qt.Checked)
         self.lbPassword.setEnabled(state != Qt.Checked)
 
-    def __advancedSettingsLinkActivate(self, link):
-        self.__advancedSettingsShown = not self.__advancedSettingsShown
-        self.__showHideAdvancedSettings()
+    def __name_changed_process(self, text):
+        self.__validate_fields()
 
-    def __showHideAdvancedSettings(self):
-        self.lbWebGIS.setVisible(not self.__advancedSettingsShown)
-        self.leWebGIS.setVisible(not self.__advancedSettingsShown)
-        self.lbName.setVisible(self.__advancedSettingsShown)
-        self.leName.setVisible(self.__advancedSettingsShown)
-        self.lbUrl.setVisible(self.__advancedSettingsShown)
-        self.leUrl.setVisible(self.__advancedSettingsShown)
+    def __name_changed_finished(self):
+        self.__user_change_connection_name = True
 
     @property
     def ngw_connection_settings(self):
         return self.ngw_conn_sett
 
-    def accept(self):
-        if not self.__advancedSettingsShown:
-            url = "%s.nextgis.com" % self.leWebGIS.text()
-            name = self.leWebGIS.text()
-        else:
-            url = self.leUrl.text()
-            name = self.leName.text()
+    def __validate_fields(self):
+        if not self.__user_try_accept:
+            return True
 
-        if url[0:7] != "http://":
-            url = "http://%s" % url
+        validation_result = True
+        url = self.leUrl.text()
+        if url == "":
+            self.leUrl.setStyleSheet("background-color: #FFCCCC")
+            self.leUrl.setPlaceholderText(self.tr("Fill it!"))
+
+            validation_result = False
+        else:
+            self.leUrl.setStyleSheet("background-color: None")
+        name = self.leName.text()
+        if name == "":
+            self.leName.setStyleSheet("background-color: #FFCCCC")
+            self.leName.setPlaceholderText(self.tr("Fill it!"))
+
+            validation_result = False
+        else:
+            self.leName.setStyleSheet("background-color: None")
+
+        return validation_result
+
+    def accept(self):
+        self.__user_try_accept = True
+        if not self.__validate_fields():
+            return
+
+        url = self.leUrl.text()
+        name = self.leName.text()
+
+        url = self.__make_valid_url(url)
 
         user = ""
         passward = ""
