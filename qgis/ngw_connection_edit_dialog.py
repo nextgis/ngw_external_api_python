@@ -26,9 +26,11 @@ import os
 from urlparse import urlparse
 
 from PyQt4 import uic
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QDialog, QStringListModel, QCompleter
+from PyQt4.QtCore import Qt, QObject, pyqtSignal, QThread
+from PyQt4.QtGui import QDialog, QStringListModel, QCompleter, QDialogButtonBox
 from ..core.ngw_connection_settings import NGWConnectionSettings
+from ..core.ngw_resource_factory import NGWResourceFactory
+from ..qgis.ngw_plugin_settings import NgwPluginSettings
 
 __author__ = 'NextGIS'
 __date__ = 'October 2014'
@@ -62,14 +64,19 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         self.setupUi(self)
 
+        self.lbConnectionTesting.setVisible(False)
+        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+
         self.completer_model = QStringListModel()
         completer = QCompleter()
         completer.setModel(self.completer_model)
+        completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
         self.leUrl.setCompleter(completer)
 
         self.cbAsGuest.stateChanged.connect(self.__cbAsGuestChecked)
         self.leUrl.textChanged.connect(self.__autocomplete_url)
         self.leUrl.textChanged.connect(self.__fill_conneection_name)
+        self.leUrl.editingFinished.connect(self.__check_connection)
 
         self.leName.textChanged.connect(self.__name_changed_process)
         self.__user_change_connection_name = False
@@ -94,9 +101,14 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             self.leUser.setText("administrator")
 
     def __autocomplete_url(self, text):
+        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+
         text_complete = self._default_server_suffix
 
-        first_point_pos = text.find('.')
+        if any(char in text for char in [':', '\\', '/']):
+            return
+
+        first_point_pos = text.find(self._default_server_suffix[0])
         if first_point_pos != -1:
             text_after_point = text[first_point_pos:]
 
@@ -168,6 +180,44 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         return validation_result
 
+    def __check_connection(self):
+        name = "temp"
+        url = self.leUrl.text()
+        url = self.__make_valid_url(url)
+        user = ""
+        passward = ""
+
+        ngw_conn_sett = NGWConnectionSettings(
+            name,
+            url,
+            user,
+            passward
+        )
+
+        pinger = NGWPinger(ngw_conn_sett)
+        thread = QThread(self)
+        thread.started.connect(pinger.run)
+
+        pinger.finished.connect(thread.deleteLater)
+        pinger.getResult.connect(self.__process_ping_result)
+
+        self.lbConnectionTesting.setVisible(True)
+        self.lbConnectionTesting.setStyleSheet("color: None")
+        self.lbConnectionTesting.setText(self.tr("Connection test..."))
+        thread.start()
+
+        self.thread = thread
+        self.pinger = pinger
+
+    def __process_ping_result(self, ping_result):
+        if ping_result is True:
+            self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
+            self.lbConnectionTesting.setText(self.tr("Connection success."))
+            self.lbConnectionTesting.setStyleSheet("color: green")
+        else:
+            self.lbConnectionTesting.setText(self.tr("Connection faild! Please check the URL."))
+            self.lbConnectionTesting.setStyleSheet("color: red")
+
     def accept(self):
         self.__user_try_accept = True
         if not self.__validate_fields():
@@ -191,3 +241,25 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             passward)
 
         QDialog.accept(self)
+
+
+class NGWPinger(QObject):
+    getResult = pyqtSignal(bool)
+    finished = pyqtSignal()
+
+    def __init__(self, ngw_connection_settings):
+        super(NGWPinger, self).__init__()
+        self.__ngw_connection_settings = ngw_connection_settings
+
+    def run(self):
+        rsc_factory = NGWResourceFactory(
+            self.__ngw_connection_settings
+        )
+
+        try:
+            rsc_factory.get_root_resource()
+            self.getResult.emit(True)
+        except:
+            self.getResult.emit(False)
+
+        self.finished.emit()

@@ -46,14 +46,7 @@
         <property name="topMargin">
          <number>0</number>
         </property>
-        <item row="3" column="0">
-         <widget class="QLabel" name="lbUser">
-          <property name="text">
-           <string>User name</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="2">
+        <item row="5" column="2">
          <widget class="QLineEdit" name="lePassword">
           <property name="echoMode">
            <enum>QLineEdit::Password</enum>
@@ -61,6 +54,13 @@
          </widget>
         </item>
         <item row="4" column="0">
+         <widget class="QLabel" name="lbUser">
+          <property name="text">
+           <string>User name</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
          <widget class="QLabel" name="lbPassword">
           <property name="text">
            <string>Password</string>
@@ -68,13 +68,6 @@
          </widget>
         </item>
         <item row="3" column="2">
-         <widget class="QLineEdit" name="leUser">
-          <property name="text">
-           <string>administrator</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2">
          <widget class="QCheckBox" name="cbAsGuest">
           <property name="text">
            <string>As guest</string>
@@ -84,15 +77,12 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="lbName">
+        <item row="4" column="2">
+         <widget class="QLineEdit" name="leUser">
           <property name="text">
-           <string>Name</string>
+           <string>administrator</string>
           </property>
          </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QLineEdit" name="leName"/>
         </item>
         <item row="0" column="0">
          <widget class="QLabel" name="lbUrl">
@@ -101,12 +91,39 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="2">
-         <widget class="QLineEdit" name="leUrl">
-          <property name="placeholderText">
-           <string>connection addres (e.g. mygis.nextgis.com)</string>
+        <item row="2" column="0">
+         <widget class="QLabel" name="lbName">
+          <property name="text">
+           <string>Name</string>
           </property>
          </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QLineEdit" name="leName"/>
+        </item>
+        <item row="0" column="2">
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QLineEdit" name="leUrl">
+            <property name="placeholderText">
+             <string>connection addres (e.g. mygis.nextgis.com)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lbConnectionTesting">
+            <property name="text">
+             <string>Connection testing</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
