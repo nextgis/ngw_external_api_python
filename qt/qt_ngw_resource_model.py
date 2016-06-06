@@ -207,6 +207,14 @@ class QNGWResourcesModelExt(QAbstractItemModel):
 
         return parent_item.childCount() > 0
 
+    def flags(self, index):
+        if index and index.isValid():
+            item = index.internalPointer()
+            if not isinstance(item, AuxiliaryItem):
+                return Qt.ItemIsEnabled
+
+        return Qt.NoItemFlags
+
     def _nearest_ngw_group_resource_parent(self, index):
         checking_index = index
         item = checking_index.internalPointer()
