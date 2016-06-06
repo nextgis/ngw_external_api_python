@@ -19,21 +19,37 @@
  ***************************************************************************/
 """
 
-import requests
 import json
+import requests
+from base64 import b64encode
+from requests.utils import to_native_string
+
 from ngw_error import NGWError
 
 UPLOAD_FILE_URL = '/api/component/file_upload/upload'
+
+
+def _basic_auth_str(username, password):
+    """Returns a Basic Auth string."""
+
+    authstr = 'Basic ' + to_native_string(
+        b64encode(('%s:%s' % (username, password)).encode('utf-8')).strip()
+    )
+
+    return authstr
+
 
 class NGWConnection(object):
 
     def __init__(self):
         self.__server_url = None
         self.__session = requests.Session()
+        self.__auth = ("", "")
 
     def __init__(self, conn_settings):
         self.__server_url = None
         self.__session = requests.Session()
+        self.__auth = ("", "")
         self.set_from_settings(conn_settings)
 
     def set_from_settings(self, conn_settings):
@@ -52,10 +68,12 @@ class NGWConnection(object):
             self.__server_url = value
 
     def set_auth(self, username, password):
-        self.__session.auth = (username, password)
+        # self.__session.auth = (username, password)
+        self.__auth = (username, password)
 
     def get_auth(self):
-        return self.__session.auth
+        # return self.__session.auth
+        self.__auth
 
     def __request(self, sub_url, method, params=None, **kwargs):
         payload = None
@@ -68,8 +86,10 @@ class NGWConnection(object):
         json_data = None
         if 'json' in kwargs:
             json_data = kwargs['json']
-        
+
         req = requests.Request(method, self.server_url + sub_url, data=payload, json=json_data)
+        req.headers['Authorization'] = _basic_auth_str(self.__auth[0], self.__auth[1])
+
         prep = self.__session.prepare_request(req)
         
         try:
