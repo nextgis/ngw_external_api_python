@@ -73,7 +73,7 @@ class NGWConnection(object):
 
     def get_auth(self):
         # return self.__session.auth
-        self.__auth
+        return self.__auth
 
     def __request(self, sub_url, method, params=None, **kwargs):
         payload = None
