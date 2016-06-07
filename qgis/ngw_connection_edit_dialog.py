@@ -56,16 +56,22 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
     ::return
     If accept, DialogInstance.ngw_connection_settings contains edited instance
     """
-    def __init__(self, parent=None, ngw_connection_settings=None):
+    def __init__(self, parent=None, ngw_connection_settings=None, only_password_change=False):
         super(NGWConnectionEditDialog, self).__init__(parent)
 
         self._default_server_suffix = ".nextgis.com"
         self.__user_try_accept = False
+        self.__only_password_change = only_password_change
 
         self.setupUi(self)
 
         self.lbConnectionTesting.setVisible(False)
         self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+
+        if self.__only_password_change:
+            self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
+            self.leUrl.setEnabled(False)
+            self.leName.setEnabled(False)
 
         self.completer_model = QStringListModel()
         completer = QCompleter()
@@ -77,7 +83,6 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.leUrl.textChanged.connect(self.__autocomplete_url)
         self.leUrl.textChanged.connect(self.__fill_conneection_name)
         self.leUrl.editingFinished.connect(self.__check_connection)
-
         self.leName.textChanged.connect(self.__name_changed_process)
         self.__user_change_connection_name = False
         self.leName.editingFinished.connect(self.__name_changed_finished)
@@ -101,7 +106,8 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             self.leUser.setText("administrator")
 
     def __autocomplete_url(self, text):
-        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        if not self.__only_password_change:
+            self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
 
         text_complete = self._default_server_suffix
 
@@ -215,7 +221,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             self.lbConnectionTesting.setText(self.tr("Connection success."))
             self.lbConnectionTesting.setStyleSheet("color: green")
         else:
-            self.lbConnectionTesting.setText(self.tr("Connection faild! Please check the URL."))
+            self.lbConnectionTesting.setText(self.tr("Connection failed! Please check the URL."))
             self.lbConnectionTesting.setStyleSheet("color: red")
 
     def accept(self):

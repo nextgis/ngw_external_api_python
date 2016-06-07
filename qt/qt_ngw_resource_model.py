@@ -211,7 +211,7 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         if index and index.isValid():
             item = index.internalPointer()
             if not isinstance(item, AuxiliaryItem):
-                return Qt.ItemIsEnabled
+                return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         return Qt.NoItemFlags
 
