@@ -312,6 +312,9 @@ class QNGWResourcesModelExt(QAbstractItemModel):
         self.rowsInserted.emit(index, c, c + len(ngw_resources) - 1)
 
     def tryCreateNGWGroup(self, new_group_name, parent_index):
+        if not parent_index.isValid():
+            parent_index = self.index(0, 0, parent_index)
+
         parent_index = self._nearest_ngw_group_resource_parent(parent_index)
 
         parent_item = parent_index.internalPointer()
