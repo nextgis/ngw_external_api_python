@@ -263,7 +263,7 @@ class NGWPinger(QObject):
         )
 
         try:
-            rsc_factory.get_root_resource()
+            rsc_factory.get_ngw_verson()
             self.getResult.emit(True)
         except:
             self.getResult.emit(False)

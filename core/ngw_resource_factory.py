@@ -28,6 +28,8 @@ from ngw_wfs_service import NGWWfsService
 from ngw_resource import NGWResource
 from ngw_connection import NGWConnection
 
+API_NGW_VERSION = '/api/component/pyramid/pkg_version'
+
 
 class NGWResourceFactory():
 
@@ -65,3 +67,6 @@ class NGWResourceFactory():
 
     def get_root_resource(self):
         return self.get_resource(0)
+
+    def get_ngw_verson(self):
+        return self.__conn.get(API_NGW_VERSION)
