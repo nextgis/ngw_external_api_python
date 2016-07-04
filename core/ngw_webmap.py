@@ -96,12 +96,13 @@ class NGWWebMapLayer(NGWWebMapItem):
 
 
 class NGWWebMapGroup(NGWWebMapItem):
-    def __init__(self, display_name):
+    def __init__(self, display_name, expanded=True):
         NGWWebMapItem.__init__(self, NGWWebMapItem.ITEM_TYPE_GROUP)
         self.display_name = display_name
+        self.expanded = expanded
 
     def _attributes(self):
         return dict(
             display_name=self.display_name,
-            group_expanded=None,
+            group_expanded=self.expanded,
         )

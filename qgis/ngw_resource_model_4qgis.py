@@ -143,8 +143,9 @@ class QGISResourceJob(NGWResourceModelJob):
         QgsMessageLog.logMessage("export_to_shapefile layer_type: %d (%d)" % (layer_type, qgs_map_layer.VectorLayer))
         if layer_type == qgs_map_layer.VectorLayer:
             layer_provider = qgs_map_layer.providerType()
-            QgsMessageLog.logMessage("export_to_shapefile layer_provider: %s" % layer_provider)
-            if layer_provider == 'ogr':
+            # QgsMessageLog.logMessage("export_to_shapefile layer_provider: %s" % layer_provider)
+            if layer_provider in ['ogr', 'memory']:
+                QgsMessageLog.logMessage("Import layer %s (%s)" % (layer_name, layer_provider, ))
                 # Import as shape ----
                 # source = export_to_shapefile(qgs_map_layer)
                 # QgsMessageLog.logMessage("export_to_shapefile source: %s" % source)
@@ -312,7 +313,10 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                             group_name
                         )
 
-                        ngw_webmap_child_group = NGWWebMapGroup(group_name)
+                        ngw_webmap_child_group = NGWWebMapGroup(
+                            group_name,
+                            qgsLayerTreeItem.isExpanded()
+                        )
                         ngw_webmap_item.appendChild(
                             ngw_webmap_child_group
                         )
