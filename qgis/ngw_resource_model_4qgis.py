@@ -142,6 +142,10 @@ class QGISResourceJob(NGWResourceModelJob):
         layer_type = qgs_map_layer.type()
         QgsMessageLog.logMessage("export_to_shapefile layer_type: %d (%d)" % (layer_type, qgs_map_layer.VectorLayer))
         if layer_type == qgs_map_layer.VectorLayer:
+            if qgs_map_layer.geometryType() in [QGis.NoGeometry, QGis.UnknownGeometry]:
+                QgsMessageLog.logMessage("Vector layer '%s' has no geometry" % (layer_name, ))
+                return None
+
             layer_provider = qgs_map_layer.providerType()
             # QgsMessageLog.logMessage("export_to_shapefile layer_provider: %s" % layer_provider)
             if layer_provider in ['ogr', 'memory']:
