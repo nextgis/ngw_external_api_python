@@ -148,7 +148,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
             layer_provider = qgs_map_layer.providerType()
             # QgsMessageLog.logMessage("export_to_shapefile layer_provider: %s" % layer_provider)
-            if layer_provider in ['ogr', 'memory']:
+            if layer_provider in ['ogr', 'memory', 'delimitedtext']:
                 QgsMessageLog.logMessage("Import layer %s (%s)" % (layer_name, layer_provider, ))
                 # Import as shape ----
                 # source = export_to_shapefile(qgs_map_layer)
