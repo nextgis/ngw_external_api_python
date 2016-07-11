@@ -37,6 +37,8 @@ from ..qt.qt_ngw_resource_item import *
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
 from ..core.ngw_resource_creator import ResourceCreator
 
+from __init__ import qgisLog
+
 
 class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
     qgisProjectImportStarted = QtCore.pyqtSignal()
@@ -135,12 +137,17 @@ class QGISResourceJob(NGWResourceModelJob):
             zf.close()
             return tmp
 
+        ngw_parent_resource.update()
+
         layer_name = qgs_map_layer.name()
+        qgisLog("Try import layer: %s" % (layer_name, ))
+
         chd_names = [ch.common.display_name for ch in ngw_parent_resource.get_children()]
+        qgisLog("chd_names: %s" % (chd_names, ))
+
         new_layer_name = self.generate_unique_name(layer_name, chd_names)
 
         layer_type = qgs_map_layer.type()
-        QgsMessageLog.logMessage("export_to_shapefile layer_type: %d (%d)" % (layer_type, qgs_map_layer.VectorLayer))
         if layer_type == qgs_map_layer.VectorLayer:
             if qgs_map_layer.geometryType() in [QGis.NoGeometry, QGis.UnknownGeometry]:
                 QgsMessageLog.logMessage("Vector layer '%s' has no geometry" % (layer_name, ))
@@ -347,10 +354,10 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             self.done.emit()
 
         except NGWError as e:
-            self.errorOccurred.emit(e.message)
+            self.errorOccurred.emit(e)
 
         except Exception as e:
-            self.errorOccurred.emit(str(e))
+            self.errorOccurred.emit(e)
 
         self.finished.emit()
 

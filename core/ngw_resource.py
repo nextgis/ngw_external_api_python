@@ -118,3 +118,10 @@ class NGWResource():
 
     def get_api_collection_url(self):
         return API_COLLECTION_URL
+
+    def update(self):
+        self._json = self.receive_resource_obj(
+            self._res_factory.connection,
+            self.common.id
+        )
+        self._construct()
