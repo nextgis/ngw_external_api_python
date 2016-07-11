@@ -26,11 +26,13 @@ import os
 from urlparse import urlparse
 
 from PyQt4 import uic
-from PyQt4.QtCore import Qt, QObject, pyqtSignal, QThread
-from PyQt4.QtGui import QDialog, QStringListModel, QCompleter, QDialogButtonBox
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
 from ..core.ngw_connection_settings import NGWConnectionSettings
 from ..core.ngw_resource_factory import NGWResourceFactory
 from ..qgis.ngw_plugin_settings import NgwPluginSettings
+
+from __init__ import qgisLog
 
 __author__ = 'NextGIS'
 __date__ = 'October 2014'
@@ -76,13 +78,19 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.completer_model = QStringListModel()
         completer = QCompleter()
         completer.setModel(self.completer_model)
-        completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
+        completer.setCompletionMode(QCompleter.PopupCompletion)
         self.leUrl.setCompleter(completer)
 
         self.cbAsGuest.stateChanged.connect(self.__cbAsGuestChecked)
         self.leUrl.textChanged.connect(self.__autocomplete_url)
         self.leUrl.textChanged.connect(self.__fill_conneection_name)
-        self.leUrl.editingFinished.connect(self.__check_connection)
+
+        self.timerUrlChange = QTimer()
+        self.timerUrlChange.setSingleShot(True)
+        self.timerUrlChange.setInterval(500)
+        self.timerUrlChange.timeout.connect(self.__try_check_connection)
+        self.leUrl.textChanged.connect(self.timerUrlChange.start)
+
         self.leName.textChanged.connect(self.__name_changed_process)
         self.__user_change_connection_name = False
         self.leName.editingFinished.connect(self.__name_changed_finished)
@@ -105,6 +113,9 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         else:
             self.leUser.setText("administrator")
 
+        self.mutexPing = QMutex()
+        self.needNextPing = False
+
     def __autocomplete_url(self, text):
         if not self.__only_password_change:
             self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
@@ -112,6 +123,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         text_complete = self._default_server_suffix
 
         if any(char in text for char in [':', '\\', '/']):
+            self.completer_model.setStringList([])
             return
 
         first_point_pos = text.find(self._default_server_suffix[0])
@@ -121,6 +133,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             if text_complete.find(text_after_point) == 0:
                 text_complete = text_complete[len(text_after_point):]
             else:
+                self.completer_model.setStringList([])
                 return
         self.completer_model.setStringList([text + text_complete])
         self.__validate_fields()
@@ -186,25 +199,35 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         return validation_result
 
+    def __try_check_connection(self):
+        # qgisLog("__try_check_connection")
+        if not self.mutexPing.tryLock():
+            self.needNextPing = True
+            return
+        self.__check_connection()
+
     def __check_connection(self):
+        # qgisLog("__check_connection")
         name = "temp"
         url = self.leUrl.text()
         url = self.__make_valid_url(url)
         user = ""
-        passward = ""
+        password = ""
 
         ngw_conn_sett = NGWConnectionSettings(
             name,
             url,
             user,
-            passward
+            password
         )
 
         pinger = NGWPinger(ngw_conn_sett)
         thread = QThread(self)
+        pinger.moveToThread(thread)
         thread.started.connect(pinger.run)
 
         pinger.finished.connect(thread.deleteLater)
+        pinger.finished.connect(self.__process_ping_finish)
         pinger.getResult.connect(self.__process_ping_result)
 
         self.lbConnectionTesting.setVisible(True)
@@ -216,13 +239,23 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.pinger = pinger
 
     def __process_ping_result(self, ping_result):
+        # qgisLog("__process_ping_result")
         if ping_result is True:
             self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
             self.lbConnectionTesting.setText(self.tr("Connection success."))
             self.lbConnectionTesting.setStyleSheet("color: green")
         else:
-            self.lbConnectionTesting.setText(self.tr("Connection failed! Please check the URL."))
+            # self.lbConnectionTesting.setText(self.tr("Connection failed! Please check the URL."))
+            self.lbConnectionTesting.setText(self.tr("Specified URL webgis not found! Or your webgis version is below 3"))
             self.lbConnectionTesting.setStyleSheet("color: red")
+
+    def __process_ping_finish(self):
+        # qgisLog("__process_ping_finish")
+        if self.needNextPing:
+            self.needNextPing = False
+            self.__check_connection()
+
+        self.mutexPing.unlock()
 
     def accept(self):
         self.__user_try_accept = True
@@ -267,5 +300,4 @@ class NGWPinger(QObject):
             self.getResult.emit(True)
         except:
             self.getResult.emit(False)
-
         self.finished.emit()
