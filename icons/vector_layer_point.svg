@@ -1,0 +1,20 @@
+<svg width="24.000000000000004" height="24.000000000000004" xmlns="http://www.w3.org/2000/svg">
+ <title>ring fill</title>
+
+ <metadata id="metadata5697">image/svg+xmlring fill2014-02-04Robert Szczepanekring fillGIS icons 0.2</metadata>
+ <g>
+  <title>background</title>
+  <rect fill="none" id="canvas_background" height="402" width="582" y="-1" x="-1"/>
+ </g>
+ <g>
+  <title>Layer 1</title>
+  <g display="inline" id="layer4">
+   <g id="g3221">
+    <path opacity="0.3" fill="#fcffff" fill-rule="evenodd" d="m14,19l9,-0.0096c0,0 0,0 0,-2c0,-2.9904 -1,-2.9904 -4.5,-2.9904c-3.5,0 -4.5,0 -4.5,3c0,2 0,2 0,2z" id="path4133"/>
+   </g>
+   <rect fill="#8cbe8c" stroke="#4c4d4c" stroke-width="1" stroke-linecap="round" stroke-miterlimit="4" stroke-opacity="0.933333" ry="3.125" rx="3.125" y="9.5" x="1.5" height="5" width="5" id="rect4294"/>
+   <rect fill="#8cbe8c" stroke="#4b4c4b" stroke-width="1" stroke-linecap="round" stroke-miterlimit="4" stroke-opacity="0.956863" ry="3.125" rx="3.125" y="1.5" x="8.5" height="5" width="5" id="rect4294-9"/>
+   <rect fill="#8cbe8c" stroke="#4c4d4c" stroke-width="1" stroke-linecap="round" stroke-miterlimit="4" stroke-opacity="0.933333" ry="3.125" rx="3.125" y="3.5" x="17.5" height="5" width="5" id="rect4294-9-0"/>
+  </g>
+ </g>
+</svg>
