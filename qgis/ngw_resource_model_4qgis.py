@@ -360,6 +360,10 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             self.iface.mapCanvas().mapRenderer().destinationCrs(),
             QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
         )
+
+        bbox = ct.transform(QgsRectangle(-179.9, -89.9, 179.9, 89.9), QgsCoordinateTransform.ReverseTransform)
+        rectangle = rectangle.intersect(bbox)
+
         rectangle = ct.transform(rectangle)
 
         ngw_webmap_items_as_dicts = [item.toDict() for item in ngw_webmap_items]
