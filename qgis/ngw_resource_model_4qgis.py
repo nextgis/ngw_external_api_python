@@ -26,13 +26,16 @@ import zipfile
 import tempfile
 import functools
 
-from PyQt4 import QtCore
+from PyQt4.QtCore import *
 
 from qgis.core import *
 from qgis.gui import *
 
-from ..qt.qt_ngw_resource_model import *
-from ..qt.qt_ngw_resource_item import *
+# from ..qt.qt_ngw_resource_model import *
+# from ..qt.qt_ngw_resource_edit_model import *
+# from ..qt.qt_ngw_resource_item import *
+from ..qt.qt_ngw_resource_edit_model import QNGWResourcesModel
+from ..qt.qt_ngw_resource_model_job import NGWResourceModelJob
 
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
 from ..core.ngw_resource_creator import ResourceCreator
@@ -40,15 +43,16 @@ from ..core.ngw_resource_creator import ResourceCreator
 from __init__ import qgisLog
 
 
-class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
-    qgisProjectImportStarted = QtCore.pyqtSignal()
-    qgisProjectImportFinished = QtCore.pyqtSignal()
+class QNGWResourcesModel4QGIS(QNGWResourcesModel):
+    JOB_IMPORT_QGIS_RESOURCE = "IMPORT_QGIS_RESOURCE"
+    JOB_IMPORT_QGIS_PROJECT = "IMPORT_QGIS_PROJECT"
 
-    JOB_IMPORT_QGIS_RESOURCE = 100
-    JOB_IMPORT_QGIS_PROJECT = 101
+    def __init__(self, parent):
+        QNGWResourcesModel.__init__(self, parent)
 
-    def __init__(self):
-        QNGWResourcesModelExt.__init__(self)
+    # def __del__(self):
+    #     print "QNGWResourcesModel4QGIS __del__"
+    #     QNGWResourcesModel.__del__(self)
 
     def createNGWLayer(self, qgs_map_layer, parent_index):
         if not parent_index.isValid():
@@ -61,14 +65,22 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
 
         worker = QGISResourceImporter(qgs_map_layer, ngw_parent_resource)
         self._stratJobOnNGWResource(
+            parent_index,
             worker,
             self.JOB_IMPORT_QGIS_RESOURCE,
-            functools.partial(self.__resourceImportFinished, parent_index),
-            parent_index
+            [self.__importFinished],
         )
 
-    def __resourceImportFinished(self, parent_index, ngw_resource):
-        self._reloadChildren(parent_index)
+    def __importFinished(self):
+        job_index = self._getJobIndexByJob(self.sender())
+        if job_index == -1:
+            return
+
+        (index, job) = self.jobs.pop(
+            job_index
+        )
+
+        self._reloadChildren(index)
 
     def tryImportCurentQGISProject(self, ngw_group_name, parent_index, iface):
         if not parent_index.isValid():
@@ -81,14 +93,11 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModelExt):
 
         worker = CurrentQGISProjectImporter(ngw_group_name, ngw_resource_parent, iface)
         self._stratJobOnNGWResource(
+            parent_index,
             worker,
             self.JOB_IMPORT_QGIS_PROJECT,
-            functools.partial(self.__importFinished, parent_index),
-            parent_index
+            [self.__importFinished],
         )
-
-    def __importFinished(self, parent_index):
-        self._reloadChildren(parent_index)
 
 
 class QGISResourceJob(NGWResourceModelJob):
@@ -218,16 +227,12 @@ class QGISResourceJob(NGWResourceModelJob):
 
 
 class QGISResourceImporter(QGISResourceJob):
-    done = pyqtSignal(object)
-
     def __init__(self, qgs_map_layer, ngw_parent_resource):
         QGISResourceJob.__init__(self)
         self.qgs_map_layer = qgs_map_layer
         self.ngw_parent_resource = ngw_parent_resource
 
-    def run(self):
-        self.started.emit()
-
+    def _do(self):
         try:
             ngw_resource = self.importQGISMapLayer(
                 self.qgs_map_layer,
@@ -239,7 +244,7 @@ class QGISResourceImporter(QGISResourceJob):
                 ngw_resource
             )
 
-            self.done.emit(ngw_resource)
+            self.dataReceived.emit(ngw_resource)
 
         except NGWError as e:
             self.errorOccurred.emit(e.message)
@@ -247,21 +252,15 @@ class QGISResourceImporter(QGISResourceJob):
         except Exception as e:
             self.errorOccurred.emit(str(e))
 
-        self.finished.emit()
-
 
 class CurrentQGISProjectImporter(QGISResourceJob):
-    done = pyqtSignal()
-
     def __init__(self, new_group_name, ngw_resource_parent, iface):
         QGISResourceJob.__init__(self)
         self.new_group_name = new_group_name
         self.ngw_resource_parent = ngw_resource_parent
         self.iface = iface
 
-    def run(self):
-        self.started.emit()
-
+    def _do(self):
         current_project = QgsProject.instance()
 
         try:
@@ -303,7 +302,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                             NGWWebMapLayer(
                                 ngw_style_resource.common.id,
                                 qgsLayerTreeItem.layer().name(),
-                                qgsLayerTreeItem.isVisible() == QtCore.Qt.Checked
+                                qgsLayerTreeItem.isVisible() == Qt.Checked
                             )
                         )
 
@@ -350,16 +349,10 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                 self.new_group_name + u"-webmap",
                 ngw_webmap_root_group.children
             )
-
-            self.done.emit()
-
         except NGWError as e:
             self.errorOccurred.emit(e)
-
         except Exception as e:
             self.errorOccurred.emit(e)
-
-        self.finished.emit()
 
     def add_webmap(self, ngw_resource, ngw_webmap_name, ngw_webmap_items):
         rectangle = self.iface.mapCanvas().extent()
