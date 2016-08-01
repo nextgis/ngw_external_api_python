@@ -95,7 +95,7 @@ class NGWConnection(object):
         try:
             resp = self.__session.send(prep)
         except requests.exceptions.RequestException, e:
-            raise NGWError(e.message.args[0])
+            raise NGWError(e.args[0])
 
         if resp.status_code / 100 != 2:
             raise NGWError(resp.content)

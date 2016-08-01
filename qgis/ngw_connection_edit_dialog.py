@@ -30,7 +30,6 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from ..core.ngw_connection_settings import NGWConnectionSettings
 from ..core.ngw_resource_factory import NGWResourceFactory
-from ..qgis.ngw_plugin_settings import NgwPluginSettings
 
 from __init__ import qgisLog
 
@@ -82,8 +81,8 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.leUrl.setCompleter(completer)
 
         self.cbAsGuest.stateChanged.connect(self.__cbAsGuestChecked)
-        self.leUrl.textChanged.connect(self.__autocomplete_url)
-        self.leUrl.textChanged.connect(self.__fill_conneection_name)
+        self.leUrl.textEdited.connect(self.__url_changed)
+        self.leUrl.textEdited.connect(self.__fill_conneection_name)
 
         self.timerUrlChange = QTimer()
         self.timerUrlChange.setSingleShot(True)
@@ -115,6 +114,11 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         self.mutexPing = QMutex()
         self.needNextPing = False
+
+    def __url_changed(self, text):
+        lower_test = text.lower()
+        self.leUrl.setText(lower_test)
+        self.__autocomplete_url(lower_test)
 
     def __autocomplete_url(self, text):
         if not self.__only_password_change:
@@ -221,22 +225,19 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             password
         )
 
-        pinger = NGWPinger(ngw_conn_sett)
-        thread = QThread(self)
-        pinger.moveToThread(thread)
-        thread.started.connect(pinger.run)
+        self.pinger = NGWPinger(ngw_conn_sett)
+        self.thread = QThread(self)
+        self.pinger.moveToThread(self.thread)
+        self.thread.started.connect(self.pinger.run)
 
-        pinger.finished.connect(thread.deleteLater)
-        pinger.finished.connect(self.__process_ping_finish)
-        pinger.getResult.connect(self.__process_ping_result)
+        self.pinger.getResult.connect(self.__process_ping_result)
+        self.pinger.finished.connect(self.__process_ping_finish)
+        self.pinger.finished.connect(self.thread.quit)
 
         self.lbConnectionTesting.setVisible(True)
         self.lbConnectionTesting.setStyleSheet("color: None")
         self.lbConnectionTesting.setText(self.tr("Connection test..."))
-        thread.start()
-
-        self.thread = thread
-        self.pinger = pinger
+        self.thread.start()
 
     def __process_ping_result(self, ping_result):
         # qgisLog("__process_ping_result")
@@ -297,7 +298,11 @@ class NGWPinger(QObject):
 
         try:
             rsc_factory.get_ngw_verson()
+            qgisLog(".emit(True)")
             self.getResult.emit(True)
         except:
+            qgisLog(".emit(False)")
             self.getResult.emit(False)
+
+        qgisLog(".emit()")
         self.finished.emit()
