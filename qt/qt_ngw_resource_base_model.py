@@ -75,6 +75,14 @@ class NGWResourcesModelJob(QObject):
         self.__thread.start()
 
 
+class QNGWResourcesModelExeption(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
+
 class QNGWResourcesBaseModel(QAbstractItemModel):
     jobStarted = pyqtSignal(unicode)
     jobStatusChanged = pyqtSignal(unicode, unicode)
@@ -239,9 +247,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         job.started.connect(
             self.__jobStartedProcess
         )
-        # job.statusChanged.connect(
-        #     self.__jobStatusChangedProcess
-        # )
+        job.statusChanged.connect(
+            self.__jobStatusChangedProcess
+        )
         job.finished.connect(
             self.__jobFinishedProcess
         )

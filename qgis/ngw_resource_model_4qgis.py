@@ -22,6 +22,7 @@
 """
 import os
 import glob
+import shutil
 import zipfile
 import tempfile
 
@@ -33,6 +34,7 @@ from qgis.gui import *
 # from ..qt.qt_ngw_resource_model import *
 # from ..qt.qt_ngw_resource_edit_model import *
 # from ..qt.qt_ngw_resource_item import *
+from ..qt.qt_ngw_resource_base_model import QNGWResourcesModelExeption
 from ..qt.qt_ngw_resource_edit_model import QNGWResourcesModel
 from ..qt.qt_ngw_resource_model_job import NGWResourceModelJob
 
@@ -102,85 +104,16 @@ class QGISResourceJob(NGWResourceModelJob):
         NGWResourceModelJob.__init__(self)
 
     def importQGISMapLayer(self, qgs_map_layer, ngw_parent_resource):
-        def export_to_json(qgs_vector_layer):
-            tmp = tempfile.mktemp('.geojson')
-            import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
-            # QgsMessageLog.logMessage("export_to_shapefile: %s" % qgs_vector_layer.crs().authid())
-            # QgsMessageLog.logMessage("export_to_shapefile: %s" % import_crs.authid())
-            QgsVectorFileWriter.writeAsVectorFormat(
-                qgs_vector_layer,
-                tmp,
-                'utf-8',
-                import_crs,
-                'GeoJSON'
-            )
-            return tmp
-
-        def export_to_shapefile(qgs_vector_layer):
-            tmp = tempfile.mktemp('.shp')
-
-            import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
-            QgsMessageLog.logMessage("export_to_shapefile: %s" % qgs_vector_layer.crs().authid())
-            QgsMessageLog.logMessage("export_to_shapefile: %s" % import_crs.authid())
-            QgsVectorFileWriter.writeAsVectorFormat(
-                qgs_vector_layer,
-                tmp,
-                'utf-8',
-                import_crs,
-            )
-            return tmp
-
-        def compress_shapefile(filepath):
-            tmp = tempfile.mktemp('.zip')
-            basePath = os.path.splitext(filepath)[0]
-            baseName = os.path.splitext(os.path.basename(filepath))[0]
-
-            zf = zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED)
-            for i in glob.iglob(basePath + '.*'):
-                ext = os.path.splitext(i)[1]
-                zf.write(i, baseName + ext)
-
-            zf.close()
-            return tmp
-
         ngw_parent_resource.update()
 
         layer_name = qgs_map_layer.name()
-
         chd_names = [ch.common.display_name for ch in ngw_parent_resource.get_children()]
-
         new_layer_name = self.generate_unique_name(layer_name, chd_names)
 
         layer_type = qgs_map_layer.type()
         if layer_type == qgs_map_layer.VectorLayer:
-            if qgs_map_layer.geometryType() in [QGis.NoGeometry, QGis.UnknownGeometry]:
-                QgsMessageLog.logMessage("Vector layer '%s' has no geometry" % (layer_name, ))
-                return None
+            return self.importQgsVectorLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)
 
-            layer_provider = qgs_map_layer.providerType()
-            # QgsMessageLog.logMessage("export_to_shapefile layer_provider: %s" % layer_provider)
-            if layer_provider in ['ogr', 'memory', 'delimitedtext']:
-                QgsMessageLog.logMessage("Import layer %s (%s)" % (layer_name, layer_provider, ))
-                # Import as shape ----
-                # source = export_to_shapefile(qgs_map_layer)
-                # QgsMessageLog.logMessage("export_to_shapefile source: %s" % source)
-                # filepath = compress_shapefile(source)
-                # QgsMessageLog.logMessage("export_to_shapefile filepath: %s" % filepath)
-
-                # Import as GeoJSON ----
-                filepath = export_to_json(qgs_map_layer)
-                # QgsMessageLog.logMessage("export_to_shapefile filepath: %s" % filepath)
-
-                ngw_vector_layer = ResourceCreator.create_vector_layer(
-                    ngw_parent_resource,
-                    filepath,
-                    new_layer_name
-                )
-
-                # os.remove(source)
-                os.remove(filepath)
-
-                return ngw_vector_layer
         elif layer_type == QgsMapLayer.RasterLayer:
             layer_provider = qgs_map_layer.providerType()
             if layer_provider == 'gdal':
@@ -194,6 +127,85 @@ class QGISResourceJob(NGWResourceModelJob):
                 return ngw_raster_layer
 
         return None
+
+    def importQgsVectorLayer(self, qgs_vector_layer, ngw_parent_resource, new_layer_name):
+        if qgs_vector_layer.geometryType() in [QGis.NoGeometry, QGis.UnknownGeometry]:
+                self.errorOccurred.emit(
+                    QNGWResourcesModelExeption(
+                        "Vector layer '%s' has no geometry" % qgs_vector_layer.name()
+                    )
+                )
+                return None
+
+        filepath = self.prepareImportFile(qgs_vector_layer)
+
+        ngw_vector_layer = ResourceCreator.create_vector_layer(
+            ngw_parent_resource,
+            filepath,
+            new_layer_name
+        )
+
+        os.remove(filepath)
+        return ngw_vector_layer
+
+    def determineImportFormat(self, qgs_vector_layer):
+        if qgs_vector_layer.featureCount() == 0:
+            return u'ESRI Shapefile'
+
+        layer_provider = qgs_vector_layer.dataProvider()
+        if layer_provider == u'ogr':
+            if layer_provider.storageType() in [u'ESRI Shapefile', u'GeoJSON']:
+                return layer_provider.storageType()
+        else:
+            return u'GeoJSON'
+
+    def prepareImportFile(self, qgs_vector_layer):
+        import_format = self.determineImportFormat(qgs_vector_layer)
+
+        if import_format == u'ESRI Shapefile':
+            return self.prepareAsShape(qgs_vector_layer)
+        elif import_format == u'GeoJSON':
+            return self.prepareAsJSON(qgs_vector_layer)
+        else:
+            return self.prepareAsJSON(qgs_vector_layer)
+
+    def prepareAsShape(self, qgs_vector_layer):
+        tmp_dir = tempfile.mkdtemp('ngw_api_prepare_import')
+        tmp_shp = os.path.join(tmp_dir, '4import.shp')
+
+        import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
+        QgsVectorFileWriter.writeAsVectorFormat(
+            qgs_vector_layer,
+            tmp_shp,
+            'utf-8',
+            import_crs,
+        )
+
+        tmp = tempfile.mktemp('.zip')
+        basePath = os.path.splitext(tmp_shp)[0]
+        baseName = os.path.splitext(os.path.basename(tmp_shp))[0]
+
+        zf = zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED)
+        for i in glob.iglob(basePath + '.*'):
+            ext = os.path.splitext(i)[1]
+            zf.write(i, baseName + ext)
+
+        zf.close()
+        shutil.rmtree(tmp_dir)
+
+        return tmp
+
+    def prepareAsJSON(self, qgs_vector_layer):
+        tmp = tempfile.mktemp('.geojson')
+        import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
+        QgsVectorFileWriter.writeAsVectorFormat(
+            qgs_vector_layer,
+            tmp,
+            'utf-8',
+            import_crs,
+            'GeoJSON'
+        )
+        return tmp
 
     def addStyle(self, qgs_map_layer, ngw_layer_resource):
         layer_type = qgs_map_layer.type()
@@ -234,6 +246,9 @@ class QGISResourceImporter(QGISResourceJob):
                 self.ngw_parent_resource
             )
 
+            if ngw_resource is None:
+                return
+
             self.addStyle(
                 self.qgs_map_layer,
                 ngw_resource
@@ -271,8 +286,8 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                 for qgsLayerTreeItem in qgsLayerTreeItems:
 
                     if isinstance(qgsLayerTreeItem, QgsLayerTreeLayer):
-                        self.statusChanged.emit("Import curent qgis project: layer %s" % qgsLayerTreeItem.layer().name())
-                        QgsMessageLog.logMessage("Import curent qgis project: layer %s" % qgsLayerTreeItem.layer().name())
+                        self.statusChanged.emit("Import layer %s" % qgsLayerTreeItem.layer().name())
+                        # QgsMessageLog.logMessage("Import curent qgis project: layer %s" % qgsLayerTreeItem.layer().name())
                         # progressDlg.setMessage(self.tr("Import layer %s") % qgsLayerTreeItem.layer().name())
                         ngw_layer_resource = self.importQGISMapLayer(
                             qgsLayerTreeItem.layer(),
@@ -302,7 +317,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                         chd_names = [ch.common.display_name for ch in ngw_resource_group.get_children()]
 
                         group_name = qgsLayerTreeItem.name()
-                        self.statusChanged.emit("Import curent qgis project: folder %s" % group_name)
+                        self.statusChanged.emit("Import folder %s" % group_name)
 
                         if group_name in chd_names:
                             id = 1
@@ -347,7 +362,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
     def add_webmap(self, ngw_resource, ngw_webmap_name, ngw_webmap_items):
         rectangle = self.iface.mapCanvas().extent()
         ct = QgsCoordinateTransform(
-            self.iface.mapCanvas().mapRenderer().destinationCrs(),
+            self.iface.mapCanvas().mapSettings().destinationCrs(),
             QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
         )
 
