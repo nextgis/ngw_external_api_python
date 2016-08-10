@@ -115,20 +115,39 @@ class QGISResourceJob(NGWResourceModelJob):
             return self.importQgsVectorLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)
 
         elif layer_type == QgsMapLayer.RasterLayer:
-            layer_provider = qgs_map_layer.providerType()
-            if layer_provider == 'gdal':
-                filepath = qgs_map_layer.source()
-                ngw_raster_layer = ResourceCreator.create_raster_layer(
-                    ngw_parent_resource,
-                    filepath,
-                    new_layer_name
-                )
-
-                return ngw_raster_layer
+            return self.importQgsRasterLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)
 
         return None
 
+    def importQgsRasterLayer(self, qgs_raster_layer, ngw_parent_resource, new_layer_name):
+        def uploadFileCallback(total_size, readed_size):
+            self.statusChanged.emit(
+                "%s - Upload (%d %%)" % (
+                    qgs_raster_layer.name(),
+                    readed_size * 100 / total_size
+                )
+            )
+        layer_provider = qgs_raster_layer.providerType()
+        if layer_provider == 'gdal':
+            filepath = qgs_raster_layer.source()
+            ngw_raster_layer = ResourceCreator.create_raster_layer(
+                ngw_parent_resource,
+                filepath,
+                new_layer_name,
+                uploadFileCallback
+            )
+
+            return ngw_raster_layer
+
     def importQgsVectorLayer(self, qgs_vector_layer, ngw_parent_resource, new_layer_name):
+        def uploadFileCallback(total_size, readed_size):
+            self.statusChanged.emit(
+                "%s - Upload (%d %%)" % (
+                    qgs_vector_layer.name(),
+                    readed_size * 100 / total_size
+                )
+            )
+
         if qgs_vector_layer.geometryType() in [QGis.NoGeometry, QGis.UnknownGeometry]:
                 self.errorOccurred.emit(
                     QNGWResourcesModelExeption(
@@ -142,7 +161,12 @@ class QGISResourceJob(NGWResourceModelJob):
         ngw_vector_layer = ResourceCreator.create_vector_layer(
             ngw_parent_resource,
             filepath,
-            new_layer_name
+            new_layer_name,
+            uploadFileCallback
+        )
+
+        self.statusChanged.emit(
+            "%s - Finishing" % qgs_vector_layer.name()
         )
 
         os.remove(filepath)
@@ -152,15 +176,20 @@ class QGISResourceJob(NGWResourceModelJob):
         if qgs_vector_layer.featureCount() == 0:
             return u'ESRI Shapefile'
 
-        layer_provider = qgs_vector_layer.dataProvider()
-        if layer_provider == u'ogr':
-            if layer_provider.storageType() in [u'ESRI Shapefile', u'GeoJSON']:
-                return layer_provider.storageType()
-        else:
-            return u'GeoJSON'
+        # if qgs_vector_layer.providerType() == u'ogr':
+        #     layer_provider = qgs_vector_layer.dataProvider()
+        #     if layer_provider.storageType() in [u'ESRI Shapefile', u'GeoJSON']:
+        #         return layer_provider.storageType()
+        # else:
+        #     return u'GeoJSON'
+        return u'GeoJSON'
 
     def prepareImportFile(self, qgs_vector_layer):
         import_format = self.determineImportFormat(qgs_vector_layer)
+
+        self.statusChanged.emit(
+            "%s - Prepare" % qgs_vector_layer.name()
+        )
 
         if import_format == u'ESRI Shapefile':
             return self.prepareAsShape(qgs_vector_layer)
@@ -185,6 +214,10 @@ class QGISResourceJob(NGWResourceModelJob):
         basePath = os.path.splitext(tmp_shp)[0]
         baseName = os.path.splitext(os.path.basename(tmp_shp))[0]
 
+        self.statusChanged.emit(
+            "%s - Packing" % qgs_vector_layer.name()
+        )
+
         zf = zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED)
         for i in glob.iglob(basePath + '.*'):
             ext = os.path.splitext(i)[1]
@@ -208,6 +241,17 @@ class QGISResourceJob(NGWResourceModelJob):
         return tmp
 
     def addStyle(self, qgs_map_layer, ngw_layer_resource):
+        def uploadFileCallback(total_size, readed_size):
+            self.statusChanged.emit(
+                "Style for %s - Upload (%d %%)" % (
+                    qgs_map_layer.name(),
+                    readed_size * 100 / total_size
+                )
+            )
+
+        self.statusChanged.emit(
+            "Style for %s - Save as qml" % qgs_map_layer.name()
+        )
         layer_type = qgs_map_layer.type()
         if layer_type == QgsMapLayer.VectorLayer:
             tmp = tempfile.mktemp('.qml')
@@ -216,7 +260,8 @@ class QGISResourceJob(NGWResourceModelJob):
             ngw_resource = ResourceCreator.create_vector_layer_style(
                 ngw_layer_resource,
                 tmp,
-                qgs_map_layer.name()
+                qgs_map_layer.name(),
+                uploadFileCallback
             )
 
             os.remove(tmp)
@@ -286,7 +331,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                 for qgsLayerTreeItem in qgsLayerTreeItems:
 
                     if isinstance(qgsLayerTreeItem, QgsLayerTreeLayer):
-                        self.statusChanged.emit("Import layer %s" % qgsLayerTreeItem.layer().name())
+                        # self.statusChanged.emit("Import layer %s" % qgsLayerTreeItem.layer().name())
                         # QgsMessageLog.logMessage("Import curent qgis project: layer %s" % qgsLayerTreeItem.layer().name())
                         # progressDlg.setMessage(self.tr("Import layer %s") % qgsLayerTreeItem.layer().name())
                         ngw_layer_resource = self.importQGISMapLayer(

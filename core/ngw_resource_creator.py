@@ -18,7 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-import json
+import os
 import requests
 from .ngw_error import NGWError
 from .ngw_resource import NGWResource
@@ -28,6 +28,25 @@ from .ngw_raster_layer import NGWRasterLayer
 from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_wfs_service import NGWWfsService
 from .ngw_webmap import NGWWebMap
+
+
+class File2Upload(file):
+    def __init__(self, path, callback):
+        file.__init__(self, path, "rb")
+        self.seek(0, os.SEEK_END)
+        self._total = self.tell()
+        self._readed = 0
+        self.seek(0)
+        self._callback = callback
+
+    def __len__(self):
+        return self._total
+
+    def read(self, size):
+        data = file.read(self, size)
+        self._readed += len(data)
+        self._callback(self._total, self._readed)
+        return data
 
 
 class ResourceCreator():
@@ -58,13 +77,13 @@ class ResourceCreator():
             raise NGWError('Cannot create resource. Server response:\n%s' % e.message)
 
     @staticmethod
-    def create_vector_layer(parent_ngw_resource, filename, layer_name):
+    def create_vector_layer(parent_ngw_resource, filename, layer_name, callback):
         connection = parent_ngw_resource._res_factory.connection
 
         try:
-            with open(filename, 'rb') as f:
+            with File2Upload(filename, callback) as f:
                 shape_file_desc = connection.put('/file_upload/upload', data=f)
-                # print " shape_file_desc: ", shape_file_desc
+
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create vector layer. Server response:\n%s' % e.message)
 
@@ -83,7 +102,6 @@ class ResourceCreator():
 
         try:
             result = connection.post(url, params=params)
-            # print "add vector_layer resource result: ", result
             ngw_resource = NGWResource.receive_resource_obj(
                 connection,
                 result['id']
@@ -94,14 +112,13 @@ class ResourceCreator():
             raise NGWError('Cannot create vector layer. Server response:\n%s' % e.message)
 
     @staticmethod
-    def create_vector_layer_style(ngw_vector_layer, style_filename, layer_name):
+    def create_vector_layer_style(ngw_vector_layer, style_filename, layer_name, callback):
         connection = ngw_vector_layer._res_factory.connection
         style_name = layer_name + '-style'
 
         try:
-            with open(style_filename, 'rb') as f:
+            with File2Upload(style_filename, callback) as f:
                 style_file_desc = connection.put('/file_upload/upload', data=f)
-                # print " style_file_desc: ", style_file_desc
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create style. Upload qml file. Server response:\n%s' % e.message)
 
@@ -133,11 +150,11 @@ class ResourceCreator():
             raise NGWError('Cannot create vector layer style. Server response:\n%s' % e.message)
 
     @staticmethod
-    def create_raster_layer(parent_ngw_resource, filename, layer_name):
+    def create_raster_layer(parent_ngw_resource, filename, layer_name, callback):
         connection = parent_ngw_resource._res_factory.connection
 
         try:
-            with open(filename, 'rb') as f:
+            with File2Upload(filename, callback) as f:
                 raster_file_desc = connection.put('/file_upload/upload', data=f)
 
         except requests.exceptions.RequestException, e:
