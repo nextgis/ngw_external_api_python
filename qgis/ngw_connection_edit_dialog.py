@@ -31,8 +31,6 @@ from PyQt4.QtGui import *
 from ..core.ngw_connection_settings import NGWConnectionSettings
 from ..core.ngw_resource_factory import NGWResourceFactory
 
-from __init__ import qgisLog
-
 __author__ = 'NextGIS'
 __date__ = 'October 2014'
 __copyright__ = '(C) 2014, NextGIS'
@@ -204,14 +202,12 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         return validation_result
 
     def __try_check_connection(self):
-        # qgisLog("__try_check_connection")
         if not self.mutexPing.tryLock():
             self.needNextPing = True
             return
         self.__check_connection()
 
     def __check_connection(self):
-        # qgisLog("__check_connection")
         name = "temp"
         url = self.leUrl.text()
         url = self.__make_valid_url(url)
@@ -240,7 +236,6 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.thread.start()
 
     def __process_ping_result(self, ping_result):
-        # qgisLog("__process_ping_result")
         if ping_result is True:
             self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
             self.lbConnectionTesting.setText(self.tr("Connection success."))
@@ -251,7 +246,6 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             self.lbConnectionTesting.setStyleSheet("color: red")
 
     def __process_ping_finish(self):
-        # qgisLog("__process_ping_finish")
         if self.needNextPing:
             self.needNextPing = False
             self.__check_connection()
@@ -298,11 +292,8 @@ class NGWPinger(QObject):
 
         try:
             rsc_factory.get_ngw_verson()
-            qgisLog(".emit(True)")
             self.getResult.emit(True)
         except:
-            qgisLog(".emit(False)")
             self.getResult.emit(False)
 
-        qgisLog(".emit()")
         self.finished.emit()

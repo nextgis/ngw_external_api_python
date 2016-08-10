@@ -24,7 +24,6 @@ import os
 import glob
 import zipfile
 import tempfile
-import functools
 
 from PyQt4.QtCore import *
 
@@ -39,8 +38,6 @@ from ..qt.qt_ngw_resource_model_job import NGWResourceModelJob
 
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
 from ..core.ngw_resource_creator import ResourceCreator
-
-from __init__ import qgisLog
 
 
 class QNGWResourcesModel4QGIS(QNGWResourcesModel):
@@ -149,10 +146,8 @@ class QGISResourceJob(NGWResourceModelJob):
         ngw_parent_resource.update()
 
         layer_name = qgs_map_layer.name()
-        qgisLog("Try import layer: %s" % (layer_name, ))
 
         chd_names = [ch.common.display_name for ch in ngw_parent_resource.get_children()]
-        qgisLog("chd_names: %s" % (chd_names, ))
 
         new_layer_name = self.generate_unique_name(layer_name, chd_names)
 
@@ -246,11 +241,8 @@ class QGISResourceImporter(QGISResourceJob):
 
             self.dataReceived.emit(ngw_resource)
 
-        except NGWError as e:
-            self.errorOccurred.emit(e.message)
-
         except Exception as e:
-            self.errorOccurred.emit(str(e))
+            self.errorOccurred.emit(e)
 
 
 class CurrentQGISProjectImporter(QGISResourceJob):
@@ -349,8 +341,6 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                 self.new_group_name + u"-webmap",
                 ngw_webmap_root_group.children
             )
-        except NGWError as e:
-            self.errorOccurred.emit(e)
         except Exception as e:
             self.errorOccurred.emit(e)
 

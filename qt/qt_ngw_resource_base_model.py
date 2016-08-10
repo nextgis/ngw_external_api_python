@@ -76,10 +76,9 @@ class NGWResourcesModelJob(QObject):
 
 
 class QNGWResourcesBaseModel(QAbstractItemModel):
-    errorOccurred = pyqtSignal(int, object)
-
     jobStarted = pyqtSignal(unicode)
     jobStatusChanged = pyqtSignal(unicode, unicode)
+    errorOccurred = pyqtSignal(unicode, object)
     jobFinished = pyqtSignal(unicode)
 
     JOB_NGW_RESOURCE_UPDATE = "RESOURCE_UPDATE"
@@ -246,9 +245,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         job.finished.connect(
             self.__jobFinishedProcess
         )
-        # job.errorOccurred.connect(
-        #     self.__jobErrorOccurredProcess
-        # )
+        job.errorOccurred.connect(
+            self.__jobErrorOccurredProcess
+        )
 
         for slot in slots:
             job.finished.connect(
