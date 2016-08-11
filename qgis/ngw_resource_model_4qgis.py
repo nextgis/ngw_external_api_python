@@ -209,7 +209,7 @@ class QGISResourceJob(NGWResourceModelJob):
             return self.prepareAsJSON(layer)
 
     def prepareAsShape(self, qgs_vector_layer):
-        QgsMessageLog.logMessage("prepareAsShape")
+        # QgsMessageLog.logMessage("prepareAsShape")
 
         tmp_dir = tempfile.mkdtemp('ngw_api_prepare_import')
         tmp_shp = os.path.join(tmp_dir, '4import.shp')
@@ -241,7 +241,7 @@ class QGISResourceJob(NGWResourceModelJob):
         return tmp
 
     def prepareAsJSON(self, qgs_vector_layer):
-        QgsMessageLog.logMessage("prepareAsJSON")
+        # QgsMessageLog.logMessage("prepareAsJSON")
 
         tmp = tempfile.mktemp('.geojson')
         import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
@@ -294,10 +294,10 @@ class QGISResourceJob(NGWResourceModelJob):
         return geometry_type
 
     def createLayer4Upload(self, qgs_vector_layer_src):
-        QgsMessageLog.logMessage("createLayer4Upload")
+        # QgsMessageLog.logMessage("createLayer4Upload")
         geometry_type = self.determineGeometry4MemoryLayer(qgs_vector_layer_src)
 
-        QgsMessageLog.logMessage("geometry_type: %s" % geometry_type)
+        # QgsMessageLog.logMessage("geometry_type: %s" % geometry_type)
 
         fields_names_changed = []
 
@@ -316,7 +316,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 fields_names_changed.append(field.name())
 
         if len(fields_names_changed) != 0:
-            QgsMessageLog.logMessage("warinig: %s" % fields_names_changed)
+            # QgsMessageLog.logMessage("warinig: %s" % fields_names_changed)
             self.warningOccurred.emit(
                 self.tr("We've renamed fields %s for layer '%s'. Style for this layer may become invalid.") % (
                     fields_names_changed,
@@ -335,7 +335,7 @@ class QGISResourceJob(NGWResourceModelJob):
             data_provider_dst.addAttributes([field])
 
         features_count = data_provider_src.featureCount()
-        features_counter = 0
+        features_counter = 1
         for feature in data_provider_src.getFeatures():
             # if geometry_type.startswith("multi"):
             #     new_geometry = feature.geometry()

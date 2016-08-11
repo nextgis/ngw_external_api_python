@@ -72,8 +72,6 @@ class NGWRootResourcesLoader(NGWResourceModelJob):
         NGWResourceModelJob.__init__(self)
         self.ngw_connection_settings = ngw_connection_settings
 
-        self.results = None
-
     def loadNGWRootResource(self):
         try:
             rsc_factory = NGWResourceFactory(self.ngw_connection_settings)

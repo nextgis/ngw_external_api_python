@@ -394,13 +394,13 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
                 self.rowsRemoved.emit(index, i, i)
 
         ngw_resources = job.getResult()
-
-        c = item.childCount()
-        self.beginInsertRows(index, c, c + len(ngw_resources) - 1)
-        item.addChildren(
-            [QNGWResourceItemExt(ngw_resource) for ngw_resource in ngw_resources]
-        )
-        self.endInsertRows()
+        if ngw_resources is not None:
+            c = item.childCount()
+            self.beginInsertRows(index, c, c + len(ngw_resources) - 1)
+            item.addChildren(
+                [QNGWResourceItemExt(ngw_resource) for ngw_resource in ngw_resources]
+            )
+            self.endInsertRows()
 
         #   job.deleteLater()
 

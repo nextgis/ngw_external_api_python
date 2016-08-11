@@ -79,10 +79,10 @@ class NGWConnection(object):
         payload = None
         if params:
             payload = json.dumps(params)
-            
+
         if 'data' in kwargs:
             payload = kwargs['data']
-        
+
         json_data = None
         if 'json' in kwargs:
             json_data = kwargs['json']
@@ -91,15 +91,16 @@ class NGWConnection(object):
         req.headers['Authorization'] = _basic_auth_str(self.__auth[0], self.__auth[1])
 
         prep = self.__session.prepare_request(req)
-        
+
         try:
             resp = self.__session.send(prep)
         except requests.exceptions.RequestException, e:
-            raise NGWError(e.args[0])
+            # raise NGWError(e.args[0])
+            raise NGWError('{"exception": "ConnectionError", "message": "RequestException: %s"}' % e.args[0])
 
         if resp.status_code / 100 != 2:
             raise NGWError(resp.content)
-        
+
         return resp.json()
 
     def get(self, sub_url, params=None, **kwargs):
