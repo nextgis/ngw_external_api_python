@@ -29,6 +29,7 @@ from ..core.ngw_resource_factory import NGWResourceFactory
 class NGWResourceModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
+    warningOccurred = pyqtSignal(unicode)
     errorOccurred = pyqtSignal(object)
     dataReceived = pyqtSignal(object)
     finished = pyqtSignal()

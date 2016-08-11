@@ -149,14 +149,22 @@ class QGISResourceJob(NGWResourceModelJob):
             )
 
         if qgs_vector_layer.geometryType() in [QGis.NoGeometry, QGis.UnknownGeometry]:
-                self.errorOccurred.emit(
-                    QNGWResourcesModelExeption(
-                        "Vector layer '%s' has no geometry" % qgs_vector_layer.name()
-                    )
+            self.errorOccurred.emit(
+                QNGWResourcesModelExeption(
+                    "Vector layer '%s' has no geometry" % qgs_vector_layer.name()
                 )
-                return None
+            )
+            return None
 
         filepath = self.prepareImportFile(qgs_vector_layer)
+
+        if filepath is None:
+            self.errorOccurred.emit(
+                QNGWResourcesModelExeption(
+                    "Can't prepare layer'%s'. Skiped!" % qgs_vector_layer.name()
+                )
+            )
+            return None
 
         ngw_vector_layer = ResourceCreator.create_vector_layer(
             ngw_parent_resource,
@@ -191,14 +199,18 @@ class QGISResourceJob(NGWResourceModelJob):
             "%s - Prepare" % qgs_vector_layer.name()
         )
 
+        layer = self.createLayer4Upload(qgs_vector_layer)
+
         if import_format == u'ESRI Shapefile':
-            return self.prepareAsShape(qgs_vector_layer)
+            return self.prepareAsShape(layer)
         elif import_format == u'GeoJSON':
-            return self.prepareAsJSON(qgs_vector_layer)
+            return self.prepareAsJSON(layer)
         else:
-            return self.prepareAsJSON(qgs_vector_layer)
+            return self.prepareAsJSON(layer)
 
     def prepareAsShape(self, qgs_vector_layer):
+        QgsMessageLog.logMessage("prepareAsShape")
+
         tmp_dir = tempfile.mkdtemp('ngw_api_prepare_import')
         tmp_shp = os.path.join(tmp_dir, '4import.shp')
 
@@ -229,6 +241,8 @@ class QGISResourceJob(NGWResourceModelJob):
         return tmp
 
     def prepareAsJSON(self, qgs_vector_layer):
+        QgsMessageLog.logMessage("prepareAsJSON")
+
         tmp = tempfile.mktemp('.geojson')
         import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
         QgsVectorFileWriter.writeAsVectorFormat(
@@ -239,6 +253,108 @@ class QGISResourceJob(NGWResourceModelJob):
             'GeoJSON'
         )
         return tmp
+
+    def determineGeometry4MemoryLayer(self, qgs_vector_layer):
+        dp = qgs_vector_layer.dataProvider()
+
+        has_multipart_geometries = False
+
+        features_count = dp.featureCount()
+        features_counter = 0
+        for feature in dp.getFeatures():
+            self.statusChanged.emit(
+                "%s - Check geometry (%d %%)" % (
+                    qgs_vector_layer.name(),
+                    features_counter * 100 / features_count
+                )
+            )
+            features_counter += 1
+            if feature.geometry().isMultipart():
+                has_multipart_geometries = True
+                break
+
+        self.statusChanged.emit(
+            "%s - Check geometry (%d %%)" % (
+                qgs_vector_layer.name(),
+                100
+            )
+        )
+
+        geometry_type = None
+        if qgs_vector_layer.geometryType() == QGis.Point:
+            geometry_type = "point"
+        elif qgs_vector_layer.geometryType() == QGis.Line:
+            geometry_type = "linestring"
+        elif qgs_vector_layer.geometryType() == QGis.Polygon:
+            geometry_type = "polygon"
+
+        if has_multipart_geometries:
+            geometry_type = "multi" + geometry_type
+
+        return geometry_type
+
+    def createLayer4Upload(self, qgs_vector_layer_src):
+        QgsMessageLog.logMessage("createLayer4Upload")
+        geometry_type = self.determineGeometry4MemoryLayer(qgs_vector_layer_src)
+
+        QgsMessageLog.logMessage("geometry_type: %s" % geometry_type)
+
+        fields_names_changed = []
+
+        data_provider_src = qgs_vector_layer_src.dataProvider()
+        field_name_map = {}
+        exist_fields_names = [field.name() for field in data_provider_src.fields()]
+        for field in data_provider_src.fields():
+            if field.name() in ["id", "type", "source"]:
+                new_field_name = field.name()
+                suffix = 1
+                while new_field_name in exist_fields_names:
+                    new_field_name = field.name() + str(suffix)
+                    suffix += 1
+                field_name_map.update({field.name(): new_field_name})
+
+                fields_names_changed.append(field.name())
+
+        if len(fields_names_changed) != 0:
+            QgsMessageLog.logMessage("warinig: %s" % fields_names_changed)
+            self.warningOccurred.emit(
+                self.tr("We've renamed fields %s for layer '%s'. Style for this layer may become invalid.") % (
+                    fields_names_changed,
+                    qgs_vector_layer_src.name()
+                )
+            )
+
+        qgs_vector_layer_dst = QgsVectorLayer("%s?crs=epsg:4326" % geometry_type, "temp", "memory")
+
+        qgs_vector_layer_dst.startEditing()
+        data_provider_dst = qgs_vector_layer_dst.dataProvider()
+        for field in data_provider_src.fields():
+            field.setName(
+                field_name_map.get(field.name(), field.name())
+            )
+            data_provider_dst.addAttributes([field])
+
+        features_count = data_provider_src.featureCount()
+        features_counter = 0
+        for feature in data_provider_src.getFeatures():
+            # if geometry_type.startswith("multi"):
+            #     new_geometry = feature.geometry()
+            #     new_geometry.convertToMultiType()
+            #     feature.setGeometry(
+            #         new_geometry
+            #     )
+            data_provider_dst.addFeatures([feature])
+            self.statusChanged.emit(
+                "%s - Prepare layer for import (%d %%)" % (
+                    qgs_vector_layer_src.name(),
+                    features_counter * 100 / features_count
+                )
+            )
+            features_counter += 1
+
+        qgs_vector_layer_dst.commitChanges()
+
+        return qgs_vector_layer_dst
 
     def addStyle(self, qgs_map_layer, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):

@@ -29,6 +29,7 @@ from qt_ngw_resource_model_job import NGWResourceUpdate, NGWRootResourcesLoader,
 class NGWResourcesModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
+    warningOccurred = pyqtSignal(unicode)
     errorOccurred = pyqtSignal(object)
     finished = pyqtSignal()
 
@@ -47,6 +48,7 @@ class NGWResourcesModelJob(QObject):
         self.__worker.started.connect(self.started.emit)
         self.__worker.statusChanged.connect(self.statusChanged.emit)
         self.__worker.errorOccurred.connect(self.errorOccurred.emit)
+        self.__worker.warningOccurred.connect(self.warningOccurred.emit)
         self.__worker.finished.connect(self.finished.emit)
 
         self.__worker.dataReceived.connect(self.__rememberResult)
@@ -87,6 +89,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
     jobStarted = pyqtSignal(unicode)
     jobStatusChanged = pyqtSignal(unicode, unicode)
     errorOccurred = pyqtSignal(unicode, object)
+    warningOccurred = pyqtSignal(unicode, unicode)
     jobFinished = pyqtSignal(unicode)
 
     JOB_NGW_RESOURCE_UPDATE = "RESOURCE_UPDATE"
@@ -256,6 +259,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         job.errorOccurred.connect(
             self.__jobErrorOccurredProcess
         )
+        job.warningOccurred.connect(
+            self.__jobWarningOccurredProcess
+        )
 
         for slot in slots:
             job.finished.connect(
@@ -310,6 +316,14 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
         (index, job) = self.jobs[job_index]
         self.errorOccurred.emit(job.getJobId(), error)
+
+    def __jobWarningOccurredProcess(self, msg):
+        job_index = self._getJobIndexByJob(self.sender())
+        if job_index == -1:
+            return
+
+        (index, job) = self.jobs[job_index]
+        self.warningOccurred.emit(job.getJobId(), msg)
 
     def reloadResource(self, index):
         item = self.index.internalPointer()
