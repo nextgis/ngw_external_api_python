@@ -41,6 +41,8 @@ from ..qt.qt_ngw_resource_model_job import NGWResourceModelJob
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
 from ..core.ngw_resource_creator import ResourceCreator
 
+from ngw_plugin_settings import NgwPluginSettings
+
 
 class QNGWResourcesModel4QGIS(QNGWResourcesModel):
     JOB_IMPORT_QGIS_RESOURCE = "IMPORT_QGIS_RESOURCE"
@@ -184,13 +186,16 @@ class QGISResourceJob(NGWResourceModelJob):
         if qgs_vector_layer.featureCount() == 0:
             return u'ESRI Shapefile'
 
-        # if qgs_vector_layer.providerType() == u'ogr':
-        #     layer_provider = qgs_vector_layer.dataProvider()
-        #     if layer_provider.storageType() in [u'ESRI Shapefile', u'GeoJSON']:
-        #         return layer_provider.storageType()
-        # else:
-        #     return u'GeoJSON'
-        return u'GeoJSON'
+        any_sanitize = NgwPluginSettings.get_sanitize_rename_fields() or NgwPluginSettings.get_sanitize_fix_geometry()
+        if any_sanitize:
+            return u'GeoJSON'
+
+        if qgs_vector_layer.providerType() == u'ogr':
+            layer_provider = qgs_vector_layer.dataProvider()
+            if layer_provider.storageType() in [u'ESRI Shapefile', u'GeoJSON']:
+                return layer_provider.storageType()
+        else:
+            return u'GeoJSON'
 
     def prepareImportFile(self, qgs_vector_layer):
         import_format = self.determineImportFormat(qgs_vector_layer)
@@ -199,7 +204,11 @@ class QGISResourceJob(NGWResourceModelJob):
             "%s - Prepare" % qgs_vector_layer.name()
         )
 
-        layer = self.createLayer4Upload(qgs_vector_layer)
+        any_sanitize = NgwPluginSettings.get_sanitize_rename_fields() or NgwPluginSettings.get_sanitize_fix_geometry()
+        if any_sanitize:
+            layer = self.createLayer4Upload(qgs_vector_layer)
+        else:
+            layer = qgs_vector_layer
 
         if import_format == u'ESRI Shapefile':
             return self.prepareAsShape(layer)
@@ -299,30 +308,34 @@ class QGISResourceJob(NGWResourceModelJob):
 
         # QgsMessageLog.logMessage("geometry_type: %s" % geometry_type)
 
-        fields_names_changed = []
-
         data_provider_src = qgs_vector_layer_src.dataProvider()
+
         field_name_map = {}
-        exist_fields_names = [field.name() for field in data_provider_src.fields()]
-        for field in data_provider_src.fields():
-            if field.name() in ["id", "type", "source"]:
-                new_field_name = field.name()
-                suffix = 1
-                while new_field_name in exist_fields_names:
-                    new_field_name = field.name() + str(suffix)
-                    suffix += 1
-                field_name_map.update({field.name(): new_field_name})
+        if NgwPluginSettings.get_sanitize_rename_fields():
+            fields_names_changed = []
+            exist_fields_names = [field.name() for field in data_provider_src.fields()]
+            for field in data_provider_src.fields():
+                if field.name() in ["id", "type", "source"]:
+                    new_field_name = field.name()
+                    suffix = 1
+                    while new_field_name in exist_fields_names:
+                        new_field_name = field.name() + str(suffix)
+                        suffix += 1
+                    field_name_map.update({field.name(): new_field_name})
 
-                fields_names_changed.append(field.name())
+                    fields_names_changed.append(field.name())
 
-        if len(fields_names_changed) != 0:
-            # QgsMessageLog.logMessage("warinig: %s" % fields_names_changed)
-            self.warningOccurred.emit(
-                self.tr("We've renamed fields %s for layer '%s'. Style for this layer may become invalid.") % (
-                    fields_names_changed,
-                    qgs_vector_layer_src.name()
+            if len(fields_names_changed) != 0:
+                # QgsMessageLog.logMessage("warinig: %s" % fields_names_changed)
+                self.warningOccurred.emit(
+                    QCoreApplication.translate(
+                        "QGISResourceJob",
+                        "We've renamed fields {0} for layer '{1}'. Style for this layer may become invalid."
+                    ).format(
+                        fields_names_changed,
+                        qgs_vector_layer_src.name()
+                    )
                 )
-            )
 
         qgs_vector_layer_dst = QgsVectorLayer("%s?crs=epsg:4326" % geometry_type, "temp", "memory")
 

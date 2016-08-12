@@ -75,3 +75,25 @@ class NgwPluginSettings(PluginSettings):
         connections = settings.childGroups()
         settings.endGroup()
         return connections
+
+    @classmethod
+    def set_sanitize_rename_fields(cls, value):
+        settings = cls.get_settings()
+        settings.setValue('/sanitize_rename_fields', int(value))
+
+    @classmethod
+    def get_sanitize_rename_fields(cls):
+        settings = cls.get_settings()
+        option = settings.value('/sanitize_rename_fields', 1, type=int)
+        return bool(option)
+
+    @classmethod
+    def set_sanitize_fix_geometry(cls, value):
+        settings = cls.get_settings()
+        settings.setValue('/sanitize_fix_geometry', int(value))
+
+    @classmethod
+    def get_sanitize_fix_geometry(cls):
+        settings = cls.get_settings()
+        option = settings.value('/sanitize_fix_geometry', 1, type=int)
+        return bool(option)
