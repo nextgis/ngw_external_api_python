@@ -26,3 +26,18 @@ class NGWConnectionSettings():
         self.server_url = server_url
         self.username = username
         self.password = password
+
+    def __eq__(self, connection_settings):
+        if connection_settings is None:
+            return False
+
+        if self.server_url != connection_settings.server_url:
+            return False
+
+        if self.username != connection_settings.username:
+            return False
+
+        if self.password != connection_settings.password:
+            return False
+
+        return True

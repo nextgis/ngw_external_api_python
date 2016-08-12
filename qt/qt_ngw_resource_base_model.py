@@ -101,14 +101,18 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         # parent.destroyed.connect(self.__stop)
 
         self.jobs = []
-
         self.root_item = AuxiliaryItem("Qt model root item")
+        self.__ngw_connection_settings = None
 
     def resetModel(self, ngw_connection_settings):
+        self.__ngw_connection_settings = ngw_connection_settings
         self.beginResetModel()
         self.__resetModel(ngw_connection_settings)
         self.endResetModel()
         self.modelReset.emit()
+
+    def isCurrentConnectionSame(self, connection_settings):
+        return self.__ngw_connection_settings == connection_settings
 
     def cleanModel(self):
         self.jobs = []
