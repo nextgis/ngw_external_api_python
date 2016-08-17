@@ -102,10 +102,22 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
 
 
 class QGISResourceJob(NGWResourceModelJob):
+    SUITABLE_LAYER = 0
+    SUITABLE_LAYER_BAD_GEOMETRY = 1
+
     def __init__(self):
         NGWResourceModelJob.__init__(self)
 
         self.sanitize_fields_names = ["id", "type", "source"]
+
+    def isSuitableLayer(self, qgs_map_layer):
+        layer_type = qgs_map_layer.type()
+
+        if layer_type == qgs_map_layer.VectorLayer:
+            if qgs_map_layer.geometryType() in [QGis.NoGeometry, QGis.UnknownGeometry]:
+                return self.SUITABLE_LAYER_BAD_GEOMETRY
+
+        return self.SUITABLE_LAYER
 
     def importQGISMapLayer(self, qgs_map_layer, ngw_parent_resource):
         ngw_parent_resource.update()
@@ -152,10 +164,10 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
             )
 
-        if qgs_vector_layer.geometryType() in [QGis.NoGeometry, QGis.UnknownGeometry]:
+        if self.isSuitableLayer(qgs_vector_layer) == self.SUITABLE_LAYER_BAD_GEOMETRY:
             self.errorOccurred.emit(
                 QNGWResourcesModelExeption(
-                    "Vector layer '%s' has no geometry" % qgs_vector_layer.name()
+                    "Vector layer '%s' has no suitable geometry" % qgs_vector_layer.name()
                 )
             )
             return None
@@ -487,6 +499,9 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                 for qgsLayerTreeItem in qgsLayerTreeItems:
 
                     if isinstance(qgsLayerTreeItem, QgsLayerTreeLayer):
+                        if self.isSuitableLayer(qgsLayerTreeItem.layer()) != self.SUITABLE_LAYER:
+                            continue
+
                         ngw_layer_resource = self.importQGISMapLayer(
                             qgsLayerTreeItem.layer(),
                             ngw_resource_group
