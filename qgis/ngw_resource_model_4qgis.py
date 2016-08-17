@@ -105,6 +105,8 @@ class QGISResourceJob(NGWResourceModelJob):
     def __init__(self):
         NGWResourceModelJob.__init__(self)
 
+        self.sanitize_fields_names = ["id", "type", "source"]
+
     def importQGISMapLayer(self, qgs_map_layer, ngw_parent_resource):
         ngw_parent_resource.update()
 
@@ -182,40 +184,170 @@ class QGISResourceJob(NGWResourceModelJob):
         os.remove(filepath)
         return ngw_vector_layer
 
-    def determineImportFormat(self, qgs_vector_layer):
-        if qgs_vector_layer.featureCount() == 0:
-            return u'ESRI Shapefile'
-
-        any_sanitize = NgwPluginSettings.get_sanitize_rename_fields() or NgwPluginSettings.get_sanitize_fix_geometry()
-        if any_sanitize:
-            return u'GeoJSON'
-
-        if qgs_vector_layer.providerType() == u'ogr':
-            layer_provider = qgs_vector_layer.dataProvider()
-            if layer_provider.storageType() in [u'ESRI Shapefile', u'GeoJSON']:
-                return layer_provider.storageType()
-        else:
-            return u'GeoJSON'
-
     def prepareImportFile(self, qgs_vector_layer):
-        import_format = self.determineImportFormat(qgs_vector_layer)
-
         self.statusChanged.emit(
             "%s - Prepare" % qgs_vector_layer.name()
         )
 
-        any_sanitize = NgwPluginSettings.get_sanitize_rename_fields() or NgwPluginSettings.get_sanitize_fix_geometry()
-        if any_sanitize:
-            layer = self.createLayer4Upload(qgs_vector_layer)
+        layer_has_mixed_geoms = False
+        layer_has_bad_fields = False
+        if NgwPluginSettings.get_sanitize_fix_geometry():
+            if self.hasSimpleAndMultyGeom(qgs_vector_layer):
+                layer_has_mixed_geoms = True
+        if NgwPluginSettings.get_sanitize_rename_fields():
+            if self.hasBadFields(qgs_vector_layer):
+                layer_has_bad_fields = True
+
+        if layer_has_mixed_geoms or layer_has_bad_fields:
+            layer = self.createLayer4Upload(qgs_vector_layer, layer_has_mixed_geoms, layer_has_bad_fields)
         else:
             layer = qgs_vector_layer
 
+        # QgsMessageLog.logMessage("source: %s" % (layer.source(),))
+        # QgsMessageLog.logMessage("fieldsCount: %d" % (len(layer.dataProvider().fields()),))
+        # QgsMessageLog.logMessage("featureCount: %d" % (layer.featureCount(),))
+        # QgsMessageLog.logMessage("geometryType: %d" % (layer.geometryType(),))
+        # QgsMessageLog.logMessage("wkbType: %d" % (layer.wkbType(),))
+        # for feature in layer.getFeatures():
+        #     QgsMessageLog.logMessage("    feature wkbType: %d" % (feature.geometry().wkbType(),))
+
+        import_format = u'ESRI Shapefile'
+        if layer.featureCount() > 0:
+            layer_provider = layer.dataProvider()
+            if layer_provider.storageType() in [u'ESRI Shapefile']:
+                import_format = layer_provider.storageType()
+            else:
+                import_format = u"GeoJSON"
+
         if import_format == u'ESRI Shapefile':
             return self.prepareAsShape(layer)
-        elif import_format == u'GeoJSON':
-            return self.prepareAsJSON(layer)
         else:
             return self.prepareAsJSON(layer)
+
+    def hasSimpleAndMultyGeom(self, qgs_vector_layer):
+        has_simple_geometries = False
+        has_multipart_geometries = False
+
+        features_count = qgs_vector_layer.featureCount()
+        features_counter = 0
+        for feature in qgs_vector_layer.getFeatures():
+            self.statusChanged.emit(
+                "%s - Check geometry (%d %%)" % (
+                    qgs_vector_layer.name(),
+                    features_counter * 100 / features_count
+                )
+            )
+            features_counter += 1
+            if feature.geometry().isMultipart():
+                has_multipart_geometries = True
+            else:
+                has_simple_geometries = True
+
+            if has_multipart_geometries and has_simple_geometries:
+                break
+
+        self.statusChanged.emit(
+            "%s - Check geometry (%d %%)" % (
+                qgs_vector_layer.name(),
+                100
+            )
+        )
+        return has_multipart_geometries and has_simple_geometries
+
+    def hasBadFields(self, qgs_vector_layer):
+        exist_fields_names = [field.name() for field in qgs_vector_layer.fields()]
+        common_fields = list(set(exist_fields_names).intersection(self.sanitize_fields_names))
+
+        return len(common_fields) > 0
+
+    def createLayer4Upload(self, qgs_vector_layer_src, has_mixed_geoms, has_bad_fields):
+        # QgsMessageLog.logMessage("createLayer4Upload")
+
+        geometry_type = self.determineGeometry4MemoryLayer(qgs_vector_layer_src, has_mixed_geoms)
+
+        field_name_map = {}
+        if has_bad_fields:
+            field_name_map = self.getFieldsForRename(qgs_vector_layer_src)
+
+            if len(field_name_map) != 0:
+                self.warningOccurred.emit(
+                    QCoreApplication.translate(
+                        "QGISResourceJob",
+                        "We've renamed fields {0} for layer '{1}'. Style for this layer may become invalid."
+                    ).format(
+                        field_name_map.keys(),
+                        qgs_vector_layer_src.name()
+                    )
+                )
+
+        qgs_vector_layer_dst = QgsVectorLayer(
+            "%s?crs=epsg:4326" % geometry_type,
+            "temp",
+            "memory"
+        )
+
+        qgs_vector_layer_dst.startEditing()
+
+        for field in qgs_vector_layer_src.fields():
+            field.setName(
+                field_name_map.get(field.name(), field.name())
+            )
+            qgs_vector_layer_dst.addAttribute(field)
+
+        qgs_vector_layer_dst.commitChanges()
+        qgs_vector_layer_dst.startEditing()
+        features_count = qgs_vector_layer_src.featureCount()
+        features_counter = 1
+        for feature in qgs_vector_layer_src.getFeatures():
+            if has_mixed_geoms:
+                new_geometry = feature.geometry()
+                new_geometry.convertToMultiType()
+                feature.setGeometry(
+                    new_geometry
+                )
+            qgs_vector_layer_dst.addFeature(feature)
+
+            self.statusChanged.emit(
+                "%s - Prepare layer for import (%d %%)" % (
+                    qgs_vector_layer_src.name(),
+                    features_counter * 100 / features_count
+                )
+            )
+            features_counter += 1
+
+        qgs_vector_layer_dst.commitChanges()
+
+        return qgs_vector_layer_dst
+
+    def determineGeometry4MemoryLayer(self, qgs_vector_layer, has_mixed_geoms):
+        geometry_type = None
+        if qgs_vector_layer.geometryType() == QGis.Point:
+            geometry_type = "point"
+        elif qgs_vector_layer.geometryType() == QGis.Line:
+            geometry_type = "linestring"
+        elif qgs_vector_layer.geometryType() == QGis.Polygon:
+            geometry_type = "polygon"
+
+        # if has_multipart_geometries:
+        if has_mixed_geoms:
+            geometry_type = "multi" + geometry_type
+
+        return geometry_type
+
+    def getFieldsForRename(self, qgs_vector_layer):
+        field_name_map = {}
+
+        exist_fields_names = [field.name() for field in qgs_vector_layer.fields()]
+        for field in qgs_vector_layer.fields():
+            if field.name() in self.sanitize_fields_names:
+                new_field_name = field.name()
+                suffix = 1
+                while new_field_name in exist_fields_names:
+                    new_field_name = field.name() + str(suffix)
+                    suffix += 1
+                field_name_map.update({field.name(): new_field_name})
+
+        return field_name_map
 
     def prepareAsShape(self, qgs_vector_layer):
         # QgsMessageLog.logMessage("prepareAsShape")
@@ -261,113 +393,8 @@ class QGISResourceJob(NGWResourceModelJob):
             import_crs,
             'GeoJSON'
         )
+
         return tmp
-
-    def determineGeometry4MemoryLayer(self, qgs_vector_layer):
-        dp = qgs_vector_layer.dataProvider()
-
-        has_multipart_geometries = False
-
-        features_count = dp.featureCount()
-        features_counter = 0
-        for feature in dp.getFeatures():
-            self.statusChanged.emit(
-                "%s - Check geometry (%d %%)" % (
-                    qgs_vector_layer.name(),
-                    features_counter * 100 / features_count
-                )
-            )
-            features_counter += 1
-            if feature.geometry().isMultipart():
-                has_multipart_geometries = True
-                break
-
-        self.statusChanged.emit(
-            "%s - Check geometry (%d %%)" % (
-                qgs_vector_layer.name(),
-                100
-            )
-        )
-
-        geometry_type = None
-        if qgs_vector_layer.geometryType() == QGis.Point:
-            geometry_type = "point"
-        elif qgs_vector_layer.geometryType() == QGis.Line:
-            geometry_type = "linestring"
-        elif qgs_vector_layer.geometryType() == QGis.Polygon:
-            geometry_type = "polygon"
-
-        if has_multipart_geometries:
-            geometry_type = "multi" + geometry_type
-
-        return geometry_type
-
-    def createLayer4Upload(self, qgs_vector_layer_src):
-        # QgsMessageLog.logMessage("createLayer4Upload")
-        geometry_type = self.determineGeometry4MemoryLayer(qgs_vector_layer_src)
-
-        # QgsMessageLog.logMessage("geometry_type: %s" % geometry_type)
-
-        data_provider_src = qgs_vector_layer_src.dataProvider()
-
-        field_name_map = {}
-        if NgwPluginSettings.get_sanitize_rename_fields():
-            fields_names_changed = []
-            exist_fields_names = [field.name() for field in data_provider_src.fields()]
-            for field in data_provider_src.fields():
-                if field.name() in ["id", "type", "source"]:
-                    new_field_name = field.name()
-                    suffix = 1
-                    while new_field_name in exist_fields_names:
-                        new_field_name = field.name() + str(suffix)
-                        suffix += 1
-                    field_name_map.update({field.name(): new_field_name})
-
-                    fields_names_changed.append(field.name())
-
-            if len(fields_names_changed) != 0:
-                # QgsMessageLog.logMessage("warinig: %s" % fields_names_changed)
-                self.warningOccurred.emit(
-                    QCoreApplication.translate(
-                        "QGISResourceJob",
-                        "We've renamed fields {0} for layer '{1}'. Style for this layer may become invalid."
-                    ).format(
-                        fields_names_changed,
-                        qgs_vector_layer_src.name()
-                    )
-                )
-
-        qgs_vector_layer_dst = QgsVectorLayer("%s?crs=epsg:4326" % geometry_type, "temp", "memory")
-
-        qgs_vector_layer_dst.startEditing()
-        data_provider_dst = qgs_vector_layer_dst.dataProvider()
-        for field in data_provider_src.fields():
-            field.setName(
-                field_name_map.get(field.name(), field.name())
-            )
-            data_provider_dst.addAttributes([field])
-
-        features_count = data_provider_src.featureCount()
-        features_counter = 1
-        for feature in data_provider_src.getFeatures():
-            # if geometry_type.startswith("multi"):
-            #     new_geometry = feature.geometry()
-            #     new_geometry.convertToMultiType()
-            #     feature.setGeometry(
-            #         new_geometry
-            #     )
-            data_provider_dst.addFeatures([feature])
-            self.statusChanged.emit(
-                "%s - Prepare layer for import (%d %%)" % (
-                    qgs_vector_layer_src.name(),
-                    features_counter * 100 / features_count
-                )
-            )
-            features_counter += 1
-
-        qgs_vector_layer_dst.commitChanges()
-
-        return qgs_vector_layer_dst
 
     def addStyle(self, qgs_map_layer, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
@@ -460,9 +487,6 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                 for qgsLayerTreeItem in qgsLayerTreeItems:
 
                     if isinstance(qgsLayerTreeItem, QgsLayerTreeLayer):
-                        # self.statusChanged.emit("Import layer %s" % qgsLayerTreeItem.layer().name())
-                        # QgsMessageLog.logMessage("Import curent qgis project: layer %s" % qgsLayerTreeItem.layer().name())
-                        # progressDlg.setMessage(self.tr("Import layer %s") % qgsLayerTreeItem.layer().name())
                         ngw_layer_resource = self.importQGISMapLayer(
                             qgsLayerTreeItem.layer(),
                             ngw_resource_group
