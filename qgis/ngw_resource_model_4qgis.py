@@ -47,6 +47,7 @@ from ngw_plugin_settings import NgwPluginSettings
 class QNGWResourcesModel4QGIS(QNGWResourcesModel):
     JOB_IMPORT_QGIS_RESOURCE = "IMPORT_QGIS_RESOURCE"
     JOB_IMPORT_QGIS_PROJECT = "IMPORT_QGIS_PROJECT"
+    JOB_CREATE_NGW_STYLE = "CREATE_NGW_STYLE"
 
     def __init__(self, parent):
         QNGWResourcesModel.__init__(self, parent)
@@ -100,6 +101,20 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
             [self.__importFinished],
         )
 
+    def createStyleForLayer(self, index, qgis_map_layer):
+        if not index.isValid():
+            index = self.index(0, 0, index)
+
+        item = index.internalPointer()
+        ngw_resource = item.data(0, Qt.UserRole)
+
+        worker = ApplyQGISStyle2NGW(ngw_resource, qgis_map_layer)
+        self._stratJobOnNGWResource(
+            index,
+            worker,
+            self.JOB_CREATE_NGW_STYLE,
+            [self._askReloadChildren],
+        )
 
 class QGISResourceJob(NGWResourceModelJob):
     SUITABLE_LAYER = 0
@@ -417,30 +432,22 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
             )
 
-        self.statusChanged.emit(
-            "Style for %s - Save as qml" % qgs_map_layer.name()
-        )
         layer_type = qgs_map_layer.type()
         if layer_type == QgsMapLayer.VectorLayer:
             tmp = tempfile.mktemp('.qml')
+            self.statusChanged.emit(
+                "Style for %s - Save as qml" % qgs_map_layer.name()
+            )
             msg, saved = qgs_map_layer.saveNamedStyle(tmp)
 
-            ngw_resource = ResourceCreator.create_vector_layer_style(
-                ngw_layer_resource,
-                tmp,
-                qgs_map_layer.name(),
-                uploadFileCallback
-            )
+            ngw_resource = ngw_layer_resource.create_qml_style(tmp, uploadFileCallback)
 
             os.remove(tmp)
             return ngw_resource
         elif layer_type == QgsMapLayer.RasterLayer:
             layer_provider = qgs_map_layer.providerType()
             if layer_provider == 'gdal':
-                ngw_resource = ResourceCreator.create_raster_layer_style(
-                    ngw_layer_resource,
-                    qgs_map_layer.name()
-                )
+                ngw_resource = ngw_layer_resource.create_style()
                 return ngw_resource
 
         return None
@@ -598,3 +605,24 @@ class CurrentQGISProjectImporter(QGISResourceJob):
         )
 
         return ngw_resource
+
+
+class ApplyQGISStyle2NGW(QGISResourceJob):
+    def __init__(self, ngw_layer, qgis_map_layer):
+        NGWResourceModelJob.__init__(self)
+        self.ngw_layer = ngw_layer
+        self.qgis_map_layer = qgis_map_layer
+
+    def _do(self):
+        def uploadFileCallback(total_size, readed_size):
+            self.statusChanged.emit(
+                "Style for ngw layer %s - Upload (%d %%)" % (
+                    self.ngw_layer.common.display_name,
+                    readed_size * 100 / total_size
+                )
+            )
+
+        try:
+            self.addStyle(self.qgis_map_layer, self.ngw_layer)
+        except Exception as e:
+            self.errorOccurred.emit(e)

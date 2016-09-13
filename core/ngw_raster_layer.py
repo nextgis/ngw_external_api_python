@@ -51,3 +51,34 @@ class NGWRasterLayer(NGWResource):
             extent.get('minLat', -90),
             extent.get('maxLat', 90),
         )
+
+    def create_style(self):
+        """Create default style for this layer
+        """
+        connection = self._res_factory.connection
+        style_name = self.generate_unique_child_name(
+            self.common.display_name + '-style'
+        )
+
+        params = dict(
+            resource=dict(
+                cls="raster_style",
+                parent=dict(id=self.common.id),
+                display_name=style_name
+            ),
+        )
+
+        try:
+            url = self.get_api_collection_url()
+            result = connection.post(url, params=params)
+            ngw_resource = NGWResource(
+                self._res_factory,
+                NGWResource.receive_resource_obj(
+                    connection,
+                    result['id']
+                )
+            )
+
+            return ngw_resource
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create raster layer style. Server response:\n%s' % e.message)

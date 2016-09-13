@@ -70,6 +70,9 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
 
         self._reloadChildren(index)
 
+    def _askReloadChildren(self):
+        self.__askReloadChildren()
+
     def deleteResource(self, index):
         parent_index = self.parent(index)
 

@@ -18,8 +18,11 @@
  *                                                                         *
  ***************************************************************************/
 """
+import requests
 from os import path
-from ngw_resource import NGWResource, API_LAYER_EXTENT
+from ngw_resource import NGWResource, API_LAYER_EXTENT, File2Upload
+from ngw_qgis_vector_style import NGWQGISVectorStyle
+from ngw_mapserver_style import NGWMapServerStyle
 
 
 class NGWVectorLayer(NGWResource):
@@ -68,3 +71,78 @@ class NGWVectorLayer(NGWResource):
             extent.get('minLat', -90),
             extent.get('maxLat', 90),
         )
+
+    def create_qml_style(self, qml, callback):
+        """Create QML style for this layer
+
+        qml - full path to qml file
+        callback - upload file callback, pass to File2Upload
+        """
+        connection = self._res_factory.connection
+        style_name = self.generate_unique_child_name(
+            self.common.display_name + '-style'
+        )
+
+        try:
+            with File2Upload(qml, callback) as f:
+                style_file_desc = connection.put('/file_upload/upload', data=f)
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create style. Upload qml file. Server response:\n%s' % e.message)
+
+        params = dict(
+            resource=dict(
+                cls=NGWQGISVectorStyle.type_id,
+                parent=dict(id=self.common.id),
+                display_name=style_name
+            ),
+        )
+        params[NGWQGISVectorStyle.type_id] = dict(
+            file_upload=style_file_desc
+        )
+
+        try:
+            url = self.get_api_collection_url()
+            result = connection.post(url, params=params)
+            ngw_resource = NGWResource(
+                self._res_factory,
+                NGWResource.receive_resource_obj(
+                    connection,
+                    result['id']
+                )
+            )
+
+            return ngw_resource
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create vector layer style. Server response:\n%s' % e.message)
+
+    def create_map_server_style(self):
+        """Create default Map Srver style for this layer
+        """
+        connection = self._res_factory.connection
+        
+        style_name = self.generate_unique_child_name(
+            self.common.display_name + '-style'
+        )
+
+        params = dict(
+            resource=dict(
+                cls=NGWMapServerStyle.type_id,
+                parent=dict(id=self.common.id),
+                display_name=style_name
+            ),
+        )
+
+        try:
+            url = self.get_api_collection_url()
+            result = connection.post(url, params=params)
+            ngw_resource = NGWResource(
+                self._res_factory,
+                NGWResource.receive_resource_obj(
+                    connection,
+                    result['id']
+                )
+            )
+
+            return ngw_resource
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create vector layer style. Server response:\n%s' % e.message)

@@ -18,6 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+import os
 from os import path
 
 API_RESOURCE_URL = lambda res_id: '/api/resource/%d' % res_id
@@ -34,6 +35,23 @@ class Wrapper():
 DICT_TO_OBJ = lambda d: Wrapper(**d)
 LIST_DICT_TO_LIST_OBJ = lambda l: [Wrapper(**el) for el in l]
 
+class File2Upload(file):
+    def __init__(self, path, callback):
+        file.__init__(self, path, "rb")
+        self.seek(0, os.SEEK_END)
+        self._total = self.tell()
+        self._readed = 0
+        self.seek(0)
+        self._callback = callback
+
+    def __len__(self):
+        return self._total
+
+    def read(self, size):
+        data = file.read(self, size)
+        self._readed += len(data)
+        self._callback(self._total, self._readed)
+        return data
 
 class NGWResource():
 
@@ -128,3 +146,14 @@ class NGWResource():
             self.common.id
         )
         self._construct()
+
+    def generate_unique_child_name(self, name):
+        chd_names = [ch.common.display_name for ch in self.get_children()]
+
+        new_name = name
+        id = 1
+        if new_name in chd_names:
+            while(new_name in chd_names):
+                new_name = name + "(%d)" % id
+                id += 1
+        return new_name
