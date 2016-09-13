@@ -19,7 +19,7 @@
  ***************************************************************************/
 """
 from os import path
-from ngw_resource import NGWResource
+from ngw_resource import NGWResource, API_LAYER_EXTENT
 
 
 class NGWVectorLayer(NGWResource):
@@ -53,3 +53,18 @@ class NGWVectorLayer(NGWResource):
     def set_icon(self, geometry_type):
         icon_filename = self.icons.get(geometry_type, 'vector_layer.svg')
         self.icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', icon_filename)
+
+    def extent(self):
+        result = self._res_factory.connection.get(
+            API_LAYER_EXTENT(self.common.id)
+        )
+        extent = result.get('extent')
+        if extent is None:
+            return (-180, 180, -90, 90)
+
+        return (
+            extent.get('minLon', -180),
+            extent.get('maxLon', 180),
+            extent.get('minLat', -90),
+            extent.get('maxLat', 90),
+        )

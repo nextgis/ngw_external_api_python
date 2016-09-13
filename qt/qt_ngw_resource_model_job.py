@@ -24,6 +24,7 @@ from PyQt4.QtCore import *
 from ..core.ngw_resource import NGWResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
+from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapRoot
 
 
 class NGWResourceModelJob(QObject):
@@ -45,6 +46,11 @@ class NGWResourceModelJob(QObject):
                 new_name = name + "(%d)" % id
                 id += 1
         return new_name
+
+    def unique_resource_name(self, resource_name, ngw_group):
+        chd_names = [ch.common.display_name for ch in ngw_group.get_children()]
+        unique_resource_name = self.generate_unique_name(resource_name, chd_names)
+        return unique_resource_name
 
     def run(self):
         self.started.emit()
@@ -155,6 +161,40 @@ class NGWCreateWFSForVector(NGWResourceModelJob):
                 self.ngw_group_resource,
                 [self.ngw_vector_layer],
                 self.ret_obj_num
+            )
+        except Exception as e:
+            self.errorOccurred.emit(e)
+
+
+class NGWCreateMapForStyle(NGWResourceModelJob):
+    def __init__(self, ngw_style):
+        NGWResourceModelJob.__init__(self)
+        self.ngw_style = ngw_style
+
+    def _do(self):
+        try:
+            ngw_layer = self.ngw_style.get_parent()
+            ngw_group = ngw_layer.get_parent()
+
+            ngw_map_name = self.unique_resource_name(
+                self.ngw_style.common.display_name + "-map",
+                ngw_group
+            )
+
+            ngw_webmap_root_group = NGWWebMapRoot()
+            ngw_webmap_root_group.appendChild(
+                NGWWebMapLayer(
+                    self.ngw_style.common.id,
+                    ngw_layer.common.display_name,
+                    True
+                )
+            )
+
+            ResourceCreator.create_webmap(
+                ngw_group,
+                ngw_map_name,
+                [item.toDict() for item in ngw_webmap_root_group.children],
+                box=ngw_layer.extent()
             )
         except Exception as e:
             self.errorOccurred.emit(e)

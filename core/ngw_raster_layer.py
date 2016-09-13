@@ -19,7 +19,7 @@
  ***************************************************************************/
 """
 from os import path
-from ngw_resource import NGWResource
+from ngw_resource import NGWResource, API_LAYER_EXTENT
 
 
 class NGWRasterLayer(NGWResource):
@@ -35,4 +35,19 @@ class NGWRasterLayer(NGWResource):
         return '%s/%s/' % (
             self.get_absolute_url_with_auth(),
             'geojson'
+        )
+
+    def extent(self):
+        result = self._res_factory.connection.get(
+            API_LAYER_EXTENT(self.common.id)
+        )
+        extent = result.get('extent')
+        if extent is None:
+            return (-180, 180, -90, 90)
+
+        return (
+            extent.get('minLon', -180),
+            extent.get('maxLon', 180),
+            extent.get('minLat', -90),
+            extent.get('maxLat', 90),
         )

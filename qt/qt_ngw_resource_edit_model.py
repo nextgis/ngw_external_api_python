@@ -21,7 +21,7 @@
 
 from PyQt4.QtCore import Qt
 
-from qt_ngw_resource_model_job import NGWGroupCreater, NGWResourceDelete, NGWCreateWFSForVector
+from qt_ngw_resource_model_job import *
 from qt_ngw_resource_base_model import QNGWResourcesBaseModel
 
 
@@ -30,6 +30,7 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
     JOB_CREATE_NGW_GROUP_RESOURCE = "CREATE_NGW_GROUP_RESOURCE"
     JOB_DELETE_NGW_RESOURCE = "DELETE_NGW_RESOURCE"
     JOB_CREATE_NGW_WFS_SERVICE = "CREATE_NGW_WFS_SERVICE"
+    JOB_CREATE_NGW_WEB_MAP = "CREATE_NGW_WEB_MAP"
 
     def __init__(self, parent):
         QNGWResourcesBaseModel.__init__(self, parent)
@@ -100,5 +101,22 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
             parent_index,
             worker,
             self.JOB_CREATE_NGW_WFS_SERVICE,
+            [self.__askReloadChildren],
+        )
+
+    def createMapForStyle(self, index):
+        if not index.isValid():
+            index = self.index(0, 0, index)
+
+        parent_index = self._nearest_ngw_group_resource_parent(index)
+
+        item = index.internalPointer()
+        ngw_resource = item.data(0, Qt.UserRole)
+
+        worker = NGWCreateMapForStyle(ngw_resource)
+        self._stratJobOnNGWResource(
+            parent_index,
+            worker,
+            self.JOB_CREATE_NGW_WEB_MAP,
             [self.__askReloadChildren],
         )

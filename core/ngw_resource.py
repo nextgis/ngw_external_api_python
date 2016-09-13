@@ -24,6 +24,9 @@ API_RESOURCE_URL = lambda res_id: '/api/resource/%d' % res_id
 API_COLLECTION_URL = '/api/resource/'
 RESOURCE_URL = lambda res_id: '/resource/%d' % res_id
 
+API_LAYER_EXTENT = lambda res_id: '/api/resource/%d/extent' % res_id
+
+
 class Wrapper():
     def __init__(self, **params):
         self.__dict__.update(params)
