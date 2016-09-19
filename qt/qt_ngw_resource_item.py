@@ -18,9 +18,10 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt,  QTimer
 from PyQt4.QtGui import QIcon, QTreeWidgetItem
 
+from ..core.ngw_group_resource import NGWGroupResource
 # from qgis.core import QgsMessageLog
 
 
@@ -80,16 +81,13 @@ class QNGWResourceItem():
 
 
 class QNGWResourceItemExt(QTreeWidgetItem):
-    CHILDREN_NOT_LOAD = 1
-    CHILDREN_LOADING = 2
-    CHILDREN_LOADED = 3
-
     NGWResourceRole = Qt.UserRole
-    NGWResourceChildrenLoadRole = Qt.UserRole + 1
+    NGWResourceIdRole = Qt.UserRole + 1
 
     def __init__(self, ngw_resource):
         QTreeWidgetItem.__init__(self)
         self.set_ngw_resource(ngw_resource)
+        self.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
 
     def set_ngw_resource(self, ngw_resource):
         if ngw_resource is not None:
@@ -97,14 +95,27 @@ class QNGWResourceItemExt(QTreeWidgetItem):
             self.setIcon(0, QIcon(ngw_resource.icon_path))
             self.setToolTip(0, ngw_resource.type_title)
             self.setData(0, self.NGWResourceRole, ngw_resource)
+            self.setData(0, self.NGWResourceIdRole, ngw_resource.common.id)
 
-        self.setData(0, self.NGWResourceChildrenLoadRole, self.CHILDREN_NOT_LOAD)
+    def ngw_resource_id(self):
+        return self.data(0, self.NGWResourceIdRole)
 
-    # def has_children(self):
-    #     ngw_resource = self.data(0, self.NGWResourceRole)
-    #     if ngw_resource is None:
-    #         return False
-    #     return ngw_resource.common.children
+    def ngw_resource_children_count(self):
+        ngw_resource = self.data(0, self.NGWResourceRole)
+        if ngw_resource.common.children > 0:
+            if ngw_resource.children_count is not None:
+                return ngw_resource.children_count
+        return ngw_resource.common.children
+
+    def is_group(self):
+        ngw_resource = self.data(0, self.NGWResourceRole)
+        return ngw_resource.type_id == NGWGroupResource.type_id
+
+    def more_priority(self, item):
+        if self.is_group() != item.is_group():
+            return self.is_group() > item.is_group()
+
+        return self.text(0) < item.text(0)
 
 
 class AuxiliaryItem(QTreeWidgetItem):

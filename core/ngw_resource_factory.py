@@ -61,9 +61,10 @@ class NGWResourceFactory():
 
     def get_resource_by_json(self, res_json):
         if res_json['resource']['cls'] in self.__res_types_register:
-            return self.__res_types_register[res_json['resource']['cls']](self, res_json)
+            resource = self.__res_types_register[res_json['resource']['cls']](self, res_json)
         else:
-            return self.__res_types_register[self.__default_type](self, res_json)
+            resource = self.__res_types_register[self.__default_type](self, res_json)
+        return resource
 
     def get_root_resource(self):
         return self.get_resource(0)

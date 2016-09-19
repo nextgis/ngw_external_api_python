@@ -23,6 +23,7 @@ from os import path
 from ngw_resource import NGWResource, API_LAYER_EXTENT, File2Upload
 from ngw_qgis_vector_style import NGWQGISVectorStyle
 from ngw_mapserver_style import NGWMapServerStyle
+from ngw_error import NGWError
 
 
 class NGWVectorLayer(NGWResource):
@@ -103,7 +104,7 @@ class NGWVectorLayer(NGWResource):
         try:
             url = self.get_api_collection_url()
             result = connection.post(url, params=params)
-            ngw_resource = NGWResource(
+            ngw_resource = NGWQGISVectorStyle(
                 self._res_factory,
                 NGWResource.receive_resource_obj(
                     connection,
@@ -119,7 +120,7 @@ class NGWVectorLayer(NGWResource):
         """Create default Map Srver style for this layer
         """
         connection = self._res_factory.connection
-        
+
         style_name = self.generate_unique_child_name(
             self.common.display_name + '-style'
         )
@@ -135,7 +136,7 @@ class NGWVectorLayer(NGWResource):
         try:
             url = self.get_api_collection_url()
             result = connection.post(url, params=params)
-            ngw_resource = NGWResource(
+            ngw_resource = NGWMapServerStyle(
                 self._res_factory,
                 NGWResource.receive_resource_obj(
                     connection,

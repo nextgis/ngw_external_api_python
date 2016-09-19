@@ -25,7 +25,6 @@ from .ngw_resource import NGWResource
 from .ngw_group_resource import NGWGroupResource
 from .ngw_vector_layer import NGWVectorLayer
 from .ngw_raster_layer import NGWRasterLayer
-from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_wfs_service import NGWWfsService
 from .ngw_webmap import NGWWebMap
 
@@ -173,13 +172,10 @@ class ResourceCreator():
             )
         )
 
-        # print "url: ", url
-        # print "params: ", params
-
         try:
             result = connection.post(url, params=params)
             # print "add webmap resource result: ", result
-            ngw_resource = NGWResource(
+            ngw_resource = NGWWebMap(
                 parent_ngw_resource._res_factory,
                 NGWResource.receive_resource_obj(
                     connection,
@@ -221,7 +217,16 @@ class ResourceCreator():
         )
 
         try:
-            connection.post(url, params=params)
+            result = connection.post(url, params=params)
 
+            ngw_resource = NGWWfsService(
+                ngw_group_resource._res_factory,
+                NGWResource.receive_resource_obj(
+                    connection,
+                    result['id']
+                )
+            )
+
+            return ngw_resource
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create wfs service. Server response:\n%s' % e.message)

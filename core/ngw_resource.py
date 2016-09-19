@@ -53,6 +53,7 @@ class File2Upload(file):
         self._callback(self._total, self._readed)
         return data
 
+
 class NGWResource():
 
     type_id = 'resource'
@@ -82,7 +83,7 @@ class NGWResource():
         ngw_con.delete(url)
 
     # INSTANCE
-    def __init__(self, resource_factory, resource_json):
+    def __init__(self, resource_factory, resource_json, children_count=None):
         """
         Init resource from json representation
         :param ngw_resource: any ngw_resource
@@ -90,7 +91,10 @@ class NGWResource():
         self._res_factory = resource_factory
         self._json = resource_json
         self._construct()
+        self.children_count = children_count
 
+    def set_children_count(self, children_count):
+        self.children_count = children_count
 
     def _construct(self):
         """
@@ -145,7 +149,11 @@ class NGWResource():
             self._res_factory.connection,
             self.common.id
         )
+
         self._construct()
+
+        children = self.get_children()
+        self.set_children_count(len(children))
 
     def generate_unique_child_name(self, name):
         chd_names = [ch.common.display_name for ch in self.get_children()]

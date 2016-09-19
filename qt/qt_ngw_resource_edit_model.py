@@ -19,13 +19,16 @@
  ***************************************************************************/
 """
 
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QModelIndex, pyqtSignal
 
+from qt_ngw_resource_item import QNGWResourceItemExt
 from qt_ngw_resource_model_job import *
 from qt_ngw_resource_base_model import QNGWResourcesBaseModel
 
 
 class QNGWResourcesModel(QNGWResourcesBaseModel):
+
+    focusedResource = pyqtSignal(QModelIndex)
 
     JOB_CREATE_NGW_GROUP_RESOURCE = "CREATE_NGW_GROUP_RESOURCE"
     JOB_DELETE_NGW_RESOURCE = "DELETE_NGW_RESOURCE"
@@ -35,9 +38,71 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
     def __init__(self, parent):
         QNGWResourcesBaseModel.__init__(self, parent)
 
-    # def __del__(self):
-    #     print "QNGWResourcesBaseModel __del__"
-    #     QNGWResourcesBaseModel.__del__(self)
+    def getIndexByNGWResourceId(self, ngw_resource_id, start_with):
+        item = start_with.internalPointer()
+
+        for i in range(0, item.childCount()):
+            index = self.getIndexByNGWResourceId(
+                ngw_resource_id,
+                self.index(i, 0, start_with)
+            )
+
+            if index is not None:
+                return index
+
+        if isinstance(item, QNGWResourceItemExt):
+            if item.ngw_resource_id() == ngw_resource_id:
+                return start_with
+
+        return None
+
+    def processJobResult(self):
+        job = self.jobs.pop(
+            self.jobs.index(self.sender())
+        )
+        job_result = job.getResult()
+
+        if job_result is None:
+            # TODO Exception
+            return
+
+        for ngw_resource in job_result.added_resources:
+            index = self.getIndexByNGWResourceId(
+                ngw_resource.common.parent.id,
+                self.index(0, 0, QModelIndex())
+            )
+            item = index.internalPointer()
+
+            new_index = self.addNGWResourceToTree(index, ngw_resource)
+
+            if job_result.main_resource_id == ngw_resource.common.id:
+                self.focusedResource.emit(
+                    new_index
+                )
+
+            self.updateResourceWithLoadChildren(index)
+
+        for ngw_resource in job_result.deleted_resources:
+            index = self.getIndexByNGWResourceId(
+                ngw_resource.common.parent.id,
+                self.index(0, 0, QModelIndex())
+            )
+            item = index.internalPointer()
+
+            for i in range(0, item.childCount()):
+                if item.child(i).ngw_resource_id() == ngw_resource.common.id:
+                    self.beginRemoveRows(index, i, i)
+                    item.removeChild(item.child(i))
+                    self.endRemoveRows()
+                    break
+            else:
+                # TODO exception: not find deleted resource in corrent tree
+                return
+
+            if job_result.main_resource_id == ngw_resource.common.id:
+                self.focusedResource.emit(index)
+
+            self.updateResourceWithLoadChildren(index)
 
     def tryCreateNGWGroup(self, new_group_name, parent_index):
         if not parent_index.isValid():
@@ -53,38 +118,20 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
 
         worker = NGWGroupCreater(new_group_name, ngw_resource_parent)
         self._stratJobOnNGWResource(
-            parent_index,
             worker,
             self.JOB_CREATE_NGW_GROUP_RESOURCE,
-            [self.__askReloadChildren],
+            self.processJobResult,
         )
-
-    def __askReloadChildren(self):
-        job_index = self._getJobIndexByJob(self.sender())
-        if job_index == -1:
-            return
-
-        (index, job) = self.jobs.pop(
-            job_index
-        )
-
-        self._reloadChildren(index)
-
-    def _askReloadChildren(self):
-        self.__askReloadChildren()
 
     def deleteResource(self, index):
-        parent_index = self.parent(index)
-
         item = index.internalPointer()
         ngw_resource = item.data(0, item.NGWResourceRole)
 
         worker = NGWResourceDelete(ngw_resource)
         self._stratJobOnNGWResource(
-            parent_index,
             worker,
             self.JOB_DELETE_NGW_RESOURCE,
-            [self.__askReloadChildren],
+            self.processJobResult,
         )
 
     def createWFSForVector(self, index, ret_obj_num):
@@ -101,25 +148,21 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
 
         worker = NGWCreateWFSForVector(ngw_resource, ngw_parent_resource, ret_obj_num)
         self._stratJobOnNGWResource(
-            parent_index,
             worker,
             self.JOB_CREATE_NGW_WFS_SERVICE,
-            [self.__askReloadChildren],
+            self.processJobResult,
         )
 
     def createMapForStyle(self, index):
         if not index.isValid():
             index = self.index(0, 0, index)
 
-        parent_index = self._nearest_ngw_group_resource_parent(index)
-
         item = index.internalPointer()
         ngw_resource = item.data(0, Qt.UserRole)
 
         worker = NGWCreateMapForStyle(ngw_resource)
         self._stratJobOnNGWResource(
-            parent_index,
             worker,
             self.JOB_CREATE_NGW_WEB_MAP,
-            [self.__askReloadChildren],
+            self.processJobResult,
         )

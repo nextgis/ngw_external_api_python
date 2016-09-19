@@ -18,8 +18,10 @@
  *                                                                         *
  ***************************************************************************/
 """
+import requests
 from os import path
 from ngw_resource import NGWResource, API_LAYER_EXTENT
+from ngw_error import NGWError
 
 
 class NGWRasterLayer(NGWResource):

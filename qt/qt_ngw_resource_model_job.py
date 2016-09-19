@@ -27,6 +27,30 @@ from ..core.ngw_resource_factory import NGWResourceFactory
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapRoot
 
 
+class NGWResourceModelJobResult():
+    def __init__(self):
+        self.added_resources = []
+        self.deleted_resources = []
+        self.edited_resources = []
+
+        self.main_resource_id = -1
+
+    def putAddedResource(self, ngw_resource, is_main=False):
+        self.added_resources.append(ngw_resource)
+        if is_main:
+            self.main_resource_id = ngw_resource.common.id
+
+    def putEditedResource(self, ngw_resource, is_main=False):
+        self.edited_resources.append(ngw_resource)
+        if is_main:
+            self.main_resource_id = ngw_resource.common.id
+
+    def putDeletedResource(self, ngw_resource, is_main=False):
+        self.deleted_resources.append(ngw_resource)
+        if is_main:
+            self.main_resource_id = ngw_resource.common.id
+
+
 class NGWResourceModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
@@ -52,25 +76,27 @@ class NGWResourceModelJob(QObject):
         unique_resource_name = self.generate_unique_name(resource_name, chd_names)
         return unique_resource_name
 
+    def getResourcesChain2Root(self, ngw_resource):
+        ngw_resource.update()
+        chain = [ngw_resource]
+        parent = ngw_resource.get_parent()
+        while parent is not None:
+            parent.update()
+            chain.insert(0, parent)
+            parent = parent.get_parent()
+
+        return chain
+
     def run(self):
         self.started.emit()
-        self._do()
+        try:
+            self._do()
+        except Exception as e:
+            self.errorOccurred.emit(e)
         self.finished.emit()
 
     def _do(self):
         pass
-
-
-class NGWResourceUpdate(NGWResourceModelJob):
-    def __init__(self, ngw_resource):
-        NGWResourceModelJob.__init__(self)
-        self.ngw_resource = ngw_resource
-
-    def _do(self):
-        try:
-            self.ngw_resource.update()
-        except Exception as e:
-            self.errorOccurred.emit(e)
 
 
 class NGWRootResourcesLoader(NGWResourceModelJob):
@@ -78,32 +104,24 @@ class NGWRootResourcesLoader(NGWResourceModelJob):
         NGWResourceModelJob.__init__(self)
         self.ngw_connection_settings = ngw_connection_settings
 
-    def loadNGWRootResource(self):
-        try:
-            rsc_factory = NGWResourceFactory(self.ngw_connection_settings)
-            ngw_root_resource = rsc_factory.get_root_resource()
-
-            self.dataReceived.emit([ngw_root_resource])
-        except Exception as e:
-            self.errorOccurred.emit(e)
-
     def _do(self):
-        self.loadNGWRootResource()
+        result = []
+        rsc_factory = NGWResourceFactory(self.ngw_connection_settings)
+        ngw_root_resource = rsc_factory.get_root_resource()
+        if ngw_root_resource is not None:
+            result.append(ngw_root_resource)
+        self.dataReceived.emit(result)
 
 
-class NGWResourcesLoader(NGWResourceModelJob):
-    def __init__(self, ngw_parent_resource):
+class NGWResourceUpdater(NGWResourceModelJob):
+    def __init__(self, ngw_resource):
         NGWResourceModelJob.__init__(self)
-        self.ngw_parent_resource = ngw_parent_resource
+        self.ngw_resource = ngw_resource
 
     def _do(self):
-        try:
-            self.ngw_parent_resource.update()
-            ngw_resource_children = self.ngw_parent_resource.get_children()
-
-            self.dataReceived.emit(ngw_resource_children)
-        except Exception as e:
-            self.errorOccurred.emit(e)
+        self.ngw_resource.update()
+        ngw_resource_children = self.ngw_resource.get_children()
+        self.dataReceived.emit((self.ngw_resource, ngw_resource_children))
 
 
 class NGWGroupCreater(NGWResourceModelJob):
@@ -113,20 +131,17 @@ class NGWGroupCreater(NGWResourceModelJob):
         self.ngw_resource_parent = ngw_resource_parent
 
     def _do(self):
-        try:
-            chd_names = [ch.common.display_name for ch in self.ngw_resource_parent.get_children()]
+        new_group_name = self.unique_resource_name(self.new_group_name, self.ngw_resource_parent)
 
-            new_group_name = self.generate_unique_name(self.new_group_name, chd_names)
+        ngw_group_resource = ResourceCreator.create_group(
+            self.ngw_resource_parent,
+            new_group_name
+        )
 
-            ngw_group_resource = ResourceCreator.create_group(
-                self.ngw_resource_parent,
-                new_group_name
-            )
+        result = NGWResourceModelJobResult()
+        result.putAddedResource(ngw_group_resource, is_main=True)
 
-            self.dataReceived.emit(ngw_group_resource)
-
-        except Exception as e:
-            self.errorOccurred.emit(e)
+        self.dataReceived.emit(result)
 
 
 class NGWResourceDelete(NGWResourceModelJob):
@@ -135,10 +150,11 @@ class NGWResourceDelete(NGWResourceModelJob):
         self.ngw_resource = ngw_resource
 
     def _do(self):
-        try:
-            NGWResource.delete_resource(self.ngw_resource)
-        except Exception as e:
-            self.errorOccurred.emit(e)
+        NGWResource.delete_resource(self.ngw_resource)
+
+        result = NGWResourceModelJobResult()
+        result.putDeletedResource(self.ngw_resource)
+        self.dataReceived.emit(result)
 
 
 class NGWCreateWFSForVector(NGWResourceModelJob):
@@ -149,21 +165,21 @@ class NGWCreateWFSForVector(NGWResourceModelJob):
         self.ret_obj_num = ret_obj_num
 
     def _do(self):
-        try:
-            ngw_wfs_service_name = self.ngw_vector_layer.common.display_name + "-wfs-service"
+        ngw_wfs_service_name = self.unique_resource_name(
+            self.ngw_vector_layer.common.display_name + "-wfs-service",
+            self.ngw_group_resource)
 
-            chd_names = [ch.common.display_name for ch in self.ngw_group_resource.get_children()]
+        ngw_wfs_resource = ResourceCreator.create_wfs_service(
+            ngw_wfs_service_name,
+            self.ngw_group_resource,
+            [self.ngw_vector_layer],
+            self.ret_obj_num
+        )
 
-            ngw_wfs_service_name = self.generate_unique_name(ngw_wfs_service_name, chd_names)
+        result = NGWResourceModelJobResult()
+        result.putAddedResource(ngw_wfs_resource, is_main=True)
 
-            ResourceCreator.create_wfs_service(
-                ngw_wfs_service_name,
-                self.ngw_group_resource,
-                [self.ngw_vector_layer],
-                self.ret_obj_num
-            )
-        except Exception as e:
-            self.errorOccurred.emit(e)
+        self.dataReceived.emit(result)
 
 
 class NGWCreateMapForStyle(NGWResourceModelJob):
@@ -172,29 +188,31 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
         self.ngw_style = ngw_style
 
     def _do(self):
-        try:
-            ngw_layer = self.ngw_style.get_parent()
-            ngw_group = ngw_layer.get_parent()
+        ngw_layer = self.ngw_style.get_parent()
+        ngw_group = ngw_layer.get_parent()
 
-            ngw_map_name = self.unique_resource_name(
-                self.ngw_style.common.display_name + "-map",
-                ngw_group
-            )
+        ngw_map_name = self.unique_resource_name(
+            self.ngw_style.common.display_name + "-map",
+            ngw_group
+        )
 
-            ngw_webmap_root_group = NGWWebMapRoot()
-            ngw_webmap_root_group.appendChild(
-                NGWWebMapLayer(
-                    self.ngw_style.common.id,
-                    ngw_layer.common.display_name,
-                    True
-                )
+        ngw_webmap_root_group = NGWWebMapRoot()
+        ngw_webmap_root_group.appendChild(
+            NGWWebMapLayer(
+                self.ngw_style.common.id,
+                ngw_layer.common.display_name,
+                True
             )
+        )
 
-            ResourceCreator.create_webmap(
-                ngw_group,
-                ngw_map_name,
-                [item.toDict() for item in ngw_webmap_root_group.children],
-                box=ngw_layer.extent()
-            )
-        except Exception as e:
-            self.errorOccurred.emit(e)
+        ngw_resource = ResourceCreator.create_webmap(
+            ngw_group,
+            ngw_map_name,
+            [item.toDict() for item in ngw_webmap_root_group.children],
+            bbox=ngw_layer.extent()
+        )
+
+        result = NGWResourceModelJobResult()
+        result.putAddedResource(ngw_resource, is_main=True)
+
+        self.dataReceived.emit(result)
