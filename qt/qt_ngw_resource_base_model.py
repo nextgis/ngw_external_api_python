@@ -46,12 +46,11 @@ class NGWResourcesModelJob(QObject):
         self.__job_id = job_id
 
         self.__worker.started.connect(self.started.emit)
+        self.__worker.dataReceived.connect(self.__rememberResult)
         self.__worker.statusChanged.connect(self.statusChanged.emit)
         self.__worker.errorOccurred.connect(self.errorOccurred.emit)
         self.__worker.warningOccurred.connect(self.warningOccurred.emit)
         self.__worker.finished.connect(self.finished.emit)
-
-        self.__worker.dataReceived.connect(self.__rememberResult)
 
     def __del__(self):
         self.__worker.started.disconnect()
@@ -266,9 +265,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             slot
         )
 
-        job.start()
-
         self.jobs.append(job)
+
+        job.start()
 
     def __jobStartedProcess(self):
         job = self.sender()

@@ -66,6 +66,7 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
             # TODO Exception
             return
 
+        indexes = []
         for ngw_resource in job_result.added_resources:
             index = self.getIndexByNGWResourceId(
                 ngw_resource.common.parent.id,
@@ -80,6 +81,10 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
                     new_index
                 )
 
+            if index not in indexes:
+                indexes.append(index)
+
+        for index in indexes:
             self.updateResourceWithLoadChildren(index)
 
         for ngw_resource in job_result.deleted_resources:
