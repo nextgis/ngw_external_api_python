@@ -45,10 +45,8 @@ class NGWResourceModelJobResult():
         if is_main:
             self.main_resource_id = ngw_resource.common.id
 
-    def putDeletedResource(self, ngw_resource, is_main=False):
+    def putDeletedResource(self, ngw_resource):
         self.deleted_resources.append(ngw_resource)
-        if is_main:
-            self.main_resource_id = ngw_resource.common.id
 
 
 class NGWResourceModelJob(QObject):

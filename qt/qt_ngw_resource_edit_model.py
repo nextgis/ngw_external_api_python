@@ -66,13 +66,15 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
             # TODO Exception
             return
 
-        indexes = []
+        indexes = {}
         for ngw_resource in job_result.added_resources:
-            index = self.getIndexByNGWResourceId(
-                ngw_resource.common.parent.id,
-                self.index(0, 0, QModelIndex())
-            )
-            item = index.internalPointer()
+            index = indexes.get(ngw_resource.common.parent.id)
+            if index is None:
+                index = self.getIndexByNGWResourceId(
+                    ngw_resource.common.parent.id,
+                    self.index(0, 0, QModelIndex())
+                )
+                indexes[ngw_resource.common.parent.id] = index
 
             new_index = self.addNGWResourceToTree(index, ngw_resource)
 
@@ -80,12 +82,11 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
                 self.focusedResource.emit(
                     new_index
                 )
+                if job.model_response:
+                    job.model_response.done.emit(new_index)
 
-            if index not in indexes:
-                indexes.append(index)
-
-        for index in indexes:
-            self.updateResourceWithLoadChildren(index)
+        for id in indexes:
+            self.updateResourceWithLoadChildren(indexes[id])
 
         for ngw_resource in job_result.deleted_resources:
             index = self.getIndexByNGWResourceId(

@@ -31,7 +31,7 @@ from PyQt4.QtCore import *
 from qgis.core import *
 from qgis.gui import *
 
-from ..qt.qt_ngw_resource_base_model import QNGWResourcesModelExeption
+from ..qt.qt_ngw_resource_base_model import QNGWResourcesModelExeption, NGWResourcesModelResponse
 from ..qt.qt_ngw_resource_edit_model import QNGWResourcesModel
 from ..qt.qt_ngw_resource_model_job import *
 
@@ -74,12 +74,17 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         parent_item = parent_index.internalPointer()
         ngw_resource_parent = parent_item.data(0, parent_item.NGWResourceRole)
 
+        response = NGWResourcesModelResponse(self)
+
         worker = CurrentQGISProjectImporter(ngw_group_name, ngw_resource_parent, iface)
         self._stratJobOnNGWResource(
             worker,
             self.JOB_IMPORT_QGIS_PROJECT,
             self.processJobResult,
+            response
         )
+
+        return response
 
     def createMapForLayer(self, index, ngw_style_id):
         if not index.isValid():
@@ -88,12 +93,17 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         item = index.internalPointer()
         ngw_resource = item.data(0, Qt.UserRole)
 
+        response = NGWResourcesModelResponse(self)
+
         worker = MapForLayerCreater(ngw_resource, ngw_style_id)
         self._stratJobOnNGWResource(
             worker,
             self.JOB_CREATE_NGW_WEB_MAP,
             self.processJobResult,
+            response,
         )
+
+        return response
 
 
 class QGISResourceJob(NGWResourceModelJob):

@@ -18,7 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import Qt,  QTimer
+from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QIcon, QTreeWidgetItem
 
 from ..core.ngw_group_resource import NGWGroupResource
@@ -112,10 +112,13 @@ class QNGWResourceItemExt(QTreeWidgetItem):
         return ngw_resource.type_id == NGWGroupResource.type_id
 
     def more_priority(self, item):
+        if isinstance(item, AuxiliaryItem):
+            return True
+
         if self.is_group() != item.is_group():
             return self.is_group() > item.is_group()
 
-        return self.text(0) < item.text(0)
+        return self.text(0).lower() < item.text(0).lower()
 
 
 class AuxiliaryItem(QTreeWidgetItem):

@@ -26,6 +26,13 @@ from qt_ngw_resource_item import QNGWResourceItemExt, AuxiliaryItem
 from qt_ngw_resource_model_job import *
 
 
+class NGWResourcesModelResponse(QObject):
+    done = pyqtSignal(object)
+
+    def __init__(self, parent):
+        QObject.__init__(self, parent)
+
+
 class NGWResourcesModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
@@ -33,7 +40,7 @@ class NGWResourcesModelJob(QObject):
     errorOccurred = pyqtSignal(object)
     finished = pyqtSignal()
 
-    def __init__(self, parent, job_id, worker):
+    def __init__(self, parent, job_id, worker, model_response=None):
         """Create job.
 
             Arguments:
@@ -51,6 +58,8 @@ class NGWResourcesModelJob(QObject):
         self.__worker.errorOccurred.connect(self.errorOccurred.emit)
         self.__worker.warningOccurred.connect(self.warningOccurred.emit)
         self.__worker.finished.connect(self.finished.emit)
+
+        self.model_response = model_response
 
     def __del__(self):
         self.__worker.started.disconnect()
@@ -236,14 +245,14 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
         return checking_index
 
-    def _stratJobOnNGWResource(self, worker, job_id, slot):
+    def _stratJobOnNGWResource(self, worker, job_id, slot, response=None):
         """Registers and starts the job.
 
             Arguments:
                 worker -- The class object inherits from NGWResourceModelJob
                 slots -- qt slots will be connected to job finished, last slot must pop job from jobs and call deleteLater
         """
-        job = NGWResourcesModelJob(self, job_id, worker)
+        job = NGWResourcesModelJob(self, job_id, worker, response)
 
         job.started.connect(
             self.__jobStartedProcess
@@ -300,7 +309,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         i = -1
         for i in range(0, parent_item.childCount()):
             item = parent_item.child(i)
-            if isinstance(item, QNGWResourceItemExt) and new_item.more_priority(item):
+            if new_item.more_priority(item):
                 break
         else:
             i += 1
@@ -385,13 +394,6 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             # TODO exception
             return
 
-        # Remove servise item - loading...
-        for i in range(0, item.childCount()):
-            if isinstance(item.child(i), AuxiliaryItem):
-                self.beginRemoveRows(index, i, i)
-                item.removeChild(item.child(i))
-                self.endRemoveRows()
-
         item.set_ngw_resource(ngw_resource)
 
         current_res_count = item.childCount()
@@ -400,6 +402,13 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             chiled_id = ngw_resource_child.common.id
             if chiled_id not in current_ids:
                 self.addNGWResourceToTree(index, ngw_resource_child)
+
+        # Remove servise item - loading...
+        for i in range(0, item.childCount()):
+            if isinstance(item.child(i), AuxiliaryItem):
+                self.beginRemoveRows(index, i, i)
+                item.removeChild(item.child(i))
+                self.endRemoveRows()
 
         self.indexes_in_update_state[index] -= 1
         if self.indexes_in_update_state[index] == 0:
