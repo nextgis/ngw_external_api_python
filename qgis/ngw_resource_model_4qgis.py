@@ -143,7 +143,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def importQgsRasterLayer(self, qgs_raster_layer, ngw_parent_resource, new_layer_name):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                "%s - Upload (%d %%)" % (
+                "%s - Upload (%d%%)" % (
                     qgs_raster_layer.name(),
                     readed_size * 100 / total_size
                 )
@@ -163,7 +163,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def importQgsVectorLayer(self, qgs_vector_layer, ngw_parent_resource, new_layer_name):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                "%s - Upload (%d %%)" % (
+                "%s - Upload (%d%%)" % (
                     qgs_vector_layer.name(),
                     readed_size * 100 / total_size
                 )
@@ -241,7 +241,7 @@ class QGISResourceJob(NGWResourceModelJob):
         features_counter = 0
         for feature in qgs_vector_layer.getFeatures():
             self.statusChanged.emit(
-                "%s - Check geometry (%d %%)" % (
+                "%s - Check geometry (%d%%)" % (
                     qgs_vector_layer.name(),
                     features_counter * 100 / features_count
                 )
@@ -256,7 +256,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 break
 
         self.statusChanged.emit(
-            "%s - Check geometry (%d %%)" % (
+            "%s - Check geometry (%d%%)" % (
                 qgs_vector_layer.name(),
                 100
             )
@@ -315,7 +315,7 @@ class QGISResourceJob(NGWResourceModelJob):
             qgs_vector_layer_dst.addFeature(feature)
 
             self.statusChanged.emit(
-                "%s - Prepare layer for import (%d %%)" % (
+                "%s - Prepare layer for import (%d%%)" % (
                     qgs_vector_layer_src.name(),
                     features_counter * 100 / features_count
                 )
@@ -402,7 +402,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def addQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                "Style for %s - Upload (%d %%)" % (
+                "Style for %s - Upload (%d%%)" % (
                     ngw_layer_resource.common.display_name,
                     readed_size * 100 / total_size
                 )

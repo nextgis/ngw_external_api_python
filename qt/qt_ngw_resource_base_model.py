@@ -335,9 +335,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         )
 
     def _proccessRootResourcesReceived(self):
-        job = self.jobs.pop(
-            self.jobs.index(self.sender())
-        )
+        job = self.sender()
 
         item = self.root_item
 
@@ -379,9 +377,8 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         )
 
     def _updateResource(self):
-        job = self.jobs.pop(
-            self.jobs.index(self.sender())
-        )
+        job = self.sender()
+
         ngw_resource, ngw_resource_children = job.getResult()
 
         ngw_resource_id = ngw_resource.common.id

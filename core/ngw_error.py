@@ -22,7 +22,10 @@
 
 class NGWError(Exception):
     def __init__(self, message):
-        self.message = unicode(message, 'utf-8')
+        if not isinstance(message, unicode):
+            self.message = unicode(message, 'utf-8')
+        else:
+            self.message = message
 
     def __str__(self):
         return self.message

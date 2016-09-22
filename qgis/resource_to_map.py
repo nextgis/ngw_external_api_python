@@ -18,6 +18,9 @@
  *                                                                         *
  ***************************************************************************/
 """
+from PyQt4.QtCore import *
+from PyQt4.QtNetwork import *
+
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsMapLayer, QgsProject, QgsRectangle
 from ..core.ngw_error import NGWError
 from ..core.ngw_vector_layer import NGWVectorLayer
@@ -34,6 +37,43 @@ def add_resource_as_geojson(resource, return_extent=False):
         raise NGWError('Layer %s can\'t be added to the map!' % resource.common.display_name)
 
     qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
+
+    QgsMapLayerRegistry.instance().addMapLayer(qgs_geojson_layer)
+
+    if return_extent:
+        if qgs_geojson_layer.extent().isEmpty() and qgs_geojson_layer.type() == QgsMapLayer.VectorLayer:
+            qgs_geojson_layer.updateExtents()
+            return qgs_geojson_layer.extent()
+
+
+def add_resource_as_geojson_with_style(ngw_layer, ngw_style, return_extent=False):
+    if not isinstance(ngw_layer, NGWVectorLayer):
+        raise NGWError('Resource type is not VectorLayer!')
+
+    qgs_geojson_layer = QgsVectorLayer(ngw_layer.get_geojson_url(), ngw_layer.common.display_name, 'ogr')
+
+    if not qgs_geojson_layer.isValid():
+        raise NGWError('Layer %s can\'t be added to the map!' % ngw_layer.common.display_name)
+
+    qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
+
+    ev_loop = QEventLoop()
+    dwn_qml_manager = QNetworkAccessManager()
+    dwn_qml_manager.finished.connect(ev_loop.quit)
+    reply = dwn_qml_manager.get(QNetworkRequest(QUrl(ngw_style.download_qml_url())))
+    ev_loop.exec_()
+
+    file = QTemporaryFile()
+    if file.open(QIODevice.WriteOnly):
+        file.write(reply.readAll())
+        file.close()
+    else:
+        # raise NGWError("Can not applay style to layer %s!" % ngw_layer.common.display_name)
+        pass
+
+    qgs_geojson_layer.loadNamedStyle(
+        file.fileName()
+    )
 
     QgsMapLayerRegistry.instance().addMapLayer(qgs_geojson_layer)
 

@@ -57,9 +57,8 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
         return None
 
     def processJobResult(self):
-        job = self.jobs.pop(
-            self.jobs.index(self.sender())
-        )
+        job = self.sender()
+
         job_result = job.getResult()
 
         if job_result is None:

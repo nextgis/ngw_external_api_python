@@ -93,7 +93,7 @@ class QNGWResourceItemExt(QTreeWidgetItem):
         if ngw_resource is not None:
             self.setText(0, ngw_resource.common.display_name)
             self.setIcon(0, QIcon(ngw_resource.icon_path))
-            self.setToolTip(0, ngw_resource.type_title)
+            # self.setToolTip(0, ngw_resource.type_title)
             self.setData(0, self.NGWResourceRole, ngw_resource)
             self.setData(0, self.NGWResourceIdRole, ngw_resource.common.id)
 
