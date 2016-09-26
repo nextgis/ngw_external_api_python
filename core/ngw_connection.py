@@ -95,8 +95,10 @@ class NGWConnection(object):
         try:
             resp = self.__session.send(prep)
         except requests.exceptions.RequestException, e:
-            # raise NGWError(e.args[0])
             raise NGWError('{"exception": "ConnectionError", "message": "RequestException: %s"}' % e.args[0])
+
+        if resp.status_code == 502:
+            raise NGWError('{"exception": "ConnectionError", "message": "Response status code: 502"}')
 
         if resp.status_code / 100 != 2:
             raise NGWError(resp.content)
@@ -111,22 +113,22 @@ class NGWConnection(object):
 
     def put(self, sub_url, params=None, **kwargs):
         return self.__request(sub_url, 'PUT', params, **kwargs)
-    
+
     def delete(self, sub_url, params=None, **kwargs):
         return self.__request(sub_url, 'DELETE', params, **kwargs)
-    
+
     def get_upload_file_url(self):
         return UPLOAD_FILE_URL
-    
+
     def upload_file(self, filename):
         with open(filename, 'rb') as fd:
-            upload_info = self.put(self.get_upload_file_url(), data=fd) 
+            upload_info = self.put(self.get_upload_file_url(), data=fd)
             return upload_info
-    
+
     def download_file(self, url):
         req = requests.Request('GET', self.server_url + url)
         prep = self.__session.prepare_request(req)
-        
+
         try:
             resp = self.__session.send(prep, stream=True)
         except requests.exceptions.RequestException, e:

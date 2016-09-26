@@ -27,10 +27,18 @@ from qt_ngw_resource_model_job import *
 
 
 class NGWResourcesModelResponse(QObject):
+    ErrorCritical = 0
+    ErrorWarrning = 1
+
     done = pyqtSignal(object)
 
     def __init__(self, parent):
         QObject.__init__(self, parent)
+
+        self.__errors = {}
+
+    def errors(self):
+        return self.__errors
 
 
 class NGWResourcesModelJob(QObject):
@@ -57,15 +65,11 @@ class NGWResourcesModelJob(QObject):
         self.__worker.statusChanged.connect(self.statusChanged.emit)
         self.__worker.errorOccurred.connect(self.errorOccurred.emit)
         self.__worker.warningOccurred.connect(self.warningOccurred.emit)
-        self.__worker.finished.connect(self.finished.emit)
 
         self.model_response = model_response
 
-    def __del__(self):
-        self.__worker.started.disconnect()
-        self.__worker.statusChanged.disconnect()
-        self.__worker.finished.disconnect()
-        self.__worker.errorOccurred.disconnect()
+    def setResponseObject(self, resp):
+        self.model_response = resp
 
     def __rememberResult(self, result):
         self.__result = result
@@ -79,11 +83,22 @@ class NGWResourcesModelJob(QObject):
     def start(self):
         self.__thread = QThread(self)
         self.__worker.moveToThread(self.__thread)
-        self.__worker.finished.connect(self.__thread.quit)
-        self.__worker.finished.connect(self.__thread.deleteLater)
+        self.__worker.finished.connect(self.finishProcess)
         self.__thread.started.connect(self.__worker.run)
 
         self.__thread.start()
+
+    def finishProcess(self):
+        self.__worker.started.disconnect()
+        self.__worker.dataReceived.disconnect()
+        self.__worker.statusChanged.disconnect()
+        self.__worker.errorOccurred.disconnect()
+        self.__worker.warningOccurred.disconnect()
+        self.__worker.finished.disconnect()
+
+        self.__thread.quit()
+        self.__thread.wait()
+        self.finished.emit()
 
 
 class QNGWResourcesModelExeption(Exception):
@@ -92,6 +107,28 @@ class QNGWResourcesModelExeption(Exception):
 
     def __str__(self):
         return self.message
+
+
+def modelRequest():
+    def modelRequestDecorator(method):
+        def wrapper(self, *args, **kwargs):
+            job = method(self, *args, **kwargs)
+            response = NGWResourcesModelResponse(self)
+            job.setResponseObject(response)
+            return response
+        return wrapper
+    return modelRequestDecorator
+
+
+def modelJobSlot():
+    def modelJobSlotDecorator(method):
+        def wrapper(self):
+            job = self.sender()
+            method(self, job)
+            job.deleteLater()
+            self.jobs.remove(job)
+        return wrapper
+    return modelJobSlotDecorator
 
 
 class QNGWResourcesBaseModel(QAbstractItemModel):
@@ -107,8 +144,6 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
     def __init__(self, parent):
         QAbstractItemModel.__init__(self, parent)
 
-        # parent.destroyed.connect(self.__stop)
-
         self.jobs = []
         self.root_item = AuxiliaryItem("Qt model root item")
         self.__ngw_connection_settings = None
@@ -116,28 +151,23 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         self.indexes_in_update_state = {}
 
     def resetModel(self, ngw_connection_settings):
+        self.__cleanModel()
         self.__ngw_connection_settings = ngw_connection_settings
+
         self.beginResetModel()
-        self.indexes_in_update_state = {}
-        self.__resetModel(ngw_connection_settings)
+        self.startLoadRootResources(ngw_connection_settings)
         self.endResetModel()
         self.modelReset.emit()
 
     def isCurrentConnectionSame(self, connection_settings):
         return self.__ngw_connection_settings == connection_settings
 
-    def cleanModel(self):
-        self.jobs = []
-
+    def __cleanModel(self):
         c = self.root_item.childCount()
         self.beginRemoveRows(QModelIndex(), 0, c - 1)
         for i in range(c - 1, -1, -1):
             self.root_item.removeChild(self.root_item.child(i))
         self.endRemoveRows()
-
-    def __resetModel(self, ngw_connection_settings):
-        self.cleanModel()
-        self.startLoadRootResources(ngw_connection_settings)
 
     def index(self, row, column, parent):
         if not self.hasIndex(row, column, parent):
@@ -184,9 +214,8 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         else:
             parent_item = parent.internalPointer()
 
-        for index in self.indexes_in_update_state:
-            if parent == index:
-                return False
+        for parent in self.indexes_in_update_state:
+            return False
 
         if isinstance(parent_item, QNGWResourceItemExt):
             return parent_item.ngw_resource_children_count() > parent_item.childCount()
@@ -245,15 +274,17 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
         return checking_index
 
-    def _stratJobOnNGWResource(self, worker, job_id, slot, response=None):
+    def _stratJobOnNGWResource(self, worker, job_id, slot):
+        self._startJob(worker, job_id, slot)
+
+    def _startJob(self, worker, job_id, slot, response=None):
         """Registers and starts the job.
 
             Arguments:
                 worker -- The class object inherits from NGWResourceModelJob
-                slots -- qt slots will be connected to job finished, last slot must pop job from jobs and call deleteLater
+                slots -- qt slots will be connected to job finished, last slot must call deleteLater
         """
         job = NGWResourcesModelJob(self, job_id, worker, response)
-
         job.started.connect(
             self.__jobStartedProcess
         )
@@ -277,6 +308,8 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         self.jobs.append(job)
 
         job.start()
+
+        return job
 
     def __jobStartedProcess(self):
         job = self.sender()
@@ -334,9 +367,8 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             self._proccessRootResourcesReceived,
         )
 
-    def _proccessRootResourcesReceived(self):
-        job = self.sender()
-
+    @modelJobSlot()
+    def _proccessRootResourcesReceived(self, job):
         item = self.root_item
 
         # Remove servise item - loading...
@@ -349,10 +381,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         for ngw_resource in ngw_resources:
             self.addNGWResourceToTree(QModelIndex(), ngw_resource)
 
-    def updateResourcesWithLoadChildren(self, indexes):
-        for index in indexes:
-            self.updateResourceWithLoadChildren(index)
-
+    @modelRequest()
     def updateResourceWithLoadChildren(self, index):
         item = index.internalPointer()
 
@@ -369,16 +398,14 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             self.endInsertRows()
 
         ngw_resource = item.data(0, Qt.UserRole)
-        worker = NGWResourceUpdater(ngw_resource)
-        self._stratJobOnNGWResource(
-            worker,
+        return self._startJob(
+            NGWResourceUpdater(ngw_resource),
             self.JOB_LOAD_NGW_RESOURCE_CHILDREN,
             self._updateResource,
         )
 
-    def _updateResource(self):
-        job = self.sender()
-
+    @modelJobSlot()
+    def _updateResource(self, job):
         ngw_resource, ngw_resource_children = job.getResult()
 
         ngw_resource_id = ngw_resource.common.id

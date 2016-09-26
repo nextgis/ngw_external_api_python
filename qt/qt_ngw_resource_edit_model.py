@@ -18,17 +18,14 @@
  *                                                                         *
  ***************************************************************************/
 """
-
-from PyQt4.QtCore import Qt, QModelIndex, pyqtSignal
+from PyQt4.QtCore import Qt, QModelIndex
 
 from qt_ngw_resource_item import QNGWResourceItemExt
 from qt_ngw_resource_model_job import *
-from qt_ngw_resource_base_model import QNGWResourcesBaseModel
+from qt_ngw_resource_base_model import *
 
 
 class QNGWResourcesModel(QNGWResourcesBaseModel):
-
-    focusedResource = pyqtSignal(QModelIndex)
 
     JOB_CREATE_NGW_GROUP_RESOURCE = "CREATE_NGW_GROUP_RESOURCE"
     JOB_DELETE_NGW_RESOURCE = "DELETE_NGW_RESOURCE"
@@ -56,9 +53,8 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
 
         return None
 
-    def processJobResult(self):
-        job = self.sender()
-
+    @modelJobSlot()
+    def processJobResult(self, job):
         job_result = job.getResult()
 
         if job_result is None:
@@ -78,14 +74,11 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
             new_index = self.addNGWResourceToTree(index, ngw_resource)
 
             if job_result.main_resource_id == ngw_resource.common.id:
-                self.focusedResource.emit(
-                    new_index
-                )
-                if job.model_response:
+                if job.model_response is not None:
                     job.model_response.done.emit(new_index)
 
-        for id in indexes:
-            self.updateResourceWithLoadChildren(indexes[id])
+        for rid in indexes:
+            self.updateResourceWithLoadChildren(indexes[rid])
 
         for ngw_resource in job_result.deleted_resources:
             index = self.getIndexByNGWResourceId(
@@ -104,11 +97,10 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
                 # TODO exception: not find deleted resource in corrent tree
                 return
 
-            if job_result.main_resource_id == ngw_resource.common.id:
-                self.focusedResource.emit(index)
+            if job.model_response is not None:
+                job.model_response.done.emit(index)
 
-            self.updateResourceWithLoadChildren(index)
-
+    @modelRequest()
     def tryCreateNGWGroup(self, new_group_name, parent_index):
         if not parent_index.isValid():
             parent_index = self.index(0, 0, parent_index)
@@ -118,27 +110,24 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
         parent_item = parent_index.internalPointer()
         ngw_resource_parent = parent_item.data(0, parent_item.NGWResourceRole)
 
-        if ngw_resource_parent is None:
-            return False
-
-        worker = NGWGroupCreater(new_group_name, ngw_resource_parent)
-        self._stratJobOnNGWResource(
-            worker,
+        return self._startJob(
+            NGWGroupCreater(new_group_name, ngw_resource_parent),
             self.JOB_CREATE_NGW_GROUP_RESOURCE,
             self.processJobResult,
         )
 
+    @modelRequest()
     def deleteResource(self, index):
         item = index.internalPointer()
         ngw_resource = item.data(0, item.NGWResourceRole)
 
-        worker = NGWResourceDelete(ngw_resource)
-        self._stratJobOnNGWResource(
-            worker,
+        return self._startJob(
+            NGWResourceDelete(ngw_resource),
             self.JOB_DELETE_NGW_RESOURCE,
             self.processJobResult,
         )
 
+    @modelRequest()
     def createWFSForVector(self, index, ret_obj_num):
         if not index.isValid():
             index = self.index(0, 0, index)
@@ -151,13 +140,13 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
         item = index.internalPointer()
         ngw_resource = item.data(0, Qt.UserRole)
 
-        worker = NGWCreateWFSForVector(ngw_resource, ngw_parent_resource, ret_obj_num)
-        self._stratJobOnNGWResource(
-            worker,
+        return self._startJob(
+            NGWCreateWFSForVector(ngw_resource, ngw_parent_resource, ret_obj_num),
             self.JOB_CREATE_NGW_WFS_SERVICE,
             self.processJobResult,
         )
 
+    @modelRequest()
     def createMapForStyle(self, index):
         if not index.isValid():
             index = self.index(0, 0, index)
@@ -165,9 +154,8 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
         item = index.internalPointer()
         ngw_resource = item.data(0, Qt.UserRole)
 
-        worker = NGWCreateMapForStyle(ngw_resource)
-        self._stratJobOnNGWResource(
-            worker,
+        return self._startJob(
+            NGWCreateMapForStyle(ngw_resource),
             self.JOB_CREATE_NGW_WEB_MAP,
             self.processJobResult,
         )

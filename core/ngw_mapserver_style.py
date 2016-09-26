@@ -30,5 +30,3 @@ class NGWMapServerStyle(NGWResource):
 
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
-
-        self.common.display_name = "(ms) " + self.common.display_name

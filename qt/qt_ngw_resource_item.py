@@ -22,6 +22,8 @@ from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QIcon, QTreeWidgetItem
 
 from ..core.ngw_group_resource import NGWGroupResource
+from ..core.ngw_qgis_vector_style import NGWQGISVectorStyle
+from ..core.ngw_mapserver_style import NGWMapServerStyle
 # from qgis.core import QgsMessageLog
 
 
@@ -91,7 +93,12 @@ class QNGWResourceItemExt(QTreeWidgetItem):
 
     def set_ngw_resource(self, ngw_resource):
         if ngw_resource is not None:
-            self.setText(0, ngw_resource.common.display_name)
+            title = ngw_resource.common.display_name
+            if ngw_resource.type_id == NGWQGISVectorStyle.type_id:
+                title = "(qgis) " + title
+            if ngw_resource.type_id == NGWMapServerStyle.type_id:
+                title = "(ms) " + title
+            self.setText(0, title)
             self.setIcon(0, QIcon(ngw_resource.icon_path))
             # self.setToolTip(0, ngw_resource.type_title)
             self.setData(0, self.NGWResourceRole, ngw_resource)

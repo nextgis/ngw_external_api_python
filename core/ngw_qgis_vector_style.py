@@ -31,7 +31,5 @@ class NGWQGISVectorStyle(NGWResource):
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
 
-        self.common.display_name = "(qgis) " + self.common.display_name
-
     def download_qml_url(self):
         return self.get_absolute_api_url() + "/qml"

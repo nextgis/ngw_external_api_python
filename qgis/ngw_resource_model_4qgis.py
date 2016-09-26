@@ -31,8 +31,8 @@ from PyQt4.QtCore import *
 from qgis.core import *
 from qgis.gui import *
 
-from ..qt.qt_ngw_resource_base_model import QNGWResourcesModelExeption, NGWResourcesModelResponse
-from ..qt.qt_ngw_resource_edit_model import QNGWResourcesModel
+from ..qt.qt_ngw_resource_base_model import *
+from ..qt.qt_ngw_resource_edit_model import *
 from ..qt.qt_ngw_resource_model_job import *
 
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
@@ -49,6 +49,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
     def __init__(self, parent):
         QNGWResourcesModel.__init__(self, parent)
 
+    @modelRequest()
     def createNGWLayer(self, qgs_map_layer, parent_index):
         if not parent_index.isValid():
             parent_index = self.index(0, 0, parent_index)
@@ -58,13 +59,13 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         parent_item = parent_index.internalPointer()
         ngw_parent_resource = parent_item.data(0, Qt.UserRole)
 
-        worker = QGISResourceImporter(qgs_map_layer, ngw_parent_resource)
-        self._stratJobOnNGWResource(
-            worker,
+        return self._startJob(
+            QGISResourceImporter(qgs_map_layer, ngw_parent_resource),
             self.JOB_IMPORT_QGIS_RESOURCE,
             self.processJobResult,
         )
 
+    @modelRequest()
     def tryImportCurentQGISProject(self, ngw_group_name, parent_index, iface):
         if not parent_index.isValid():
             parent_index = self.index(0, 0, parent_index)
@@ -74,18 +75,13 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         parent_item = parent_index.internalPointer()
         ngw_resource_parent = parent_item.data(0, parent_item.NGWResourceRole)
 
-        response = NGWResourcesModelResponse(self)
-
-        worker = CurrentQGISProjectImporter(ngw_group_name, ngw_resource_parent, iface)
-        self._stratJobOnNGWResource(
-            worker,
+        return self._startJob(
+            CurrentQGISProjectImporter(ngw_group_name, ngw_resource_parent, iface),
             self.JOB_IMPORT_QGIS_PROJECT,
             self.processJobResult,
-            response
         )
 
-        return response
-
+    @modelRequest()
     def createMapForLayer(self, index, ngw_style_id):
         if not index.isValid():
             index = self.index(0, 0, index)
@@ -93,17 +89,11 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         item = index.internalPointer()
         ngw_resource = item.data(0, Qt.UserRole)
 
-        response = NGWResourcesModelResponse(self)
-
-        worker = MapForLayerCreater(ngw_resource, ngw_style_id)
-        self._stratJobOnNGWResource(
-            worker,
+        return self._startJob(
+            MapForLayerCreater(ngw_resource, ngw_style_id),
             self.JOB_CREATE_NGW_WEB_MAP,
             self.processJobResult,
-            response,
         )
-
-        return response
 
 
 class QGISResourceJob(NGWResourceModelJob):
@@ -239,13 +229,17 @@ class QGISResourceJob(NGWResourceModelJob):
 
         features_count = qgs_vector_layer.featureCount()
         features_counter = 0
+        progress = 0
         for feature in qgs_vector_layer.getFeatures():
-            self.statusChanged.emit(
-                "%s - Check geometry (%d%%)" % (
-                    qgs_vector_layer.name(),
-                    features_counter * 100 / features_count
+            v = features_counter * 100 / features_count
+            if progress < v:
+                progress = v
+                self.statusChanged.emit(
+                    "%s - Check geometry (%d%%)" % (
+                        qgs_vector_layer.name(),
+                        features_counter * 100 / features_count
+                    )
                 )
-            )
             features_counter += 1
             if feature.geometry().isMultipart():
                 has_multipart_geometries = True
@@ -445,14 +439,16 @@ class QGISResourceImporter(QGISResourceJob):
             self.qgs_map_layer,
             self.ngw_parent_resource
         )
-
+        # QgsMessageLog.logMessage("QGISResourceImporter ngw_resource: %d" % ngw_resource.common.id)
         if ngw_resource is None:
             return
 
+        # QgsMessageLog.logMessage("QGISResourceImporter add style start")
         ngw_style = self.addStyle(
             self.qgs_map_layer,
             ngw_resource
         )
+        # QgsMessageLog.logMessage("QGISResourceImporter added style: %d" % ngw_style.common.id)
 
         result = NGWResourceModelJobResult()
         result.putAddedResource(ngw_resource, is_main=True)
@@ -615,6 +611,7 @@ class MapForLayerCreater(QGISResourceJob):
             result.putAddedResource(ngw_style)
 
             self.ngw_style_id = ngw_style.common.id
+            # QgsMessageLog.logMessage("Create style qml: %s" % self.ngw_style_id)
 
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_root_group.appendChild(
