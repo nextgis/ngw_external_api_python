@@ -271,14 +271,16 @@ class QGISResourceJob(NGWResourceModelJob):
             field_name_map = self.getFieldsForRename(qgs_vector_layer_src)
 
             if len(field_name_map) != 0:
+                msg = QCoreApplication.translate(
+                    "QGISResourceJob",
+                    "We've renamed fields {0} for layer '{1}'. Style for this layer may become invalid."
+                ).format(
+                    field_name_map.keys(),
+                    qgs_vector_layer_src.name()
+                )
+
                 self.warningOccurred.emit(
-                    QCoreApplication.translate(
-                        "QGISResourceJob",
-                        "We've renamed fields {0} for layer '{1}'. Style for this layer may become invalid."
-                    ).format(
-                        field_name_map.keys(),
-                        qgs_vector_layer_src.name()
-                    )
+                    QNGWResourcesModelExeption(msg)
                 )
 
         qgs_vector_layer_dst = QgsVectorLayer(
@@ -479,6 +481,8 @@ class CurrentQGISProjectImporter(QGISResourceJob):
 
         ngw_webmap_root_group = NGWWebMapRoot()
 
+        skip_import_layer_error = NgwPluginSettings.get_force_qgis_project_import()
+
         def process_one_level_of_layers_tree(qgsLayerTreeItems, ngw_resource_group, ngw_webmap_item):
             for qgsLayerTreeItem in qgsLayerTreeItems:
 
@@ -486,10 +490,23 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                     if self.isSuitableLayer(qgsLayerTreeItem.layer()) != self.SUITABLE_LAYER:
                         continue
 
-                    ngw_layer_resource = self.importQGISMapLayer(
-                        qgsLayerTreeItem.layer(),
-                        ngw_resource_group
-                    )
+                    try:
+                        ngw_layer_resource = self.importQGISMapLayer(
+                            qgsLayerTreeItem.layer(),
+                            ngw_resource_group
+                        )
+                    except Exception as e:
+                        exception = QNGWResourcesModelExeption(
+                            self.tr("Import '%s'" % qgsLayerTreeItem.layer().name()),
+                            e
+                        )
+                        if skip_import_layer_error:
+                            self.warningOccurred.emit(
+                                exception
+                            )
+                            continue
+                        else:
+                            raise exception
 
                     if ngw_layer_resource is None:
                         continue

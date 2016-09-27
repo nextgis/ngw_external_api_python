@@ -44,7 +44,7 @@ class NGWResourcesModelResponse(QObject):
 class NGWResourcesModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
-    warningOccurred = pyqtSignal(unicode)
+    warningOccurred = pyqtSignal(object)
     errorOccurred = pyqtSignal(object)
     finished = pyqtSignal()
 
@@ -102,8 +102,9 @@ class NGWResourcesModelJob(QObject):
 
 
 class QNGWResourcesModelExeption(Exception):
-    def __init__(self, message):
+    def __init__(self, message, ngw_error=None):
         self.message = message
+        self.ngw_error = ngw_error
 
     def __str__(self):
         return self.message
@@ -135,7 +136,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
     jobStarted = pyqtSignal(unicode)
     jobStatusChanged = pyqtSignal(unicode, unicode)
     errorOccurred = pyqtSignal(unicode, object)
-    warningOccurred = pyqtSignal(unicode, unicode)
+    warningOccurred = pyqtSignal(unicode, object)
     jobFinished = pyqtSignal(unicode)
 
     JOB_NGW_RESOURCE_UPDATE = "RESOURCE_UPDATE"
@@ -327,9 +328,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         job = self.sender()
         self.errorOccurred.emit(job.getJobId(), error)
 
-    def __jobWarningOccurredProcess(self, msg):
+    def __jobWarningOccurredProcess(self, error):
         job = self.sender()
-        self.warningOccurred.emit(job.getJobId(), msg)
+        self.warningOccurred.emit(job.getJobId(), error)
 
     def addNGWResourceToTree(self, parent, ngw_resource):
         if not parent.isValid():

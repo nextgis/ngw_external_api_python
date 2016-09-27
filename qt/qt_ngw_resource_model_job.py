@@ -52,7 +52,7 @@ class NGWResourceModelJobResult():
 class NGWResourceModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
-    warningOccurred = pyqtSignal(unicode)
+    warningOccurred = pyqtSignal(object)
     errorOccurred = pyqtSignal(object)
     dataReceived = pyqtSignal(object)
     finished = pyqtSignal()

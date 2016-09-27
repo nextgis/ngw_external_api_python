@@ -97,3 +97,14 @@ class NgwPluginSettings(PluginSettings):
         settings = cls.get_settings()
         option = settings.value('/sanitize_fix_geometry', 1, type=int)
         return bool(option)
+
+    @classmethod
+    def set_force_qgis_project_import(cls, value):
+        settings = cls.get_settings()
+        settings.setValue('/force_qgis_project_import', int(value))
+
+    @classmethod
+    def get_force_qgis_project_import(cls):
+        settings = cls.get_settings()
+        option = settings.value('/force_qgis_project_import', 1, type=int)
+        return bool(option)
