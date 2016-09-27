@@ -20,6 +20,8 @@
 """
 import os
 from os import path
+import requests
+from ngw_error import NGWError
 
 API_RESOURCE_URL = lambda res_id: '/api/resource/%d' % res_id
 API_COLLECTION_URL = '/api/resource/'
@@ -34,6 +36,7 @@ class Wrapper():
 
 DICT_TO_OBJ = lambda d: Wrapper(**d)
 LIST_DICT_TO_LIST_OBJ = lambda l: [Wrapper(**el) for el in l]
+
 
 class File2Upload(file):
     def __init__(self, path, callback):
@@ -143,6 +146,22 @@ class NGWResource():
 
     def get_api_collection_url(self):
         return API_COLLECTION_URL
+
+    def change_name(self, name):
+        new_name = self.generate_unique_child_name(name)
+        params = dict(
+            resource=dict(
+                display_name=new_name,
+            ),
+        )
+
+        try:
+            connection = self._res_factory.connection
+            url = self.get_relative_api_url()
+            connection.put(url, params=params)
+            self.update()
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot rename resource. Server response:\n%s' % e.message)
 
     def update(self):
         self._json = self.receive_resource_obj(

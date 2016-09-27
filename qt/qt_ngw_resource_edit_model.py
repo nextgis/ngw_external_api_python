@@ -31,6 +31,7 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
     JOB_DELETE_NGW_RESOURCE = "DELETE_NGW_RESOURCE"
     JOB_CREATE_NGW_WFS_SERVICE = "CREATE_NGW_WFS_SERVICE"
     JOB_CREATE_NGW_WEB_MAP = "CREATE_NGW_WEB_MAP"
+    JOB_RENAME_RESOURCE = "RENAME_NGW_RESOURCE"
 
     def __init__(self, parent):
         QNGWResourcesBaseModel.__init__(self, parent)
@@ -79,6 +80,28 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
 
         for rid in indexes:
             self.updateResourceWithLoadChildren(indexes[rid])
+
+        for ngw_resource in job_result.edited_resources:
+            index = self.getIndexByNGWResourceId(
+                ngw_resource.common.parent.id,
+                self.index(0, 0, QModelIndex())
+            )
+            item = index.internalPointer()
+
+            for i in range(0, item.childCount()):
+                if item.child(i).ngw_resource_id() == ngw_resource.common.id:
+                    self.beginRemoveRows(index, i, i)
+                    item.removeChild(item.child(i))
+                    self.endRemoveRows()
+                    break
+            else:
+                # TODO exception: not find deleted resource in corrent tree
+                return
+
+            new_index = self.addNGWResourceToTree(index, ngw_resource)
+
+            if job.model_response is not None:
+                job.model_response.done.emit(new_index)
 
         for ngw_resource in job_result.deleted_resources:
             index = self.getIndexByNGWResourceId(
@@ -157,5 +180,16 @@ class QNGWResourcesModel(QNGWResourcesBaseModel):
         return self._startJob(
             NGWCreateMapForStyle(ngw_resource),
             self.JOB_CREATE_NGW_WEB_MAP,
+            self.processJobResult,
+        )
+
+    @modelRequest()
+    def renameResource(self, index, new_name):
+        item = index.internalPointer()
+        ngw_resource = item.data(0, item.NGWResourceRole)
+
+        return self._startJob(
+            NGWRenameResource(ngw_resource, new_name),
+            self.JOB_RENAME_RESOURCE,
             self.processJobResult,
         )

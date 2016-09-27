@@ -214,3 +214,18 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
         result.putAddedResource(ngw_resource, is_main=True)
 
         self.dataReceived.emit(result)
+
+
+class NGWRenameResource(NGWResourceModelJob):
+    def __init__(self, ngw_resource, new_name):
+        NGWResourceModelJob.__init__(self)
+        self.ngw_resource = ngw_resource
+        self.new_name = new_name
+
+    def _do(self):
+        self.ngw_resource.change_name(self.new_name)
+
+        result = NGWResourceModelJobResult()
+        result.putEditedResource(self.ngw_resource, is_main=True)
+
+        self.dataReceived.emit(result)
