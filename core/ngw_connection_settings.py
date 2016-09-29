@@ -27,6 +27,15 @@ class NGWConnectionSettings():
         self.username = username
         self.password = password
 
+        self.proxy_enable = False
+
+    def set_proxy(self, host, port, user, password):
+        self.proxy_enable = True
+        self.proxy_host = host
+        self.proxy_port = port
+        self.proxy_user = user
+        self.proxy_password = password
+
     def __eq__(self, connection_settings):
         if connection_settings is None:
             return False

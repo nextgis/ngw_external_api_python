@@ -50,11 +50,27 @@ class NGWConnection(object):
         self.__server_url = None
         self.__session = requests.Session()
         self.__auth = ("", "")
+        self.__proxy = None
         self.set_from_settings(conn_settings)
 
     def set_from_settings(self, conn_settings):
         self.server_url = conn_settings.server_url
         self.set_auth(conn_settings.username, conn_settings.password)
+
+        if conn_settings.proxy_enable and conn_settings.proxy_host != "":
+            proxy_url = conn_settings.proxy_host
+            if conn_settings.proxy_port != "":
+                proxy_url = "%s:%s" % (proxy_url, conn_settings.proxy_port)
+            if conn_settings.proxy_user != "":
+                proxy_url = "%s:%s@%s" % (
+                    conn_settings.proxy_user,
+                    conn_settings.proxy_password,
+                    proxy_url
+                )
+
+            self.__proxy = {
+                "http": proxy_url
+            }
 
     @property
     def server_url(self):
@@ -93,9 +109,9 @@ class NGWConnection(object):
         prep = self.__session.prepare_request(req)
 
         try:
-            resp = self.__session.send(prep)
+            resp = self.__session.send(prep, proxies=self.__proxy)
         except requests.exceptions.RequestException, e:
-            raise NGWError('{"exception": "ConnectionError", "message": "RequestException: %s"}' % e.args[0])
+            raise NGWError('{"exception": "ConnectionError", "message": "RequestException: %s"}' % type(e))
 
         if resp.status_code == 502:
             raise NGWError('{"exception": "ConnectionError", "message": "Response status code: 502"}')

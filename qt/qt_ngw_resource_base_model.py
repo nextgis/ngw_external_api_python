@@ -378,6 +378,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
                 item.removeChild(item.child(i))
                 self.rowsRemoved.emit(QModelIndex(), i, i)
 
+        if job.getResult() is None:
+            return
+
         ngw_resources = job.getResult()
         for ngw_resource in ngw_resources:
             self.addNGWResourceToTree(QModelIndex(), ngw_resource)
@@ -407,26 +410,27 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
     @modelJobSlot()
     def _updateResource(self, job):
-        ngw_resource, ngw_resource_children = job.getResult()
+        if job.getResult() is not None:
+            ngw_resource, ngw_resource_children = job.getResult()
 
-        ngw_resource_id = ngw_resource.common.id
+            ngw_resource_id = ngw_resource.common.id
 
-        for index in self.indexes_in_update_state:
-            item = index.internalPointer()
-            if ngw_resource_id == item.ngw_resource_id():
-                break
-        else:
-            # TODO exception
-            return
+            for index in self.indexes_in_update_state:
+                item = index.internalPointer()
+                if ngw_resource_id == item.ngw_resource_id():
+                    break
+            else:
+                # TODO exception
+                return
 
-        item.set_ngw_resource(ngw_resource)
+            item.set_ngw_resource(ngw_resource)
 
-        current_res_count = item.childCount()
-        current_ids = [item.child(i).ngw_resource_id() for i in range(0, current_res_count) if isinstance(item.child(i), QNGWResourceItemExt)]
-        for ngw_resource_child in ngw_resource_children:
-            chiled_id = ngw_resource_child.common.id
-            if chiled_id not in current_ids:
-                self.addNGWResourceToTree(index, ngw_resource_child)
+            current_res_count = item.childCount()
+            current_ids = [item.child(i).ngw_resource_id() for i in range(0, current_res_count) if isinstance(item.child(i), QNGWResourceItemExt)]
+            for ngw_resource_child in ngw_resource_children:
+                chiled_id = ngw_resource_child.common.id
+                if chiled_id not in current_ids:
+                    self.addNGWResourceToTree(index, ngw_resource_child)
 
         # Remove servise item - loading...
         for i in range(0, item.childCount()):
