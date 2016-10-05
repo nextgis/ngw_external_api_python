@@ -114,8 +114,10 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.needNextPing = False
 
     def __url_changed(self, text):
+        curent_cursor_position = self.leUrl.cursorPosition()
         lower_test = text.lower()
         self.leUrl.setText(lower_test)
+        self.leUrl.setCursorPosition(curent_cursor_position)
         self.__autocomplete_url(lower_test)
 
     def __autocomplete_url(self, text):
