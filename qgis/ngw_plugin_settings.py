@@ -45,9 +45,9 @@ class NgwPluginSettings(PluginSettings):
 
         return NGWConnectionSettings(
             connection_name,
-            settings.value(key + '/server_url', ''),
-            settings.value(key + '/username', ''),
-            settings.value(key + '/password', '')
+            settings.value(key + '/server_url', u'', type=unicode),
+            settings.value(key + '/username', u'', type=unicode),
+            settings.value(key + '/password', u'', type=unicode)
         )
 
     @classmethod
@@ -61,7 +61,7 @@ class NgwPluginSettings(PluginSettings):
     @classmethod
     def get_selected_ngw_connection_name(cls):
         settings = cls.get_settings()
-        return settings.value('/ui/selectedConnection', '')
+        return settings.value('/ui/selectedConnection', u'', type=unicode)
 
     @classmethod
     def set_selected_ngw_connection_name(cls, connection_name):

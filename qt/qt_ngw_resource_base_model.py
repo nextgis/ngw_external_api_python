@@ -163,6 +163,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
     def isCurrentConnectionSame(self, connection_settings):
         return self.__ngw_connection_settings == connection_settings
 
+    def cleanModel(self):
+        self.__cleanModel()
+
     def __cleanModel(self):
         c = self.root_item.childCount()
         self.beginRemoveRows(QModelIndex(), 0, c - 1)
