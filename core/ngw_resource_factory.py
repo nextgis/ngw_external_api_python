@@ -23,6 +23,7 @@ from ngw_mapserver_style import NGWMapServerStyle
 from ngw_qgis_vector_style import NGWQGISVectorStyle
 from ngw_wms_service import NGWWmsService
 from ngw_vector_layer import NGWVectorLayer
+from ngw_raster_layer import NGWRasterLayer
 from ngw_group_resource import NGWGroupResource
 from ngw_wfs_service import NGWWfsService
 from ngw_resource import NGWResource
@@ -42,6 +43,7 @@ class NGWResourceFactory():
             NGWVectorLayer.type_id: NGWVectorLayer,
             NGWMapServerStyle.type_id: NGWMapServerStyle,
             NGWQGISVectorStyle.type_id: NGWQGISVectorStyle,
+            NGWRasterLayer.type_id: NGWRasterLayer,
             NGWWebMap.type_id: NGWWebMap,
         }
         self.__default_type = NGWResource.type_id
