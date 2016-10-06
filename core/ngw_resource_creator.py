@@ -146,7 +146,6 @@ class ResourceCreator():
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create raster layer. Server response:\n%s' % e.message)
 
-
     @staticmethod
     def create_webmap(parent_ngw_resource, ngw_webmap_name, ngw_webmap_items, bbox=[-180, 180, 90, -90]):
         connection = parent_ngw_resource._res_factory.connection

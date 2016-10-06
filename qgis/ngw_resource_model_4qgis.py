@@ -37,6 +37,8 @@ from ..qt.qt_ngw_resource_model_job import *
 
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
 from ..core.ngw_resource_creator import ResourceCreator
+from ..core.ngw_vector_layer import NGWVectorLayer
+from ..core.ngw_raster_layer import NGWRasterLayer
 
 from ngw_plugin_settings import NgwPluginSettings
 
@@ -613,22 +615,32 @@ class MapForLayerCreater(QGISResourceJob):
         self.ngw_layer = ngw_layer
         self.ngw_style_id = ngw_style_id
 
+    def _defStyleForVector(self):
+        qml = self.getQMLDefaultStyle()
+
+        if qml is None:
+            self.errorOccurred.emit("There is no defalut style description for create new style.")
+            return
+
+        ngw_style = self.addQMLStyle(qml, self.ngw_layer)
+
+        result.putAddedResource(ngw_style)
+
+        return ngw_style.common.id
+
+    def _defStyleForRaster(self):
+        ngw_style = self.ngw_layer.create_style()
+        return ngw_style.common.id
+
     def _do(self):
         result = NGWResourceModelJobResult()
 
         if self.ngw_style_id is None:
-            qml = self.getQMLDefaultStyle()
+            if self.ngw_layer.type_id == NGWVectorLayer.type_id:
+                self.ngw_style_id = self._defStyleForVector()
 
-            if qml is None:
-                self.errorOccurred.emit("There is no defalut style description for create new style.")
-                return
-
-            ngw_style = self.addQMLStyle(qml, self.ngw_layer)
-
-            result.putAddedResource(ngw_style)
-
-            self.ngw_style_id = ngw_style.common.id
-            # QgsMessageLog.logMessage("Create style qml: %s" % self.ngw_style_id)
+            if self.ngw_layer.type_id == NGWRasterLayer.type_id:
+                self.ngw_style_id = self._defStyleForRaster()
 
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_root_group.appendChild(
