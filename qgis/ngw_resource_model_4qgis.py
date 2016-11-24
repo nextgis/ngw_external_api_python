@@ -624,23 +624,25 @@ class MapForLayerCreater(QGISResourceJob):
 
         ngw_style = self.addQMLStyle(qml, self.ngw_layer)
 
-        result.putAddedResource(ngw_style)
-
-        return ngw_style.common.id
+        return ngw_style
 
     def _defStyleForRaster(self):
         ngw_style = self.ngw_layer.create_style()
-        return ngw_style.common.id
+        return ngw_style
 
     def _do(self):
         result = NGWResourceModelJobResult()
 
         if self.ngw_style_id is None:
             if self.ngw_layer.type_id == NGWVectorLayer.type_id:
-                self.ngw_style_id = self._defStyleForVector()
+                ngw_style = self._defStyleForVector()
+                result.putAddedResource(ngw_style)
+                self.ngw_style_id = ngw_style.common.id
 
             if self.ngw_layer.type_id == NGWRasterLayer.type_id:
-                self.ngw_style_id = self._defStyleForRaster()
+                ngw_style = self._defStyleForRaster()
+                result.putAddedResource(ngw_style)
+                self.ngw_style_id = ngw_style.common.id
 
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_root_group.appendChild(
