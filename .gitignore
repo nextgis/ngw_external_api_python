@@ -7,6 +7,9 @@ __pycache__/
 # C extensions
 *.so
 
+# .qm qt translations
+*.qm
+
 # Distribution / packaging
 .Python
 env/
@@ -57,3 +60,4 @@ target/
 
 
 .idea/
+core/requests/*
