@@ -260,7 +260,7 @@ class QGISResourceJob(NGWResourceModelJob):
         return has_multipart_geometries and has_simple_geometries
 
     def hasBadFields(self, qgs_vector_layer):
-        exist_fields_names = [field.name() for field in qgs_vector_layer.fields()]
+        exist_fields_names = [field.name().lower() for field in qgs_vector_layer.fields()]
         common_fields = list(set(exist_fields_names).intersection(self.sanitize_fields_names))
 
         return len(common_fields) > 0
@@ -344,7 +344,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         exist_fields_names = [field.name() for field in qgs_vector_layer.fields()]
         for field in qgs_vector_layer.fields():
-            if field.name() in self.sanitize_fields_names:
+            if field.name().lower() in self.sanitize_fields_names:
                 new_field_name = field.name()
                 suffix = 1
                 while new_field_name in exist_fields_names:
