@@ -78,7 +78,8 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         completer.setCompletionMode(QCompleter.PopupCompletion)
         self.leUrl.setCompleter(completer)
 
-        self.cbAsGuest.stateChanged.connect(self.__cbAsGuestChecked)
+        self.cbAsGuest.toggled.connect(self.__cbAsGuestChecked)
+        
         self.leUrl.textEdited.connect(self.__url_changed)
         self.leUrl.textEdited.connect(self.__fill_conneection_name)
 
@@ -163,11 +164,19 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         self.leName.setText(connection_name)
 
-    def __cbAsGuestChecked(self, state):
-        self.leUser.setEnabled(state != Qt.Checked)
-        self.lbUser.setEnabled(state != Qt.Checked)
-        self.lePassword.setEnabled(state != Qt.Checked)
-        self.lbPassword.setEnabled(state != Qt.Checked)
+    def __cbAsGuestChecked(self, as_guest):
+        accessLinkHtml = ""
+        if not as_guest:
+            self.gbUser.setEnabled(True)
+            accessLinkHtml = u'<a href="{}"><span style=" text-decoration: underline; color:#0000ff;">{}</span></a>'.format(
+                self.tr('http://docs.nextgis.com/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection'),
+                self.tr('Where do I get these?')
+            )
+        else:
+            self.gbUser.setEnabled(False)
+            accessLinkHtml = self.tr('Where do I get these?')
+
+        self.lAccessLink.setText(accessLinkHtml)
 
     def __name_changed_process(self, text):
         self.__validate_fields()
@@ -240,7 +249,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
     def __process_ping_result(self, ping_result):
         if ping_result is True:
             self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
-            self.lbConnectionTesting.setText(self.tr("Connection success."))
+            self.lbConnectionTesting.setText(self.tr("Connection successful!"))
             self.lbConnectionTesting.setStyleSheet("color: green")
         else:
             # self.lbConnectionTesting.setText(self.tr("Connection failed! Please check the URL."))
