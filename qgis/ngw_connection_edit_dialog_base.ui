@@ -201,6 +201,11 @@
  </widget>
  <tabstops>
   <tabstop>leUrl</tabstop>
+  <tabstop>leName</tabstop>
+  <tabstop>cbAsGuest</tabstop>
+  <tabstop>leUser</tabstop>
+  <tabstop>lePassword</tabstop>
+  <tabstop>buttonBox</tabstop>
  </tabstops>
  <resources/>
  <connections>
