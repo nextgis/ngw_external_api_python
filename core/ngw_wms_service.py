@@ -21,11 +21,13 @@
 from os import path
 from ngw_resource import NGWResource
 
+from ..utils import ICONS_DIR
+
 
 class NGWWmsService(NGWResource):
 
     type_id = 'wmsserver_service'
-    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'wms.svg')
+    icon_path = path.join(ICONS_DIR, 'wms.svg')
     type_title = 'NGW WMS Service'
 
     def __init__(self, resource_factory, resource_json):

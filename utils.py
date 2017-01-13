@@ -18,17 +18,10 @@
  *                                                                         *
  ***************************************************************************/
 """
-from os import path
-from ngw_resource import NGWResource
+import os
+import sys
 
-from ..utils import ICONS_DIR
-
-
-class NGWMapServerStyle(NGWResource):
-
-    type_id = 'mapserver_style'
-    icon_path = path.join(ICONS_DIR, 'style.png')
-    type_title = 'NGW MapServer Style'
-
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)
+ICONS_DIR = os.path.join(
+	os.path.dirname(__file__).decode(sys.getfilesystemencoding()),
+	'icons'
+)

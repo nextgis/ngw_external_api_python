@@ -25,11 +25,13 @@ from ngw_qgis_vector_style import NGWQGISVectorStyle
 from ngw_mapserver_style import NGWMapServerStyle
 from ngw_error import NGWError
 
+from ..utils import ICONS_DIR
+
 
 class NGWVectorLayer(NGWResource):
 
     type_id = 'vector_layer'
-    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'vector_layer.svg')
+    icon_path = path.join(ICONS_DIR, 'vector_layer.svg')
     type_title = 'NGW Vector Layer'
 
     icons = {
@@ -56,7 +58,7 @@ class NGWVectorLayer(NGWResource):
 
     def set_icon(self, geometry_type):
         icon_filename = self.icons.get(geometry_type, 'vector_layer.svg')
-        self.icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', icon_filename)
+        self.icon_path = path.join(ICONS_DIR, icon_filename)
 
     def extent(self):
         result = self._res_factory.connection.get(

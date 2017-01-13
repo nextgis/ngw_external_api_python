@@ -21,11 +21,13 @@
 from os import path
 from ngw_resource import NGWResource
 
+from ..utils import ICONS_DIR
+
 
 class NGWWebMap(NGWResource):
 
     type_id = 'webmap'
-    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'web_map.svg')
+    icon_path = path.join(ICONS_DIR, 'web_map.svg')
     type_title = 'NGW Web Map'
 
     def __init__(self, resource_factory, resource_json):

@@ -21,11 +21,13 @@
 from os import path
 from ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 
+from ..utils import ICONS_DIR
+
 
 class NGWWfsService(NGWResource):
 
     type_id = 'wfsserver_service'
-    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'wfs.svg')
+    icon_path = path.join(ICONS_DIR, 'wfs.svg')
     type_title = 'NGW WFS Service'
 
     def _construct(self):

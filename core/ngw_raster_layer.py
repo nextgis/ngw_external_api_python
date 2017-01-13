@@ -23,11 +23,13 @@ from os import path
 from ngw_resource import NGWResource, API_LAYER_EXTENT
 from ngw_error import NGWError
 
+from ..utils import ICONS_DIR
+
 
 class NGWRasterLayer(NGWResource):
 
     type_id = 'raster_layer'
-    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'raster_layer.svg')
+    icon_path = path.join(ICONS_DIR, 'raster_layer.svg')
     type_title = 'NGW Raster Layer'
 
     def __init__(self, resource_factory, resource_json):

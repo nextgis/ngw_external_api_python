@@ -23,6 +23,8 @@ from os import path
 import requests
 from ngw_error import NGWError
 
+from ..utils import ICONS_DIR
+
 API_RESOURCE_URL = lambda res_id: '/api/resource/%d' % res_id
 API_COLLECTION_URL = '/api/resource/'
 RESOURCE_URL = lambda res_id: '/resource/%d' % res_id
@@ -60,7 +62,7 @@ class File2Upload(file):
 class NGWResource():
 
     type_id = 'resource'
-    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'resource.svg')
+    icon_path = path.join(ICONS_DIR, 'resource.svg')
     type_title = 'NGW Resource'
 
 

@@ -21,11 +21,13 @@
 from os import path
 from ngw_resource import NGWResource
 
+from ..utils import ICONS_DIR
+
 
 class NGWQGISVectorStyle(NGWResource):
 
     type_id = 'qgis_vector_style'
-    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'style.png')
+    icon_path = path.join(ICONS_DIR, 'style.png')
     type_title = 'NGW QGIS Vector Style'
 
     def __init__(self, resource_factory, resource_json):

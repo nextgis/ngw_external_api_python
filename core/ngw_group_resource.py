@@ -21,11 +21,13 @@
 from os import path
 from ngw_resource import NGWResource
 
+from ..utils import ICONS_DIR
+
 
 class NGWGroupResource(NGWResource):
 
     type_id = 'resource_group'
-    icon_path = path.join(path.dirname(__file__), path.pardir, 'icons/', 'group.png')
+    icon_path = path.join(ICONS_DIR, 'group.png')
     type_title = 'NGW Group resource'
 
     def __init__(self, resource_factory, resource_json):
