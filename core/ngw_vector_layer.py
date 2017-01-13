@@ -149,3 +149,33 @@ class NGWVectorLayer(NGWResource):
             return ngw_resource
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create vector layer style. Server response:\n%s' % e.message)
+
+    def add_aliases(self, aliases):
+        flayer_dict = self._json.get('feature_layer')
+        if flayer_dict is None:
+            raise NGWError('Cannot add alias for resource. There is no feature_layer in Resource JSON')
+
+        fields_list = flayer_dict.get('fields')
+        if fields_list is None:
+            raise NGWError('Cannot add alias for resource. There is no feature_layer-fields in Resource JSON')
+
+        aliases_keynames = aliases.keys()
+
+        for field_index in range(len(fields_list)):
+            field_keyname = fields_list[field_index]['keyname']
+            if field_keyname in aliases_keynames:
+                 flayer_dict['fields'][field_index]['display_name'] = aliases[field_keyname]
+
+        try:
+            connection = self._res_factory.connection
+            url = self.get_relative_api_url()
+
+            params = dict(
+                feature_layer = flayer_dict
+            )
+
+            res = connection.put(url, params=params)
+
+            self.update()
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot add alias for resource. Server response:\n%s' % e.message)

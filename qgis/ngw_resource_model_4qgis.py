@@ -169,7 +169,7 @@ class QGISResourceJob(NGWResourceModelJob):
             )
             return None
 
-        filepath = self.prepareImportFile(qgs_vector_layer)
+        filepath, rename_fields_map = self.prepareImportFile(qgs_vector_layer)
 
         if filepath is None:
             self.errorOccurred.emit(
@@ -185,6 +185,18 @@ class QGISResourceJob(NGWResourceModelJob):
             new_layer_name,
             uploadFileCallback
         )
+
+        aliases = {}
+        src_layer_aliases = qgs_vector_layer.attributeAliases()
+        for fn, rfn in rename_fields_map.items():
+            if src_layer_aliases.has_key(fn):
+               aliases[rfn] = src_layer_aliases[fn]
+
+        if len(aliases) > 0:
+            self.statusChanged.emit(
+                "%s - Add aliases" % qgs_vector_layer.name()
+            )
+            ngw_vector_layer.add_aliases(aliases)
 
         self.statusChanged.emit(
             "%s - Finishing" % qgs_vector_layer.name()
@@ -207,8 +219,9 @@ class QGISResourceJob(NGWResourceModelJob):
             if self.hasBadFields(qgs_vector_layer):
                 layer_has_bad_fields = True
 
+        rename_fields_map = {}
         if layer_has_mixed_geoms or layer_has_bad_fields:
-            layer = self.createLayer4Upload(qgs_vector_layer, layer_has_mixed_geoms, layer_has_bad_fields)
+            layer, rename_fields_map = self.createLayer4Upload(qgs_vector_layer, layer_has_mixed_geoms, layer_has_bad_fields)
         else:
             layer = qgs_vector_layer
 
@@ -221,9 +234,9 @@ class QGISResourceJob(NGWResourceModelJob):
                 import_format = u"GeoJSON"
 
         if import_format == u'ESRI Shapefile':
-            return self.prepareAsShape(layer)
+            return self.prepareAsShape(layer), rename_fields_map
         else:
-            return self.prepareAsJSON(layer)
+            return self.prepareAsJSON(layer), rename_fields_map
 
     def hasSimpleAndMultyGeom(self, qgs_vector_layer):
         has_simple_geometries = False
@@ -322,7 +335,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         qgs_vector_layer_dst.commitChanges()
 
-        return qgs_vector_layer_dst
+        return qgs_vector_layer_dst, field_name_map
 
     def determineGeometry4MemoryLayer(self, qgs_vector_layer, has_mixed_geoms):
         geometry_type = None

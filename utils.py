@@ -22,6 +22,6 @@ import os
 import sys
 
 ICONS_DIR = os.path.join(
-	os.path.dirname(__file__).decode(sys.getfilesystemencoding()),
-	'icons'
+    os.path.dirname(__file__).decode(sys.getfilesystemencoding()),
+    'icons'
 )

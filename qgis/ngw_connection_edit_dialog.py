@@ -93,6 +93,12 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.__user_change_connection_name = False
         self.leName.editingFinished.connect(self.__name_changed_finished)
 
+        accessLinkHtml = u'<a href="{}"><span style=" text-decoration: underline; color:#0000ff;">{}</span></a>'.format(
+            self.tr('http://docs.nextgis.com/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection'),
+            self.tr('Where do I get these?')
+        )
+        self.lAccessLink.setText(accessLinkHtml)
+
         self.__cbAsGuestChecked(self.cbAsGuest.checkState())
 
         self.ngw_conn_sett = ngw_connection_settings
@@ -167,16 +173,11 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
     def __cbAsGuestChecked(self, as_guest):
         accessLinkHtml = ""
         if not as_guest:
-            self.gbUser.setEnabled(True)
-            accessLinkHtml = u'<a href="{}"><span style=" text-decoration: underline; color:#0000ff;">{}</span></a>'.format(
-                self.tr('http://docs.nextgis.com/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection'),
-                self.tr('Where do I get these?')
-            )
+            self.leUser.setEnabled(True)
+            self.lePassword.setEnabled(True)
         else:
-            self.gbUser.setEnabled(False)
-            accessLinkHtml = self.tr('Where do I get these?')
-
-        self.lAccessLink.setText(accessLinkHtml)
+            self.leUser.setEnabled(False)
+            self.lePassword.setEnabled(False)
 
     def __name_changed_process(self, text):
         self.__validate_fields()
