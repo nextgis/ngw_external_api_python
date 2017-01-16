@@ -25,3 +25,28 @@ ICONS_DIR = os.path.join(
     os.path.dirname(__file__).decode(sys.getfilesystemencoding()),
     'icons'
 )
+
+ngw_api_logger = None
+debug = False
+
+def setLogger(logger):
+    global ngw_api_logger
+    ngw_api_logger = logger
+
+
+"""
+Enable debuging
+    in QGIS use in console:
+        from nextgis_connect.ngw_api.utils import setDebugEnabled
+        setDebugEnabled(True)
+"""
+def setDebugEnabled(flag):
+    global debug
+    debug = flag
+
+def log(msg):
+    if debug is False:
+        return
+
+    if ngw_api_logger is not None:
+        ngw_api_logger(msg)

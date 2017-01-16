@@ -26,6 +26,8 @@ from requests.utils import to_native_string
 
 from ngw_error import NGWError
 
+from ..utils import log
+
 UPLOAD_FILE_URL = '/api/component/file_upload/upload'
 
 
@@ -102,6 +104,15 @@ class NGWConnection(object):
         json_data = None
         if 'json' in kwargs:
             json_data = kwargs['json']
+
+        log(
+            "method: {}\nurl: {}\ndata: {}\njson:".format(
+                method,
+                self.server_url + sub_url,
+                payload,
+                json_data
+            )
+        )
 
         req = requests.Request(method, self.server_url + sub_url, data=payload, json=json_data)
         req.headers['Authorization'] = _basic_auth_str(self.__auth[0], self.__auth[1])
