@@ -193,10 +193,9 @@ class ResourceCreator():
 
         params_layers = []
         for ngw_layer in ngw_layers:
-            ngw_layer_name = ngw_layer.common.display_name
             params_layer = dict(
-                display_name=ngw_layer_name,
-                keyname=ngw_layer_name.lower().replace(' ', '_'),
+                display_name=ngw_layer.common.display_name,
+                keyname="ngw_id_%d" % ngw_layer.common.id,
                 resource_id=ngw_layer.common.id,
                 maxfeatures=ret_obj_num
             )
