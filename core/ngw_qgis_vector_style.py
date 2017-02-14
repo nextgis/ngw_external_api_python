@@ -19,7 +19,8 @@
  ***************************************************************************/
 """
 from os import path
-from ngw_resource import NGWResource
+import requests
+from ngw_resource import NGWResource, File2Upload
 
 from ..utils import ICONS_DIR
 
@@ -35,3 +36,34 @@ class NGWQGISVectorStyle(NGWResource):
 
     def download_qml_url(self):
         return self.get_absolute_api_url() + "/qml"
+
+    def update_qml(self, qml, callback):
+        """Create QML style for this layer
+
+        qml - full path to qml file
+        callback - upload file callback, pass to File2Upload (ngw_resource.py)
+        """
+        connection = self._res_factory.connection
+
+        try:
+            with File2Upload(qml, callback) as f:
+                style_file_desc = connection.put('/file_upload/upload', data=f)
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create style. Upload qml file. Server response:\n%s' % e.message)
+
+        params = dict(
+            resource=dict(
+                display_name=self.common.display_name,
+
+            ),
+        )
+        params[self.type_id] = dict(
+            file_upload=style_file_desc
+        )
+
+        try:
+            url = self.get_relative_api_url()
+            connection.put(url, params=params)
+            self.update()
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create vector layer style. Server response:\n%s' % e.message)
