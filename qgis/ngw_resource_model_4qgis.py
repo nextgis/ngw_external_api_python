@@ -48,6 +48,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
     JOB_IMPORT_QGIS_RESOURCE = "IMPORT_QGIS_RESOURCE"
     JOB_IMPORT_QGIS_PROJECT = "IMPORT_QGIS_PROJECT"
     JOB_CREATE_NGW_STYLE = "CREATE_NGW_STYLE"
+    JOB_CREATE_NGW_WMS_SERVICE = "CREATE_NGW_WMS_SERVICE"
 
     def __init__(self, parent):
         QNGWResourcesModel.__init__(self, parent)
@@ -112,6 +113,24 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
             self.processJobResult,
         )
 
+    @modelRequest()
+    def createWMSForVector(self, index, ngw_resource_style_id):
+        if not index.isValid():
+            index = self.index(0, 0, index)
+
+        parent_index = self._nearest_ngw_group_resource_parent(index)
+
+        parent_item = parent_index.internalPointer()
+        ngw_parent_resource = parent_item.data(0, Qt.UserRole)
+
+        item = index.internalPointer()
+        ngw_resource = item.data(0, Qt.UserRole)
+
+        return self._startJob(
+            NGWCreateWMSForVector(ngw_resource, ngw_parent_resource, ngw_resource_style_id),
+            self.JOB_CREATE_NGW_WMS_SERVICE,
+            self.processJobResult,
+        )
 
 class QGISResourceJob(NGWResourceModelJob):
     SUITABLE_LAYER = 0
@@ -484,6 +503,42 @@ class QGISResourceJob(NGWResourceModelJob):
             self.updateQMLStyle(tmp, ngw_qgis_vector_resource)
             os.remove(tmp)
 
+    def getQMLDefaultStyle(self):
+        gtype = self.ngw_layer._json[self.ngw_layer.type_id]["geometry_type"]
+
+        if gtype in ["LINESTRING", "MULTILINESTRING"]:
+            return os.path.join(
+                os.path.dirname(__file__),
+                "line_style.qml"
+            )
+        if gtype in ["POINT", "MULTIPOINT"]:
+            return os.path.join(
+                os.path.dirname(__file__),
+                "point_style.qml"
+            )
+        if gtype in ["POLYGON", "MULTIPOLYGON"]:
+            return os.path.join(
+                os.path.dirname(__file__),
+                "polygon_style.qml"
+            )
+
+        return None
+
+    def _defStyleForVector(self, ngw_layer):
+        qml = self.getQMLDefaultStyle()
+
+        if qml is None:
+            self.errorOccurred.emit("There is no defalut style description for create new style.")
+            return
+
+        ngw_style = self.addQMLStyle(qml, ngw_layer)
+
+        return ngw_style
+
+    def _defStyleForRaster(self, ngw_layer):
+        ngw_style = ngw_layer.create_style()
+        return ngw_style
+
 class QGISResourceImporter(QGISResourceJob):
     def __init__(self, qgs_map_layer, ngw_parent_resource):
         QGISResourceJob.__init__(self)
@@ -667,32 +722,17 @@ class MapForLayerCreater(QGISResourceJob):
         self.ngw_layer = ngw_layer
         self.ngw_style_id = ngw_style_id
 
-    def _defStyleForVector(self):
-        qml = self.getQMLDefaultStyle()
-
-        if qml is None:
-            self.errorOccurred.emit("There is no defalut style description for create new style.")
-            return
-
-        ngw_style = self.addQMLStyle(qml, self.ngw_layer)
-
-        return ngw_style
-
-    def _defStyleForRaster(self):
-        ngw_style = self.ngw_layer.create_style()
-        return ngw_style
-
     def _do(self):
         result = NGWResourceModelJobResult()
 
         if self.ngw_style_id is None:
             if self.ngw_layer.type_id == NGWVectorLayer.type_id:
-                ngw_style = self._defStyleForVector()
+                ngw_style = self._defStyleForVector(self.ngw_layer)
                 result.putAddedResource(ngw_style)
                 self.ngw_style_id = ngw_style.common.id
 
             if self.ngw_layer.type_id == NGWRasterLayer.type_id:
-                ngw_style = self._defStyleForRaster()
+                ngw_style = self._defStyleForRaster(self.ngw_layer)
                 result.putAddedResource(ngw_style)
                 self.ngw_style_id = ngw_style.common.id
 
@@ -723,27 +763,6 @@ class MapForLayerCreater(QGISResourceJob):
 
         self.dataReceived.emit(result)
 
-    def getQMLDefaultStyle(self):
-        gtype = self.ngw_layer._json[self.ngw_layer.type_id]["geometry_type"]
-
-        if gtype in ["LINESTRING", "MULTILINESTRING"]:
-            return os.path.join(
-                os.path.dirname(__file__),
-                "line_style.qml"
-            )
-        if gtype in ["POINT", "MULTIPOINT"]:
-            return os.path.join(
-                os.path.dirname(__file__),
-                "point_style.qml"
-            )
-        if gtype in ["POLYGON", "MULTIPOLYGON"]:
-            return os.path.join(
-                os.path.dirname(__file__),
-                "polygon_style.qml"
-            )
-
-        return None
-
 
 class QGISStyleImporter(QGISResourceJob):
     def __init__(self, qgs_map_layer, ngw_resource):
@@ -760,5 +779,41 @@ class QGISStyleImporter(QGISResourceJob):
         elif self.ngw_resource.type_id == NGWQGISVectorStyle.type_id:
             self.updateStyle(self.qgs_map_layer, self.ngw_resource)
             result.putEditedResource(self.ngw_resource)
+
+        self.dataReceived.emit(result)
+
+
+class NGWCreateWMSForVector(QGISResourceJob):
+    def __init__(self, ngw_vector_layer, ngw_group_resource, ngw_style_id):
+        NGWResourceModelJob.__init__(self)
+        self.ngw_layer = ngw_vector_layer
+        self.ngw_group_resource = ngw_group_resource
+        self.ngw_style_id = ngw_style_id
+
+    def _do(self):
+        result = NGWResourceModelJobResult()
+
+        if self.ngw_style_id is None:
+            if self.ngw_layer.type_id == NGWVectorLayer.type_id:
+                ngw_style = self._defStyleForVector(self.ngw_layer)
+                result.putAddedResource(ngw_style)
+                self.ngw_style_id = ngw_style.common.id
+
+            if self.ngw_layer.type_id == NGWRasterLayer.type_id:
+                ngw_style = self._defStyleForRaster(self.ngw_layer)
+                result.putAddedResource(ngw_style)
+                self.ngw_style_id = ngw_style.common.id
+
+        ngw_wms_service_name = self.unique_resource_name(
+            self.ngw_layer.common.display_name + "-wms-service",
+            self.ngw_group_resource)
+
+        ngw_wfs_resource = NGWWmsService.create_in_group(
+            ngw_wms_service_name,
+            self.ngw_group_resource,
+            [(self.ngw_layer, self.ngw_style_id)],
+        )
+
+        result.putAddedResource(ngw_wfs_resource, is_main=True)
 
         self.dataReceived.emit(result)
