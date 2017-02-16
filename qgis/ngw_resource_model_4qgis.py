@@ -40,6 +40,7 @@ from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_qgis_vector_style import NGWQGISVectorStyle
 from ..core.ngw_raster_layer import NGWRasterLayer
+from ..core.ngw_wms_service import NGWWmsService
 
 from ngw_plugin_settings import NgwPluginSettings
 
