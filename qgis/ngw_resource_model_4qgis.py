@@ -54,7 +54,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         QNGWResourcesModel.__init__(self, parent)
 
     @modelRequest()
-    def createNGWLayer(self, qgs_map_layer, parent_index):
+    def createNGWLayer(self, qgs_map_layers, parent_index):
         if not parent_index.isValid():
             parent_index = self.index(0, 0, parent_index)
 
@@ -64,7 +64,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         ngw_parent_resource = parent_item.data(0, Qt.UserRole)
 
         return self._startJob(
-            QGISResourceImporter(qgs_map_layer, ngw_parent_resource),
+            QGISResourcesImporter(qgs_map_layers, ngw_parent_resource),
             self.JOB_IMPORT_QGIS_RESOURCE,
             self.processJobResult,
         )
@@ -539,33 +539,34 @@ class QGISResourceJob(NGWResourceModelJob):
         ngw_style = ngw_layer.create_style()
         return ngw_style
 
-class QGISResourceImporter(QGISResourceJob):
-    def __init__(self, qgs_map_layer, ngw_parent_resource):
+class QGISResourcesImporter(QGISResourceJob):
+    def __init__(self, qgs_map_layers, ngw_parent_resource):
         QGISResourceJob.__init__(self)
-        self.qgs_map_layer = qgs_map_layer
+        self.qgs_map_layers = qgs_map_layers
         self.ngw_parent_resource = ngw_parent_resource
 
     def _do(self):
-        ngw_resource = self.importQGISMapLayer(
-            self.qgs_map_layer,
-            self.ngw_parent_resource
-        )
-        # QgsMessageLog.logMessage("QGISResourceImporter ngw_resource: %d" % ngw_resource.common.id)
-        if ngw_resource is None:
-            return
+        for qgs_map_layer in self.qgs_map_layers:
+            ngw_resource = self.importQGISMapLayer(
+                qgs_map_layer,
+                self.ngw_parent_resource
+            )
+            # QgsMessageLog.logMessage("QGISResourceImporter ngw_resource: %d" % ngw_resource.common.id)
+            if ngw_resource is None:
+                return
 
-        # QgsMessageLog.logMessage("QGISResourceImporter add style start")
-        ngw_style = self.addStyle(
-            self.qgs_map_layer,
-            ngw_resource
-        )
-        # QgsMessageLog.logMessage("QGISResourceImporter added style: %d" % ngw_style.common.id)
+            # QgsMessageLog.logMessage("QGISResourceImporter add style start")
+            ngw_style = self.addStyle(
+            qgs_map_layer,
+                ngw_resource
+            )
+            # QgsMessageLog.logMessage("QGISResourceImporter added style: %d" % ngw_style.common.id)
 
-        result = NGWResourceModelJobResult()
-        result.putAddedResource(ngw_resource, is_main=True)
-        result.putAddedResource(ngw_style)
+            result = NGWResourceModelJobResult()
+            result.putAddedResource(ngw_resource, is_main=True)
+            result.putAddedResource(ngw_style)
 
-        self.dataReceived.emit(result)
+            self.dataReceived.emit(result)
 
 
 class CurrentQGISProjectImporter(QGISResourceJob):

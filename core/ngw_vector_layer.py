@@ -34,13 +34,31 @@ class NGWVectorLayer(NGWResource):
     icon_path = path.join(ICONS_DIR, 'vector_layer.svg')
     type_title = 'NGW Vector Layer'
 
+    UNKNOWN = 0
+    POINT = 1
+    MULTIPOINT = 2
+    LINESTRING = 3
+    MULTILINESTRING = 4
+    POLYGON = 5
+    MULTIPOLYGON = 6
+
+    __GEOMETRIES = {
+        "POINT": POINT,
+        "MULTIPOINT": MULTIPOINT,
+        "LINESTRING": LINESTRING,
+        "MULTILINESTRING": MULTILINESTRING,
+        "POLYGON": POLYGON,
+        "MULTIPOLYGON": MULTIPOLYGON,
+    }
+
     icons = {
-        "POINT": "vector_layer_point.svg",
-        "MULTIPOINT": "vector_layer_mpoint.svg",
-        "LINESTRING": "vector_layer_line.svg",
-        "MULTILINESTRING": "vector_layer_mline.svg",
-        "POLYGON": "vector_layer_polygon.svg",
-        "MULTIPOLYGON": "vector_layer_mpolygon.svg",
+        UNKNOWN: "vector_layer_point.svg", 
+        POINT: "vector_layer_point.svg",
+        MULTIPOINT: "vector_layer_mpoint.svg",
+        LINESTRING: "vector_layer_line.svg",
+        MULTILINESTRING: "vector_layer_mline.svg",
+        POLYGON: "vector_layer_polygon.svg",
+        MULTIPOLYGON: "vector_layer_mpolygon.svg",
     }
 
     def __init__(self, resource_factory, resource_json):
@@ -48,7 +66,13 @@ class NGWVectorLayer(NGWResource):
 
         if self.type_id in self._json:
             if "geometry_type" in self._json[self.type_id]:
-                self.set_icon(self._json[self.type_id]["geometry_type"])
+                self.set_icon(self.geom_type())
+
+    def geom_type(self):
+        if self.type_id in self._json:
+            if "geometry_type" in self._json[self.type_id]:
+                return self.__GEOMETRIES.get(self._json[self.type_id]["geometry_type"], self.UNKNOWN)
+        return self.UNKNOWN
 
     def get_geojson_url(self):
         return '%s/%s/' % (
