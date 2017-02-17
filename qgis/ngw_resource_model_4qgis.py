@@ -41,6 +41,8 @@ from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_qgis_vector_style import NGWQGISVectorStyle
 from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_wms_service import NGWWmsService
+from ..core.ngw_wms_connection import NGWWmsConnection
+from ..core.ngw_wms_layer import NGWWmsLayer
 
 from ngw_plugin_settings import NgwPluginSettings
 
@@ -55,17 +57,16 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         QNGWResourcesModel.__init__(self, parent)
 
     @modelRequest()
-    def createNGWLayer(self, qgs_map_layers, parent_index):
+    def createNGWLayers(self, qgs_map_layers, parent_index):
         if not parent_index.isValid():
             parent_index = self.index(0, 0, parent_index)
 
         parent_index = self._nearest_ngw_group_resource_parent(parent_index)
-
         parent_item = parent_index.internalPointer()
-        ngw_parent_resource = parent_item.data(0, Qt.UserRole)
+        ngw_group = parent_item.data(0, Qt.UserRole)
 
         return self._startJob(
-            QGISResourcesImporter(qgs_map_layers, ngw_parent_resource),
+            QGISResourcesImporter(qgs_map_layers, ngw_group),
             self.JOB_IMPORT_QGIS_RESOURCE,
             self.processJobResult,
         )
@@ -133,6 +134,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
             self.processJobResult,
         )
 
+
 class QGISResourceJob(NGWResourceModelJob):
     SUITABLE_LAYER = 0
     SUITABLE_LAYER_BAD_GEOMETRY = 1
@@ -153,19 +155,45 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def importQGISMapLayer(self, qgs_map_layer, ngw_parent_resource):
         ngw_parent_resource.update()
-
         layer_name = qgs_map_layer.name()
-        chd_names = [ch.common.display_name for ch in ngw_parent_resource.get_children()]
-        new_layer_name = self.generate_unique_name(layer_name, chd_names)
+
+        new_layer_name = self.unique_resource_name(layer_name, ngw_parent_resource)
 
         layer_type = qgs_map_layer.type()
+
         if layer_type == qgs_map_layer.VectorLayer:
             return self.importQgsVectorLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)
 
         elif layer_type == QgsMapLayer.RasterLayer:
-            return self.importQgsRasterLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)
+            layer_data_provider = qgs_map_layer.dataProvider().name()
+            if layer_data_provider == "gdal":
+                return self.importQgsRasterLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)
+
+            elif layer_data_provider == "wms":
+                return self.importQgsWMSLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)            
 
         return None
+
+    def importQgsWMSLayer(self, qgs_wms_layer, ngw_group, ngw_wfs_connection_name):
+        self.statusChanged.emit(
+            "%s - Import as WMS Connection " % (
+                qgs_wms_layer.name(),
+            )
+        )
+
+        layer_source = qgs_wms_layer.source()
+        parameters = {}
+        for parameter in layer_source.split('&'):
+            key, value = parameter.split("=")
+            parameters[key] = value
+
+        wfs_connection = NGWWmsConnection.create_in_group(
+            ngw_wfs_connection_name,
+            ngw_group,
+            parameters.get("url", "")
+        )
+
+        return wfs_connection
 
     def importQgsRasterLayer(self, qgs_raster_layer, ngw_parent_resource, new_layer_name):
         def uploadFileCallback(total_size, readed_size):
@@ -541,33 +569,47 @@ class QGISResourceJob(NGWResourceModelJob):
         return ngw_style
 
 class QGISResourcesImporter(QGISResourceJob):
-    def __init__(self, qgs_map_layers, ngw_parent_resource):
+    def __init__(self, qgs_map_layers, ngw_group):
         QGISResourceJob.__init__(self)
         self.qgs_map_layers = qgs_map_layers
-        self.ngw_parent_resource = ngw_parent_resource
+        self.ngw_group = ngw_group
 
     def _do(self):
+        result = NGWResourceModelJobResult()
+        
         for qgs_map_layer in self.qgs_map_layers:
             ngw_resource = self.importQGISMapLayer(
                 qgs_map_layer,
-                self.ngw_parent_resource
+                self.ngw_group
             )
-            # QgsMessageLog.logMessage("QGISResourceImporter ngw_resource: %d" % ngw_resource.common.id)
-            if ngw_resource is None:
-                return
-
-            # QgsMessageLog.logMessage("QGISResourceImporter add style start")
-            ngw_style = self.addStyle(
-            qgs_map_layer,
-                ngw_resource
-            )
-            # QgsMessageLog.logMessage("QGISResourceImporter added style: %d" % ngw_style.common.id)
-
-            result = NGWResourceModelJobResult()
             result.putAddedResource(ngw_resource, is_main=True)
-            result.putAddedResource(ngw_style)
+            
+            if ngw_resource.type_id in [NGWVectorLayer.type_id, NGWRasterLayer.type_id]:
+                ngw_style = self.addStyle(
+                    qgs_map_layer,
+                    ngw_resource
+                )
+                result.putAddedResource(ngw_style)
 
-            self.dataReceived.emit(result)
+            if ngw_resource.type_id == NGWWmsConnection.type_id:
+                self.statusChanged.emit(
+                    "%s - Import as WMS Layer " % (
+                        qgs_map_layer.name(),
+                    )
+                )
+                ngw_wfs_layer_name = self.unique_resource_name(
+                    ngw_resource.common.display_name + "_layer",
+                    self.ngw_group
+                )
+                wfs_layer = NGWWmsLayer.create_in_group(
+                    ngw_wfs_layer_name,
+                    self.ngw_group,
+                    ngw_resource.common.id,
+                    ngw_resource.layers()
+                )
+                result.putAddedResource(wfs_layer)
+        
+        self.dataReceived.emit(result)
 
 
 class CurrentQGISProjectImporter(QGISResourceJob):
@@ -621,26 +663,55 @@ class CurrentQGISProjectImporter(QGISResourceJob):
 
                     if ngw_layer_resource is None:
                         continue
-
                     result.putAddedResource(ngw_layer_resource)
 
-                    ngw_style_resource = self.addStyle(
-                        qgsLayerTreeItem.layer(),
-                        ngw_layer_resource
-                    )
-
-                    if ngw_style_resource is None:
-                        continue
-
-                    result.putAddedResource(ngw_style_resource)
-
-                    ngw_webmap_item.appendChild(
-                        NGWWebMapLayer(
-                            ngw_style_resource.common.id,
-                            qgsLayerTreeItem.layer().name(),
-                            qgsLayerTreeItem.isVisible() == Qt.Checked
+                    if ngw_layer_resource.type_id in [NGWVectorLayer.type_id, NGWRasterLayer.type_id]:
+                        ngw_style = self.addStyle(
+                            qgsLayerTreeItem.layer(),
+                            ngw_layer_resource
                         )
-                    )
+
+                        if ngw_style is None:
+                            continue
+                        result.putAddedResource(ngw_style)
+                        
+                        ngw_webmap_item.appendChild(
+                            NGWWebMapLayer(
+                                ngw_style.common.id,
+                                qgsLayerTreeItem.layer().name(),
+                                qgsLayerTreeItem.isVisible() == Qt.Checked
+                            )
+                        )
+
+                    if ngw_layer_resource.type_id == NGWWmsConnection.type_id:
+                        self.statusChanged.emit(
+                            "%s - Import as WMS Layer " % (
+                                qgsLayerTreeItem.layer().name(),
+                            )
+                        )
+                        ngw_wfs_layer_name = self.unique_resource_name(
+                            ngw_layer_resource.common.display_name + "_layer",
+                            ngw_resource_group
+                        )
+                        wfs_layer = NGWWmsLayer.create_in_group(
+                            ngw_wfs_layer_name,
+                            ngw_resource_group,
+                            ngw_layer_resource.common.id,
+                            ngw_layer_resource.layers()
+                        )
+
+                        if wfs_layer is None:
+                            continue
+                        result.putAddedResource(wfs_layer)
+
+                        ngw_webmap_item.appendChild(
+                            NGWWebMapLayer(
+                                wfs_layer.common.id,
+                                wfs_layer.common.display_name,
+                                qgsLayerTreeItem.isVisible() == Qt.Checked
+                            )
+                        )
+
 
                 if isinstance(qgsLayerTreeItem, QgsLayerTreeGroup):
                     chd_names = [ch.common.display_name for ch in ngw_resource_group.get_children()]

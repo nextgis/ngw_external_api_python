@@ -22,6 +22,8 @@ from ngw_webmap import NGWWebMap
 from ngw_mapserver_style import NGWMapServerStyle
 from ngw_qgis_vector_style import NGWQGISVectorStyle
 from ngw_wms_service import NGWWmsService
+from ngw_wms_connection import NGWWmsConnection
+from ngw_wms_layer import NGWWmsLayer
 from ngw_vector_layer import NGWVectorLayer
 from ngw_raster_layer import NGWRasterLayer
 from ngw_raster_style import NGWRasterStyle
@@ -47,6 +49,8 @@ class NGWResourceFactory():
             NGWRasterLayer.type_id: NGWRasterLayer,
             NGWWebMap.type_id: NGWWebMap,
             NGWRasterStyle.type_id: NGWRasterStyle,
+            NGWWmsConnection.type_id: NGWWmsConnection,
+            NGWWmsLayer.type_id: NGWWmsLayer,
         }
         self.__default_type = NGWResource.type_id
         self.__conn = NGWConnection(conn_settings)

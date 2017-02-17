@@ -26,30 +26,25 @@ from ngw_resource import NGWResource
 from ..utils import ICONS_DIR
 
 
-class NGWWmsService(NGWResource):
+class NGWWmsConnection(NGWResource):
 
-    type_id = 'wmsserver_service'
-    icon_path = path.join(ICONS_DIR, 'wms_service.svg')
-    type_title = 'NGW WMS Service'
+    type_id = 'wmsclient_connection'
+    icon_path = path.join(ICONS_DIR, 'wms_connection.svg') # TODO change icon
+    type_title = 'NGW WMS Connection'
 
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
 
+    def layers(self):
+        layers = self._json.get(self.type_id, {}).get("capcache", {}).get("layers",{})
+        layer_ids = [l.get("id") for l in layers if l.get("id") is not None]
+        return ",".join(layer_ids)
+
+
     @classmethod
-    def create_in_group(cls, name, ngw_group_resource, ngw_layers_with_style):
+    def create_in_group(cls, name, ngw_group_resource, wms_url):
         connection = ngw_group_resource._res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
-
-        params_layers = []
-        for ngw_layer, ngw_style_id in ngw_layers_with_style:
-            params_layer = dict(
-                display_name=ngw_layer.common.display_name,
-                keyname="ngw_id_%d" % ngw_layer.common.id,
-                resource_id=ngw_style_id,
-                min_scale_denom=None,
-                max_scale_denom=None,
-            )
-            params_layers.append(params_layer)
 
         params = dict(
             resource=dict(
@@ -62,7 +57,11 @@ class NGWWmsService(NGWResource):
         )
 
         params[cls.type_id] = dict(
-            layers=params_layers
+            url=wms_url,
+            user=None,
+            password=None,
+            version="1.1.1",
+            capcache="query",
         )
 
         try:
@@ -78,4 +77,4 @@ class NGWWmsService(NGWResource):
 
             return ngw_resource
         except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create wfs service. Server response:\n%s' % e.message)
+            raise NGWError('Cannot create wfs connection. Server response:\n%s' % e.message)
