@@ -276,7 +276,7 @@ class QGISResourceJob(NGWResourceModelJob):
         layer_has_mixed_geoms = False
         layer_has_bad_fields = False
         if NgwPluginSettings.get_sanitize_fix_geometry():
-            if self.hasSimpleAndMultyGeom(qgs_vector_layer):
+            if self.hasMixGeometry(qgs_vector_layer):
                 layer_has_mixed_geoms = True
         if NgwPluginSettings.get_sanitize_rename_fields():
             if self.hasBadFields(qgs_vector_layer):
@@ -301,9 +301,10 @@ class QGISResourceJob(NGWResourceModelJob):
         else:
             return self.prepareAsJSON(layer), rename_fields_map
 
-    def hasSimpleAndMultyGeom(self, qgs_vector_layer):
+    def hasMixGeometry(self, qgs_vector_layer):
         has_simple_geometries = False
         has_multipart_geometries = False
+        has_none_geometries = False
 
         features_count = qgs_vector_layer.featureCount()
         features_counter = 0
@@ -319,12 +320,14 @@ class QGISResourceJob(NGWResourceModelJob):
                     )
                 )
             features_counter += 1
-            if feature.geometry().isMultipart():
+            if feature.geometry() is None:
+                has_none_geometries = True
+            elif feature.geometry().isMultipart():
                 has_multipart_geometries = True
             else:
                 has_simple_geometries = True
 
-            if has_multipart_geometries and has_simple_geometries:
+            if (has_multipart_geometries and has_simple_geometries) or has_none_geometries:
                 break
 
         self.statusChanged.emit(
@@ -333,7 +336,8 @@ class QGISResourceJob(NGWResourceModelJob):
                 100
             )
         )
-        return has_multipart_geometries and has_simple_geometries
+
+        return (has_multipart_geometries and has_simple_geometries) or has_none_geometries
 
     def hasBadFields(self, qgs_vector_layer):
         exist_fields_names = [field.name().lower() for field in qgs_vector_layer.fields()]
@@ -379,21 +383,29 @@ class QGISResourceJob(NGWResourceModelJob):
         qgs_vector_layer_dst.startEditing()
         features_count = qgs_vector_layer_src.featureCount()
         features_counter = 1
+        progress = 0
         for feature in qgs_vector_layer_src.getFeatures():
             if has_mixed_geoms:
                 new_geometry = feature.geometry()
+                
+                if new_geometry is None:
+                    continue
+                
                 new_geometry.convertToMultiType()
                 feature.setGeometry(
                     new_geometry
                 )
             qgs_vector_layer_dst.addFeature(feature)
 
-            self.statusChanged.emit(
-                "%s - Prepare layer for import (%d%%)" % (
-                    qgs_vector_layer_src.name(),
-                    features_counter * 100 / features_count
+            tmp_progress = features_counter * 100 / features_count
+            if  tmp_progress > progress:
+                progress = tmp_progress
+                self.statusChanged.emit(
+                    "%s - Prepare layer for import (%d%%)" % (
+                        qgs_vector_layer_src.name(),
+                        features_counter * 100 / features_count
+                    )
                 )
-            )
             features_counter += 1
 
         qgs_vector_layer_dst.commitChanges()
