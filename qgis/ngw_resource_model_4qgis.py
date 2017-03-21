@@ -43,6 +43,7 @@ from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_wms_service import NGWWmsService
 from ..core.ngw_wms_connection import NGWWmsConnection
 from ..core.ngw_wms_layer import NGWWmsLayer
+from ..utils import log
 
 from ngw_plugin_settings import NgwPluginSettings
 
@@ -276,15 +277,14 @@ class QGISResourceJob(NGWResourceModelJob):
         layer_has_mixed_geoms = False
         layer_has_bad_fields = False
         if NgwPluginSettings.get_sanitize_fix_geometry():
-            if self.hasMixGeometry(qgs_vector_layer):
-                layer_has_mixed_geoms = True
+            layer_has_mixed_geoms, fids_with_notvalid_geom = self.checkGeometry(qgs_vector_layer)
         if NgwPluginSettings.get_sanitize_rename_fields():
             if self.hasBadFields(qgs_vector_layer):
                 layer_has_bad_fields = True
 
         rename_fields_map = {}
-        if layer_has_mixed_geoms or layer_has_bad_fields:
-            layer, rename_fields_map = self.createLayer4Upload(qgs_vector_layer, layer_has_mixed_geoms, layer_has_bad_fields)
+        if layer_has_mixed_geoms or layer_has_bad_fields or (len(fids_with_notvalid_geom) > 0):
+            layer, rename_fields_map = self.createLayer4Upload(qgs_vector_layer, fids_with_notvalid_geom, layer_has_mixed_geoms, layer_has_bad_fields)
         else:
             layer = qgs_vector_layer
 
@@ -301,10 +301,12 @@ class QGISResourceJob(NGWResourceModelJob):
         else:
             return self.prepareAsJSON(layer), rename_fields_map
 
-    def hasMixGeometry(self, qgs_vector_layer):
+
+    def checkGeometry(self, qgs_vector_layer):
         has_simple_geometries = False
         has_multipart_geometries = False
-        has_none_geometries = False
+
+        fids_with_not_valid_geom = []
 
         features_count = qgs_vector_layer.featureCount()
         features_counter = 0
@@ -321,14 +323,30 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
             features_counter += 1
             if feature.geometry() is None:
-                has_none_geometries = True
-            elif feature.geometry().isMultipart():
+                fids_with_not_valid_geom.append(feature.id())
+                continue
+
+            # isGeosValid excepted to some geometries 
+            # if not feature.geometry().isGeosValid():
+            #     log("Feature %s has not valid geometry (geos)" % str(feature.id()))
+            #     fids_with_not_valid_geom.append(feature.id())
+
+            # Fix one point line. Method isGeosValid return true for same geometry.
+            if feature.geometry().type() == QGis.Line:
+                g = feature.geometry()
+                if g.isMultipart():
+                    for polyline in g.asMultiPolyline():
+                        if len(polyline) < 2:
+                            fids_with_not_valid_geom.append(feature.id())
+                            break
+                else:
+                    if len(g.asPolyline()) < 2:
+                        fids_with_not_valid_geom.append(feature.id())
+
+            if feature.geometry().isMultipart():
                 has_multipart_geometries = True
             else:
                 has_simple_geometries = True
-
-            if (has_multipart_geometries and has_simple_geometries) or has_none_geometries:
-                break
 
         self.statusChanged.emit(
             "%s - Check geometry (%d%%)" % (
@@ -337,7 +355,10 @@ class QGISResourceJob(NGWResourceModelJob):
             )
         )
 
-        return (has_multipart_geometries and has_simple_geometries) or has_none_geometries
+        return (
+            (has_multipart_geometries and has_simple_geometries),
+            fids_with_not_valid_geom
+        )
 
     def hasBadFields(self, qgs_vector_layer):
         exist_fields_names = [field.name().lower() for field in qgs_vector_layer.fields()]
@@ -345,7 +366,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return len(common_fields) > 0
 
-    def createLayer4Upload(self, qgs_vector_layer_src, has_mixed_geoms, has_bad_fields):
+    def createLayer4Upload(self, qgs_vector_layer_src, fids_with_notvalid_geom, has_mixed_geoms, has_bad_fields):
         geometry_type = self.determineGeometry4MemoryLayer(qgs_vector_layer_src, has_mixed_geoms)
 
         field_name_map = {}
@@ -385,11 +406,11 @@ class QGISResourceJob(NGWResourceModelJob):
         features_counter = 1
         progress = 0
         for feature in qgs_vector_layer_src.getFeatures():
+            if feature.id() in fids_with_notvalid_geom:
+                continue
+
             if has_mixed_geoms:
                 new_geometry = feature.geometry()
-                
-                if new_geometry is None:
-                    continue
                 
                 new_geometry.convertToMultiType()
                 feature.setGeometry(
@@ -409,6 +430,19 @@ class QGISResourceJob(NGWResourceModelJob):
             features_counter += 1
 
         qgs_vector_layer_dst.commitChanges()
+
+        if len(fids_with_notvalid_geom) != 0:
+                msg = QCoreApplication.translate(
+                    "QGISResourceJob",
+                    "We've excluded features with id {0} for layer '{1}'. Reason: invalid geometry."
+                ).format(
+                    fids_with_notvalid_geom,
+                    qgs_vector_layer_src.name()
+                )
+
+                self.warningOccurred.emit(
+                    QNGWResourcesModelExeption(msg)
+                )
 
         return qgs_vector_layer_dst, field_name_map
 

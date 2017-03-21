@@ -3,7 +3,7 @@
 <context>
     <name>CurrentQGISProjectImporter</name>
     <message>
-        <location filename="ngw_resource_model_4qgis.py" line="502"/>
+        <location filename="ngw_resource_model_4qgis.py" line="691"/>
         <source>Import &apos;%s&apos;</source>
         <translation>Импорт &apos;%s&apos;</translation>
     </message>
@@ -84,12 +84,12 @@
 <context>
     <name>NGWConnectionEditDialog</name>
     <message>
-        <location filename="ngw_connection_edit_dialog.py" line="206"/>
+        <location filename="ngw_connection_edit_dialog.py" line="209"/>
         <source>Fill it!</source>
         <translation>Заполните поле!</translation>
     </message>
     <message>
-        <location filename="ngw_connection_edit_dialog.py" line="247"/>
+        <location filename="ngw_connection_edit_dialog.py" line="250"/>
         <source>Connection test...</source>
         <translation>Проверка подключения...</translation>
     </message>
@@ -99,22 +99,22 @@
         <translation type="obsolete">Успешное подключение.</translation>
     </message>
     <message>
-        <location filename="ngw_connection_edit_dialog.py" line="257"/>
+        <location filename="ngw_connection_edit_dialog.py" line="260"/>
         <source>Specified URL webgis not found! Or your webgis version is below 3</source>
         <translation>По заданному URL Веб ГИС не найдена! Или версия Вашей Веб ГИС ниже 3</translation>
     </message>
     <message>
-        <location filename="ngw_connection_edit_dialog.py" line="253"/>
+        <location filename="ngw_connection_edit_dialog.py" line="256"/>
         <source>Connection successful!</source>
         <translation>Успешное подключение!</translation>
     </message>
     <message>
-        <location filename="ngw_connection_edit_dialog.py" line="171"/>
+        <location filename="ngw_connection_edit_dialog.py" line="96"/>
         <source>http://docs.nextgis.com/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection</source>
         <translation>http://docs.nextgis.ru/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection</translation>
     </message>
     <message>
-        <location filename="ngw_connection_edit_dialog.py" line="176"/>
+        <location filename="ngw_connection_edit_dialog.py" line="96"/>
         <source>Where do I get these?</source>
         <translation>Где взять имя пользователя и пароль?</translation>
     </message>
@@ -122,9 +122,14 @@
 <context>
     <name>QGISResourceJob</name>
     <message>
-        <location filename="ngw_resource_model_4qgis.py" line="276"/>
+        <location filename="ngw_resource_model_4qgis.py" line="370"/>
         <source>We&apos;ve renamed fields {0} for layer &apos;{1}&apos;. Style for this layer may become invalid.</source>
         <translation>Следующие поля переименованы {0} for layer &apos;{1}&apos;. Стиль для этого слоя может стать некорректным.</translation>
+    </message>
+    <message>
+        <location filename="ngw_resource_model_4qgis.py" line="428"/>
+        <source>We&apos;ve excluded features with id {0} for layer &apos;{1}&apos;. Reason: invalid geometry.</source>
+        <translation>Объекты с id {0} слоя &apos;{1}&apos; были исключены. Причина: неправильная геометрия.</translation>
     </message>
 </context>
 </TS>
