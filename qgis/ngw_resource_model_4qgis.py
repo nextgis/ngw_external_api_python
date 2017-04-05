@@ -387,7 +387,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
 
         qgs_vector_layer_dst = QgsVectorLayer(
-            "%s?crs=epsg:4326" % geometry_type,
+            "%s?crs=%s" % (geometry_type, qgs_vector_layer_src.crs().authid()),
             "temp",
             "memory"
         )
@@ -814,11 +814,13 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
         )
 
-        bbox = ct.transform(QgsRectangle(-179.9, -89.9, 179.9, 89.9), QgsCoordinateTransform.ReverseTransform)
-        rectangle = rectangle.intersect(bbox)
-
+        # log(">>> rectangle: " + str(rectangle.asPolygon()))
+        # bbox = ct.transform(QgsRectangle(-179.9, -89.9, 179.9, 89.9), QgsCoordinateTransform.ReverseTransform)
+        # log(">>> bbox: " + str(bbox.asPolygon()))
+        # rectangle = rectangle.intersect(bbox)
+        # log(">>> rectangle 1: " + str(rectangle.asPolygon()))
         rectangle = ct.transform(rectangle)
-
+        # log(">>> rectangle 2: " + str(rectangle.asPolygon()))
         ngw_webmap_items_as_dicts = [item.toDict() for item in ngw_webmap_items]
         ngw_resource = ResourceCreator.create_webmap(
             ngw_resource,
