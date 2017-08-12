@@ -143,7 +143,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def __init__(self):
         NGWResourceModelJob.__init__(self)
 
-        self.sanitize_fields_names = ["id", "type", "source"]
+        self.sanitize_fields_names = ["id", "geom"]
 
     def isSuitableLayer(self, qgs_map_layer):
         layer_type = qgs_map_layer.type()
@@ -171,7 +171,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 return self.importQgsRasterLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)
 
             elif layer_data_provider == "wms":
-                return self.importQgsWMSLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)            
+                return self.importQgsWMSLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)
 
         return None
 
@@ -326,7 +326,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 fids_with_not_valid_geom.append(feature.id())
                 continue
 
-            # isGeosValid excepted to some geometries 
+            # isGeosValid excepted to some geometries
             # if not feature.geometry().isGeosValid():
             #     log("Feature %s has not valid geometry (geos)" % str(feature.id()))
             #     fids_with_not_valid_geom.append(feature.id())
@@ -411,7 +411,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
             if has_mixed_geoms:
                 new_geometry = feature.geometry()
-                
+
                 new_geometry.convertToMultiType()
                 feature.setGeometry(
                     new_geometry
@@ -622,14 +622,14 @@ class QGISResourcesImporter(QGISResourceJob):
 
     def _do(self):
         result = NGWResourceModelJobResult()
-        
+
         for qgs_map_layer in self.qgs_map_layers:
             ngw_resource = self.importQGISMapLayer(
                 qgs_map_layer,
                 self.ngw_group
             )
             result.putAddedResource(ngw_resource, is_main=True)
-            
+
             if ngw_resource.type_id in [NGWVectorLayer.type_id, NGWRasterLayer.type_id]:
                 ngw_style = self.addStyle(
                     qgs_map_layer,
@@ -654,7 +654,7 @@ class QGISResourcesImporter(QGISResourceJob):
                     ngw_resource.layers()
                 )
                 result.putAddedResource(wfs_layer)
-        
+
         self.dataReceived.emit(result)
 
 
@@ -720,7 +720,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                         if ngw_style is None:
                             continue
                         result.putAddedResource(ngw_style)
-                        
+
                         ngw_webmap_item.appendChild(
                             NGWWebMapLayer(
                                 ngw_style.common.id,
