@@ -18,11 +18,15 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject, pyqtSignal, QThread
+import os
+import uuid
+
+from PyQt4.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject, pyqtSignal, QThread, QCoreApplication
 
 from ..core.ngw_group_resource import NGWGroupResource
+from ..utils import log
 
-from qt_ngw_resource_item import QNGWResourceItemExt, AuxiliaryItem
+from qt_ngw_resource_item import *
 from qt_ngw_resource_model_job import *
 
 
@@ -45,10 +49,10 @@ class NGWResourcesModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
     warningOccurred = pyqtSignal(object)
-    errorOccurred = pyqtSignal(object)
+    errorOccurred = pyqtSignal(object, object)
     finished = pyqtSignal()
 
-    def __init__(self, parent, job_id, worker, model_response=None):
+    def __init__(self, parent, worker, model_response=None):
         """Create job.
 
             Arguments:
@@ -58,7 +62,8 @@ class NGWResourcesModelJob(QObject):
         QObject.__init__(self, parent)
         self.__result = None
         self.__worker = worker
-        self.__job_id = job_id
+        self.__job_id = self.__worker.id
+        # self.__job_id = "%s_%s" % (self.__worker.id, str(uuid.uuid1()))
 
         self.__worker.started.connect(self.started.emit)
         self.__worker.dataReceived.connect(self.__rememberResult)
@@ -135,28 +140,25 @@ def modelJobSlot():
 class QNGWResourcesBaseModel(QAbstractItemModel):
     jobStarted = pyqtSignal(unicode)
     jobStatusChanged = pyqtSignal(unicode, unicode)
-    errorOccurred = pyqtSignal(unicode, object)
+    errorOccurred = pyqtSignal(unicode, object, object)
     warningOccurred = pyqtSignal(unicode, object)
     jobFinished = pyqtSignal(unicode)
-
-    JOB_NGW_RESOURCE_UPDATE = "RESOURCE_UPDATE"
-    JOB_LOAD_NGW_RESOURCE_CHILDREN = "RESOURCES_LOAD"
 
     def __init__(self, parent):
         QAbstractItemModel.__init__(self, parent)
 
         self.jobs = []
-        self.root_item = AuxiliaryItem("Qt model root item")
+        self.root_item = QNGWConnectionItem()
         self.__ngw_connection_settings = None
 
-        self.indexes_in_update_state = {}
+        self.__indexes_blocked_by_jobs = {}
 
     def resetModel(self, ngw_connection_settings):
-        self.__cleanModel()
         self.__ngw_connection_settings = ngw_connection_settings
-
+        self.__cleanModel()
         self.beginResetModel()
-        self.startLoadRootResources(ngw_connection_settings)
+        self.root_item = QNGWConnectionItem(self.__ngw_connection_settings)
+        # self.__startLoadRootResources(ngw_connection_settings)
         self.endResetModel()
         self.modelReset.emit()
 
@@ -173,15 +175,15 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             self.root_item.removeChild(self.root_item.child(i))
         self.endRemoveRows()
 
+    def item(self, index):
+        return index.internalPointer() if index and index.isValid() else self.root_item
+
     def index(self, row, column, parent):
+        # log("--- index" + str(parent.data(QNGWResourceItem.NGWResourceIdRole)))
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
 
-        if not parent.isValid():
-            parent_item = self.root_item
-        else:
-            parent_item = parent.internalPointer()
-
+        parent_item = self.item(parent)
         child_item = parent_item.child(row)
         if child_item:
             return self.createIndex(row, column, child_item)
@@ -189,11 +191,8 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             return QModelIndex()
 
     def parent(self, index):
-        if index and index.isValid():
-            item = index.internalPointer()
-        else:
-            item = self.root_item
-
+        # log("--- parent" + str(index.data(QNGWResourceItem.NGWResourceIdRole)))
+        item = self.item(index)
         parent_item = item.parent()
         if parent_item == self.root_item or not parent_item:
             return QModelIndex()
@@ -205,90 +204,66 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         )
 
     def rowCount(self, parent):
-        if not parent.isValid():
-            parent_item = self.root_item
-        else:
-            parent_item = parent.internalPointer()
-
+        # log("--- rowCount" + str(parent.data(QNGWResourceItem.NGWResourceIdRole)))
+        parent_item = self.item(parent)
         return parent_item.childCount()
 
     def canFetchMore(self, parent):
-        if not parent.isValid():
-            parent_item = self.root_item
-        else:
-            parent_item = parent.internalPointer()
-
-        for parent in self.indexes_in_update_state:
+        log("--- canFetchMore start " + str(parent.data(QNGWResourceItem.NGWResourceIdRole)))
+        if self._isIndexBlockedByJob(parent):
             return False
 
-        if isinstance(parent_item, QNGWResourceItemExt):
-            return parent_item.ngw_resource_children_count() > parent_item.childCount()
-
-        return False
+        item = self.item(parent)
+        can_fetch_more = item.ngw_resource_children_count() > item.childCount()
+        log("--- canFetchMore finish " + str(parent.data(QNGWResourceItem.NGWResourceIdRole)))
+        return can_fetch_more
 
     def fetchMore(self, parent):
-        if not parent.isValid():
-            parent_item = self.root_item
-        else:
-            parent_item = parent.internalPointer()
-
-        if isinstance(parent_item, QNGWResourceItemExt):
-            self.updateResourceWithLoadChildren(parent)
+        log("--- fetchMore start" + str(parent.data(QNGWResourceItem.NGWResourceIdRole)))
+        self.__updateResourceWithLoadChildren(parent)
+        log("--- fetchMore finish" + str(parent.data(QNGWResourceItem.NGWResourceIdRole)))
 
     def columnCount(self, parent=None):
         return 1
 
     def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid():
-            return None
-
-        item = index.internalPointer()
+        item = self.item(index)
         return item.data(index.column(), role)
 
     def hasChildren(self, parent=None):
-        if not parent.isValid():
-            parent_item = self.root_item
-        else:
-            parent_item = parent.internalPointer()
-
-        if isinstance(parent_item, QNGWResourceItemExt):
-            ngw_resource = parent_item.data(0, QNGWResourceItemExt.NGWResourceRole)
+        parent_item = self.item(parent)
+        if isinstance(parent_item, QNGWResourceItem):
+            ngw_resource = parent_item.data(0, QNGWResourceItem.NGWResourceRole)
             return ngw_resource.common.children
 
         return parent_item.childCount() > 0
 
     def flags(self, index):
-        if index and index.isValid():
-            item = index.internalPointer()
-            if not isinstance(item, AuxiliaryItem):
-                return item.flags()
-
-        return Qt.NoItemFlags
+        item = self.item(index)
+        return item.flags()
 
     def _nearest_ngw_group_resource_parent(self, index):
         checking_index = index
 
         item = checking_index.internalPointer()
-        ngw_resource = item.data(0, QNGWResourceItemExt.NGWResourceRole)
+        ngw_resource = item.data(0, QNGWResourceItem.NGWResourceRole)
 
         while not isinstance(ngw_resource, NGWGroupResource):
             checking_index = self.parent(checking_index)
             checking_item = checking_index.internalPointer()
-            ngw_resource = checking_item.data(0, QNGWResourceItemExt.NGWResourceRole)
+            ngw_resource = checking_item.data(0, QNGWResourceItem.NGWResourceRole)
 
         return checking_index
 
-    def _stratJobOnNGWResource(self, worker, job_id, slot):
-        self._startJob(worker, job_id, slot)
-
-    def _startJob(self, worker, job_id, slot, response=None):
+    # TODO job должен уметь не стартовать, например есди запущен job обновления дочерних ресурсов - нельзя запускать обновление
+    def _startJob(self, worker, index=None, slot=None, response=None):
         """Registers and starts the job.
 
             Arguments:
                 worker -- The class object inherits from NGWResourceModelJob
                 slots -- qt slots will be connected to job finished, last slot must call deleteLater
         """
-        job = NGWResourcesModelJob(self, job_id, worker, response)
+        job = NGWResourcesModelJob(self, worker, response)
         job.started.connect(
             self.__jobStartedProcess
         )
@@ -305,12 +280,16 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             self.__jobWarningOccurredProcess
         )
 
-        job.finished.connect(
-            slot
-        )
+        if slot is None:
+            job.finished.connect(self.processJobResult)
+        else:
+            job.finished.connect(slot)
 
         self.jobs.append(job)
 
+        if index is not None:
+            self._blockIndexesByJob([index], job)
+        
         job.start()
 
         return job
@@ -327,22 +306,18 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         job = self.sender()
         self.jobFinished.emit(job.getJobId())
 
-    def __jobErrorOccurredProcess(self, error):
+    def __jobErrorOccurredProcess(self, error, trace):
         job = self.sender()
-        self.errorOccurred.emit(job.getJobId(), error)
+        self.errorOccurred.emit(job.getJobId(), error, trace)
 
     def __jobWarningOccurredProcess(self, error):
         job = self.sender()
         self.warningOccurred.emit(job.getJobId(), error)
 
     def addNGWResourceToTree(self, parent, ngw_resource):
-        if not parent.isValid():
-            parent_item = self.root_item
-        else:
-            parent_item = parent.internalPointer()
+        parent_item = self.item(parent)
 
-        new_item = QNGWResourceItemExt(ngw_resource)
-
+        new_item = QNGWResourceItem(ngw_resource)
         i = -1
         for i in range(0, parent_item.childCount()):
             item = parent_item.child(i)
@@ -357,91 +332,158 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
         return self.index(i, 0, parent)
 
-    def startLoadRootResources(self, ngw_connection_settings):
-        self.beginInsertRows(QModelIndex(), 0, 0)
-        self.root_item.addChild(
-            AuxiliaryItem("loading...")
-        )
-        self.endInsertRows()
+    def _blockIndexesByJob(self, indexes, job):
+        if self.__indexes_blocked_by_jobs.get(job) is None:
+            self.__indexes_blocked_by_jobs[job] = []
+        self.__indexes_blocked_by_jobs[job].extend(indexes)
 
-        worker = NGWRootResourcesLoader(ngw_connection_settings)
-        self._stratJobOnNGWResource(
-            worker,
-            self.JOB_LOAD_NGW_RESOURCE_CHILDREN,
-            self._proccessRootResourcesReceived,
-        )
-
-    @modelJobSlot()
-    def _proccessRootResourcesReceived(self, job):
-        item = self.root_item
-
-        # Remove servise item - loading...
-        for i in range(0, item.childCount()):
-            if isinstance(item.child(i), AuxiliaryItem):
-                item.removeChild(item.child(i))
-                self.rowsRemoved.emit(QModelIndex(), i, i)
-
-        if job.getResult() is None:
-            return
-
-        ngw_resources = job.getResult()
-        for ngw_resource in ngw_resources:
-            self.addNGWResourceToTree(QModelIndex(), ngw_resource)
-
-    @modelRequest()
-    def updateResourceWithLoadChildren(self, index):
-        item = index.internalPointer()
-
-        if index in self.indexes_in_update_state:
-            self.indexes_in_update_state[index] += 1
-        else:
-            self.indexes_in_update_state[index] = 1
-
-            # Add servise item - loading...
+        for index in indexes:
+            item = self.item(index)
             self.beginInsertRows(index, item.childCount(), item.childCount())
-            item.addChild(
-                AuxiliaryItem("loading...")
-            )
+            item.lock()
             self.endInsertRows()
 
-        ngw_resource = item.data(0, Qt.UserRole)
-        return self._startJob(
-            NGWResourceUpdater(ngw_resource),
-            self.JOB_LOAD_NGW_RESOURCE_CHILDREN,
-            self._updateResource,
-        )
+        QCoreApplication.processEvents()
+
+    def _releaseIndexesByJob(self, job):
+        indexes = self.__indexes_blocked_by_jobs.get(job, [])
+        self.__indexes_blocked_by_jobs[job] = []
+
+        for index in indexes:
+            item = self.item(index)
+            
+            self.beginRemoveRows(index, item.childCount(), item.childCount())
+            item.release()
+            self.endRemoveRows()
+
+        QCoreApplication.processEvents()
+
+    def _isIndexBlockedByJob(self, index):
+        for job, blocked_indexes in self.__indexes_blocked_by_jobs.items():
+            for blocked_index in blocked_indexes:
+                if index == blocked_index:
+                    return True
+        return False
+
+    def getIndexByNGWResourceId(self, ngw_resource_id, start_with):
+        item = start_with.internalPointer()
+
+        for i in range(0, item.childCount()):
+            index = self.getIndexByNGWResourceId(
+                ngw_resource_id,
+                self.index(i, 0, start_with)
+            )
+
+            if index is not None:
+                return index
+
+        if isinstance(item, QNGWResourceItem):
+            if item.ngw_resource_id() == ngw_resource_id:
+                return start_with
+
+        return None
 
     @modelJobSlot()
-    def _updateResource(self, job):
-        if job.getResult() is not None:
-            ngw_resource, ngw_resource_children = job.getResult()
+    def processJobResult(self, job):
+        job_result = job.getResult()
 
-            ngw_resource_id = ngw_resource.common.id
+        # log(">>> job_result: " + str(job_result))
+        if job_result is None:
+            # TODO Exception
+            self._releaseIndexesByJob(job)
+            return
 
-            for index in self.indexes_in_update_state:
+        indexes = {}
+        for ngw_resource in job_result.added_resources:
+            if ngw_resource.common.parent is None:
+                index = QModelIndex()
+                new_index = self.addNGWResourceToTree(index, ngw_resource)
+            else:
+                index = indexes.get(ngw_resource.common.parent.id)
+                if index is None:
+                    index = self.getIndexByNGWResourceId(
+                        ngw_resource.common.parent.id,
+                        self.index(0, 0, QModelIndex())
+                    )
+                    indexes[ngw_resource.common.parent.id] = index
+
                 item = index.internalPointer()
-                if ngw_resource_id == item.ngw_resource_id():
+                current_ids = [item.child(i).ngw_resource_id() for i in range(0, item.childCount()) if isinstance(item.child(i), QNGWResourceItem)]
+                if ngw_resource.common.id not in current_ids:
+                    new_index = self.addNGWResourceToTree(index, ngw_resource)
+                else:
+                    continue
+
+            if job_result.main_resource_id == ngw_resource.common.id:
+                if job.model_response is not None:
+                    job.model_response.done.emit(new_index)
+
+        for ngw_resource in job_result.edited_resources:
+            index = self.getIndexByNGWResourceId(
+                ngw_resource.common.parent.id,
+                self.index(0, 0, QModelIndex())
+            )
+            item = index.internalPointer()
+
+            for i in range(0, item.childCount()):
+                if item.child(i).ngw_resource_id() == ngw_resource.common.id:
+                    self.beginRemoveRows(index, i, i)
+                    item.removeChild(item.child(i))
+                    self.endRemoveRows()
                     break
             else:
-                # TODO exception
+                # TODO exception: not find deleted resource in corrent tree
+                self._releaseIndexesByJob(job)
                 return
 
-            item.set_ngw_resource(ngw_resource)
+            new_index = self.addNGWResourceToTree(index, ngw_resource)
 
-            current_res_count = item.childCount()
-            current_ids = [item.child(i).ngw_resource_id() for i in range(0, current_res_count) if isinstance(item.child(i), QNGWResourceItemExt)]
-            for ngw_resource_child in ngw_resource_children:
-                chiled_id = ngw_resource_child.common.id
-                if chiled_id not in current_ids:
-                    self.addNGWResourceToTree(index, ngw_resource_child)
+            if job.model_response is not None:
+                job.model_response.done.emit(new_index)
 
-        # Remove servise item - loading...
-        for i in range(0, item.childCount()):
-            if isinstance(item.child(i), AuxiliaryItem):
-                self.beginRemoveRows(index, i, i)
-                item.removeChild(item.child(i))
-                self.endRemoveRows()
+        for ngw_resource in job_result.deleted_resources:
+            # log(">>> delete ngw_resource: " + str(ngw_resource))
+            index = self.getIndexByNGWResourceId(
+                ngw_resource.common.parent.id,
+                self.index(0, 0, QModelIndex())
+            )
+            item = index.internalPointer()
 
-        self.indexes_in_update_state[index] -= 1
-        if self.indexes_in_update_state[index] == 0:
-            self.indexes_in_update_state.pop(index)
+            for i in range(0, item.childCount()):
+                if item.child(i).ngw_resource_id() == ngw_resource.common.id:
+                    self.beginRemoveRows(index, i, i)
+                    item.removeChild(item.child(i))
+                    self.endRemoveRows()
+                    break
+            else:
+                # TODO exception: not find deleted resource in corrent tree
+                self._releaseIndexesByJob(job)
+                return
+
+            ngw_resource = item.data(0, QNGWResourceItem.NGWResourceRole)
+            ngw_resource.update()
+
+            if job.model_response is not None:
+                job.model_response.done.emit(index)
+
+        self._releaseIndexesByJob(job)
+
+    def __updateResourceWithLoadChildren(self, index):
+        item = self.item(index)
+
+        if not isinstance(item, QNGWItem):
+            return
+
+        if item == self.root_item:
+            job = self._startJob(
+                NGWRootResourcesLoader(self.__ngw_connection_settings),
+                index
+            )
+        else:
+            ngw_resource = item.data(0, Qt.UserRole)
+            job = self._startJob(
+                NGWResourceUpdater(ngw_resource),
+                index
+            )
+
+        return job

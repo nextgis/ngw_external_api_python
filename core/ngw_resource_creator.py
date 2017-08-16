@@ -64,6 +64,9 @@ class ResourceCreator():
 
         try:
             result = connection.post(url, params=params)
+            if type(result)!=dict or not result.has_key("id"):
+                raise NGWError('Cannot create resource. Bad ngw answer! There is no id attribute.')
+
             ngw_resource = NGWGroupResource(
                 parent_ngw_resource._res_factory,
                 NGWResource.receive_resource_obj(

@@ -21,7 +21,7 @@
 from os import path
 from ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 
-from ..utils import ICONS_DIR
+from ..utils import ICONS_DIR, log
 
 
 class NGWWfsService(NGWResource):
@@ -30,11 +30,14 @@ class NGWWfsService(NGWResource):
     icon_path = path.join(ICONS_DIR, 'wfs.svg')
     type_title = 'NGW WFS Service'
 
+    def __init__(self, resource_factory, resource_json):
+        NGWResource.__init__(self, resource_factory, resource_json)
+
     def _construct(self):
         NGWResource._construct(self)
         #wfsserver_service
-        self.wfs = DICT_TO_OBJ(self._json['wfsserver_service'])
-        if self.wfs.layers:
+        self.wfs = DICT_TO_OBJ(self._json[self.type_id])
+        if hasattr(self.wfs, "layers"):
             self.wfs.layers = LIST_DICT_TO_LIST_OBJ(self.wfs.layers)
 
     def get_wfs_url(self, layer_keyname):

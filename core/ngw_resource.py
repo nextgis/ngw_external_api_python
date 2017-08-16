@@ -23,7 +23,7 @@ from os import path
 import requests
 from ngw_error import NGWError
 
-from ..utils import ICONS_DIR
+from ..utils import ICONS_DIR, log
 
 API_RESOURCE_URL = lambda res_id: '/api/resource/%d' % res_id
 API_COLLECTION_URL = '/api/resource/'
@@ -146,7 +146,8 @@ class NGWResource():
     def get_relative_api_url(self):
         return API_RESOURCE_URL(self.common.id)
 
-    def get_api_collection_url(self):
+    @classmethod
+    def get_api_collection_url(cls):
         return API_COLLECTION_URL
 
     def change_name(self, name):

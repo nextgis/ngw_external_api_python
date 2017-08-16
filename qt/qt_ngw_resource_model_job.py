@@ -18,6 +18,8 @@
  *                                                                         *
  ***************************************************************************/
 """
+import sys
+import traceback
 
 from PyQt4.QtCore import *
 
@@ -25,6 +27,8 @@ from ..core.ngw_resource import NGWResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapRoot
+
+from ..utils import log
 
 
 class NGWResourceModelJobResult():
@@ -53,12 +57,13 @@ class NGWResourceModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
     warningOccurred = pyqtSignal(object)
-    errorOccurred = pyqtSignal(object)
+    errorOccurred = pyqtSignal(object, object)
     dataReceived = pyqtSignal(object)
     finished = pyqtSignal()
 
     def __init__(self):
         QObject.__init__(self)
+        self.id = self.__class__.__name__
 
     def generate_unique_name(self, name, present_names):
         new_name = name
@@ -90,7 +95,8 @@ class NGWResourceModelJob(QObject):
         try:
             self._do()
         except Exception as e:
-            self.errorOccurred.emit(e)
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            self.errorOccurred.emit(e, repr(traceback.format_tb(exc_traceback)))
         self.finished.emit()
 
     def _do(self):
@@ -99,15 +105,19 @@ class NGWResourceModelJob(QObject):
 
 class NGWRootResourcesLoader(NGWResourceModelJob):
     def __init__(self, ngw_connection_settings):
+        log("NGWRootResourcesLoader")
         NGWResourceModelJob.__init__(self)
         self.ngw_connection_settings = ngw_connection_settings
 
     def _do(self):
-        result = []
+        # result = []
+        result = NGWResourceModelJobResult()
+
         rsc_factory = NGWResourceFactory(self.ngw_connection_settings)
         ngw_root_resource = rsc_factory.get_root_resource()
         if ngw_root_resource is not None:
-            result.append(ngw_root_resource)
+            # result.append(ngw_root_resource)
+            result.putAddedResource(ngw_root_resource, is_main=True)
         self.dataReceived.emit(result)
 
 
@@ -117,10 +127,15 @@ class NGWResourceUpdater(NGWResourceModelJob):
         self.ngw_resource = ngw_resource
 
     def _do(self):
-        self.ngw_resource.update()
-        ngw_resource_children = self.ngw_resource.get_children()
-        self.dataReceived.emit((self.ngw_resource, ngw_resource_children))
+        result = NGWResourceModelJobResult()
 
+        # self.ngw_resource.update()
+        ngw_resource_children = self.ngw_resource.get_children()
+        for ngw_resource_child in ngw_resource_children:
+            result.putAddedResource(ngw_resource_child)
+            
+        # self.dataReceived.emit((self.ngw_resource, ngw_resource_children))
+        self.dataReceived.emit(result)
 
 class NGWGroupCreater(NGWResourceModelJob):
     def __init__(self, new_group_name, ngw_resource_parent):
@@ -138,6 +153,8 @@ class NGWGroupCreater(NGWResourceModelJob):
 
         result = NGWResourceModelJobResult()
         result.putAddedResource(ngw_group_resource, is_main=True)
+
+        self.ngw_resource_parent.update()
 
         self.dataReceived.emit(result)
 

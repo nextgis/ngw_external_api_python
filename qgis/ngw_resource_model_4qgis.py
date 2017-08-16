@@ -39,6 +39,7 @@ from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_qgis_vector_style import NGWQGISVectorStyle
+from ..core.ngw_feature import NGWFeature
 from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_wms_service import NGWWmsService
 from ..core.ngw_wms_connection import NGWWmsConnection
@@ -49,10 +50,6 @@ from ngw_plugin_settings import NgwPluginSettings
 
 
 class QNGWResourcesModel4QGIS(QNGWResourcesModel):
-    JOB_IMPORT_QGIS_RESOURCE = "IMPORT_QGIS_RESOURCE"
-    JOB_IMPORT_QGIS_PROJECT = "IMPORT_QGIS_PROJECT"
-    JOB_CREATE_NGW_STYLE = "CREATE_NGW_STYLE"
-    JOB_CREATE_NGW_WMS_SERVICE = "CREATE_NGW_WMS_SERVICE"
 
     def __init__(self, parent):
         QNGWResourcesModel.__init__(self, parent)
@@ -68,8 +65,6 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
 
         return self._startJob(
             QGISResourcesImporter(qgs_map_layers, ngw_group),
-            self.JOB_IMPORT_QGIS_RESOURCE,
-            self.processJobResult,
         )
 
     @modelRequest()
@@ -82,8 +77,6 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
 
         return self._startJob(
             QGISStyleImporter(qgs_map_layer, ngw_resource),
-            self.JOB_IMPORT_QGIS_RESOURCE,
-            self.processJobResult,
         )
 
     @modelRequest()
@@ -98,8 +91,6 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
 
         return self._startJob(
             CurrentQGISProjectImporter(ngw_group_name, ngw_resource_parent, iface),
-            self.JOB_IMPORT_QGIS_PROJECT,
-            self.processJobResult,
         )
 
     @modelRequest()
@@ -111,9 +102,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         ngw_resource = item.data(0, Qt.UserRole)
 
         return self._startJob(
-            MapForLayerCreater(ngw_resource, ngw_style_id),
-            self.JOB_CREATE_NGW_WEB_MAP,
-            self.processJobResult,
+            MapForLayerCreater(ngw_resource, ngw_style_id)
         )
 
     @modelRequest()
@@ -131,8 +120,18 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
 
         return self._startJob(
             NGWCreateWMSForVector(ngw_resource, ngw_parent_resource, ngw_resource_style_id),
-            self.JOB_CREATE_NGW_WMS_SERVICE,
-            self.processJobResult,
+        )
+
+    @modelRequest()
+    def updateNGWLayer(self, index, qgs_vector_layer):
+        if not index.isValid():
+            index = self.index(0, 0, index)
+
+        item = index.internalPointer()
+        ngw_vector_layer = item.data(0, Qt.UserRole)
+
+        return self._startJob(
+            NGWUpdateVectorLayer(ngw_vector_layer, qgs_vector_layer),
         )
 
 
@@ -584,16 +583,19 @@ class QGISResourceJob(NGWResourceModelJob):
         if gtype in ["LINESTRING", "MULTILINESTRING"]:
             return os.path.join(
                 os.path.dirname(__file__),
+                "qgis_styles",
                 "line_style.qml"
             )
         if gtype in ["POINT", "MULTIPOINT"]:
             return os.path.join(
                 os.path.dirname(__file__),
+                "qgis_styles",
                 "point_style.qml"
             )
         if gtype in ["POLYGON", "MULTIPOLYGON"]:
             return os.path.join(
                 os.path.dirname(__file__),
+                "qgis_styles",
                 "polygon_style.qml"
             )
 
@@ -613,6 +615,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def _defStyleForRaster(self, ngw_layer):
         ngw_style = ngw_layer.create_style()
         return ngw_style
+
 
 class QGISResourcesImporter(QGISResourceJob):
     def __init__(self, qgs_map_layers, ngw_group):
@@ -636,6 +639,7 @@ class QGISResourcesImporter(QGISResourceJob):
                     ngw_resource
                 )
                 result.putAddedResource(ngw_style)
+                ngw_resource.update()
 
             if ngw_resource.type_id == NGWWmsConnection.type_id:
                 self.statusChanged.emit(
@@ -654,7 +658,9 @@ class QGISResourcesImporter(QGISResourceJob):
                     ngw_resource.layers()
                 )
                 result.putAddedResource(wfs_layer)
-        
+
+        self.ngw_group.update()
+
         self.dataReceived.emit(result)
 
 
@@ -684,7 +690,6 @@ class CurrentQGISProjectImporter(QGISResourceJob):
 
         def process_one_level_of_layers_tree(qgsLayerTreeItems, ngw_resource_group, ngw_webmap_item):
             for qgsLayerTreeItem in qgsLayerTreeItems:
-
                 if isinstance(qgsLayerTreeItem, QgsLayerTreeLayer):
                     if self.isSuitableLayer(qgsLayerTreeItem.layer()) != self.SUITABLE_LAYER:
                         continue
@@ -696,7 +701,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                         )
                     except Exception as e:
                         exception = QNGWResourcesModelExeption(
-                            self.tr("Import '%s'" % qgsLayerTreeItem.layer().name()),
+                            "Import '%s'" % qgsLayerTreeItem.layer().name(),
                             e
                         )
                         if skip_import_layer_error:
@@ -709,9 +714,12 @@ class CurrentQGISProjectImporter(QGISResourceJob):
 
                     if ngw_layer_resource is None:
                         continue
+
+                    log(">>> resource creation Finish")
                     result.putAddedResource(ngw_layer_resource)
 
                     if ngw_layer_resource.type_id in [NGWVectorLayer.type_id, NGWRasterLayer.type_id]:
+                        log(">>> style creation Start")
                         ngw_style = self.addStyle(
                             qgsLayerTreeItem.layer(),
                             ngw_layer_resource
@@ -728,6 +736,10 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                                 qgsLayerTreeItem.isVisible() == Qt.Checked
                             )
                         )
+
+                        # Add style to layer, therefore, it is necessary to upgrade layer resource for get children flag
+                        ngw_layer_resource.update()
+                        log(">>> style creation Finish")
 
                     if ngw_layer_resource.type_id == NGWWmsConnection.type_id:
                         self.statusChanged.emit(
@@ -804,6 +816,9 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             ngw_webmap_root_group.children
         )
         result.putAddedResource(ngw_webmap, is_main=True)
+
+        # The group was attached resources,  therefore, it is necessary to upgrade for get children flag
+        ngw_group_resource.update()
 
         self.dataReceived.emit(result)
 
@@ -937,4 +952,83 @@ class NGWCreateWMSForVector(QGISResourceJob):
 
         result.putAddedResource(ngw_wfs_resource, is_main=True)
 
+        self.dataReceived.emit(result)
+
+
+class NGWUpdateVectorLayer(QGISResourceJob):
+    def __init__(self, ngw_vector_layer, qgs_map_layers):
+        NGWResourceModelJob.__init__(self)
+        self.ngw_layer = ngw_vector_layer
+        self.qgis_layer = qgs_map_layers
+
+    def createNGWFeatureDictFromQGSFeature(self, qgs_feature):
+        feature_dict = {}
+
+        # id need only for update not for create
+        # feature_dict["id"] = qgs_feature.id() + 1 # Fix NGW behavior
+        feature_dict["geom"] = qgs_feature.constGeometry().exportToWkt()
+        feature_dict["fields"] = {}
+
+        for qgsField in qgs_feature.fields().toList():
+            field_type = self.ngw_layer.fieldType(qgsField.name())
+            # value = unicode(qgs_feature.attribute(qgsField.name()))
+            if field_type == NGWVectorLayer.FieldTypeString:
+                value = unicode(qgs_feature.attribute(qgsField.name()))
+            elif field_type == NGWVectorLayer.FieldTypeReal:
+                value = float(qgs_feature.attribute(qgsField.name()))
+            else:
+                value = unicode(qgs_feature.attribute(qgsField.name()))
+
+            feature_dict["fields"][qgsField.name()] = value
+
+        return feature_dict
+
+    def getFeaturesPart(self, pack_size):
+        ngw_features=[]
+        for qgsFeature in self.qgis_layer.getFeatures():
+            ngw_features.append(
+                NGWFeature(self.createNGWFeatureDictFromQGSFeature(qgsFeature), self.ngw_layer)
+            )
+
+            if len(ngw_features) == pack_size:
+                yield ngw_features
+                ngw_features = []
+
+        if len(ngw_features) > 0:
+                yield ngw_features
+                
+    def _do(self):
+        log(">>> NGWUpdateVectorLayer _do")
+        result = NGWResourceModelJobResult()
+        
+        block_size = 10
+        total_count = self.qgis_layer.featureCount()
+        current_count = 0
+        done = 0
+        
+        self.statusChanged.emit(
+            "%s - Remove all feature" % (
+                self.qgis_layer ,
+            )
+        )
+        self.ngw_layer.delete_all_features()
+
+        self.statusChanged.emit(
+            "%s - Add features" % (
+                self.qgis_layer ,
+            )
+        )
+        for features in self.getFeaturesPart(block_size):
+            self.ngw_layer.patch_features(features)
+            current_count += len(features)
+
+            d = current_count * 100 / total_count
+            if done < d:
+                done = d
+                self.statusChanged.emit(
+                    "%s - Add features (%d%%)" % (
+                        self.qgis_layer ,
+                        done
+                    )
+                )
         self.dataReceived.emit(result)

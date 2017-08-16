@@ -24,11 +24,20 @@ from ngw_resource import NGWResource, API_LAYER_EXTENT, File2Upload
 from ngw_qgis_vector_style import NGWQGISVectorStyle
 from ngw_mapserver_style import NGWMapServerStyle
 from ngw_error import NGWError
+from ngw_feature import NGWFeature
 
-from ..utils import ICONS_DIR
+from ..utils import ICONS_DIR, log
+
+ADD_FEATURE_URL = u"/api/resource/%s/feature/"
+DEL_ALL_FEATURES_URL = u"/api/resource/%s/feature/"
 
 
 class NGWVectorLayer(NGWResource):
+    """ Define ngw vector layer resource
+
+        Geometry types: point, multipoint, linestring, multilinestring, polygon, multipolygon 
+        
+    """
 
     type_id = 'vector_layer'
     icon_path = path.join(ICONS_DIR, 'vector_layer.svg')
@@ -61,12 +70,75 @@ class NGWVectorLayer(NGWResource):
         MULTIPOLYGON: "vector_layer_mpolygon.svg",
     }
 
+    FieldTypeString, FieldTypeReal = range(2)
+
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
 
         if self.type_id in self._json:
             if "geometry_type" in self._json[self.type_id]:
                 self.set_icon(self.geom_type())
+
+        self._field_defs = {}
+        for field_def in self._json.get("feature_layer", {}).get("fields", []):
+            self._field_defs[field_def.get("keyname")] = field_def
+
+    def fieldType(self, name):
+        field_def = self._field_defs.get(name, {})
+        if field_def.get("datatype") == "REAL":
+            return self.FieldTypeReal
+        elif field_def.get("datatype") == "STRING":
+            return self.FieldTypeString
+
+        return None
+
+    # TODO Need refactoring.
+    @classmethod
+    def create_empty(cls, ngw_resource_parent, display_name):
+        display_name_uniq = ngw_resource_parent.generate_unique_child_name(display_name)
+
+        parameters = {
+            "resource": {
+                "cls": cls.type_id,
+                "parent": {
+                    "id": ngw_resource_parent.common.id
+                },
+                "display_name": display_name_uniq,
+                "keyname": None,
+                "description": None
+            },
+            "resmeta": {
+                "items": {}
+            },
+            "vector_layer":{
+                "srs":{ "id":3857 },
+                "geometry_type": "POINT",
+                "fields": [
+                    {
+                        "keyname": "attr",
+                        "datatype": "STRING"
+                    },
+                ]
+            }
+        }
+
+        connection = ngw_resource_parent._res_factory.connection
+
+        try:
+            url = cls.get_api_collection_url()
+            result = connection.post(url, params=parameters)
+            ngw_resource = NGWVectorLayer(
+                ngw_resource_parent._res_factory,
+                NGWResource.receive_resource_obj(
+                    ngw_resource_parent._res_factory.connection,
+                    result['id']
+                )
+            )
+
+            return ngw_resource
+
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot create e,pty vector layer. Server response:\n%s' % e.message)
 
     def geom_type(self):
         if self.type_id in self._json:
@@ -83,6 +155,53 @@ class NGWVectorLayer(NGWResource):
     def set_icon(self, geometry_type):
         icon_filename = self.icons.get(geometry_type, 'vector_layer.svg')
         self.icon_path = path.join(ICONS_DIR, icon_filename)
+
+    def get_feature_adding_url(self):
+        return ADD_FEATURE_URL % self.common.id
+
+    def get_feature_deleting_url(self):
+        return DEL_ALL_FEATURES_URL % self.common.id
+
+    # TODO Need refactoring 
+    def patch_features(self, ngw_feature_list):
+        log ("!!! update_features %s" % ngw_feature_list)
+        features_dict_list = []
+        for ngw_feature in ngw_feature_list:
+            features_dict_list.append(ngw_feature.asDict())
+
+        connection = self._res_factory.connection
+
+        try:
+            # connection.delete(self.get_feature_deleting_url())
+
+            url = self.get_feature_adding_url()
+            log ("!!! update_features %s" % features_dict_list)
+            result = connection.patch(url, params=features_dict_list)
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot patch vector layer. Server response:\n%s' % e.message)
+
+    def delete_all_features(self):
+        connection = self._res_factory.connection
+        try:
+            connection.delete(self.get_feature_deleting_url())
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot delete all features from vector layer. Server response:\n%s' % e.message)
+
+    # TODO Need refactoring. Paging loading with process
+    def get_features(self):
+        connection = self._res_factory.connection
+
+        try:
+            url = self.get_feature_adding_url()
+            result = connection.get(url)
+
+            ngw_features = []
+            for feature in result:
+                ngw_features.append(NGWFeature(feature, self))
+
+            return ngw_features
+        except requests.exceptions.RequestException, e:
+            raise NGWError('Cannot get all features from vector layer. Server response:\n%s' % e.message)
 
     def extent(self):
         result = self._res_factory.connection.get(

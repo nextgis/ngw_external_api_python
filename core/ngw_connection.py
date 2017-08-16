@@ -29,6 +29,7 @@ from ngw_error import NGWError
 from ..utils import log
 
 UPLOAD_FILE_URL = '/api/component/file_upload/upload'
+GET_VERSION_URL = '/api/component/pyramid/pkg_version'
 
 
 def _basic_auth_str(username, password):
@@ -130,7 +131,12 @@ class NGWConnection(object):
         if resp.status_code / 100 != 2:
             raise NGWError(resp.content)
 
-        return resp.json()
+        try:
+            json_response = resp.json()
+        except:
+            raise NGWError('{"exception": "ResponceError", "message": "Response does not contain json. Perhaps the server does not support this functionality."}')
+
+        return json_response
 
     def get(self, sub_url, params=None, **kwargs):
         return self.__request(sub_url, 'GET', params, **kwargs)
@@ -140,6 +146,9 @@ class NGWConnection(object):
 
     def put(self, sub_url, params=None, **kwargs):
         return self.__request(sub_url, 'PUT', params, **kwargs)
+
+    def patch(self, sub_url, params=None, **kwargs):
+        return self.__request(sub_url, 'PATCH', params, **kwargs)
 
     def delete(self, sub_url, params=None, **kwargs):
         return self.__request(sub_url, 'DELETE', params, **kwargs)
@@ -165,3 +174,10 @@ class NGWConnection(object):
             raise NGWError(resp.content)
         
         return resp.content
+
+    def get_version(self):
+        try:
+            pkg_versions_json = self.get(GET_VERSION_URL)
+            return pkg_versions_json.get("nextgisweb")
+        except requests.exceptions.RequestException, e:
+            return None
