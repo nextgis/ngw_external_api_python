@@ -20,7 +20,7 @@
 """
 import requests
 from os import path
-from ngw_resource import NGWResource, API_LAYER_EXTENT, File2Upload
+from ngw_resource import NGWResource, API_LAYER_EXTENT
 from ngw_qgis_vector_style import NGWQGISVectorStyle
 from ngw_mapserver_style import NGWMapServerStyle
 from ngw_error import NGWError
@@ -103,7 +103,7 @@ class NGWVectorLayer(NGWResource):
         """Create QML style for this layer
 
         qml - full path to qml file
-        callback - upload file callback, pass to File2Upload
+        callback - upload file callback
         """
         connection = self._res_factory.connection
         style_name = self.generate_unique_child_name(
@@ -111,8 +111,7 @@ class NGWVectorLayer(NGWResource):
         )
 
         try:
-            with File2Upload(qml, callback) as f:
-                style_file_desc = connection.put('/file_upload/upload', data=f)
+            style_file_desc = connection.upload_file(qml, callback)
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create style. Upload qml file. Server response:\n%s' % e.message)
 
