@@ -29,25 +29,6 @@ from .ngw_wfs_service import NGWWfsService
 from .ngw_webmap import NGWWebMap
 
 
-class File2Upload(file):
-    def __init__(self, path, callback):
-        file.__init__(self, path, "rb")
-        self.seek(0, os.SEEK_END)
-        self._total = self.tell()
-        self._readed = 0
-        self.seek(0)
-        self._callback = callback
-
-    def __len__(self):
-        return self._total
-
-    def read(self, size):
-        data = file.read(self, size)
-        self._readed += len(data)
-        self._callback(self._total, self._readed)
-        return data
-
-
 class ResourceCreator():
 
     @staticmethod
@@ -83,9 +64,7 @@ class ResourceCreator():
         connection = parent_ngw_resource._res_factory.connection
 
         try:
-            with File2Upload(filename, callback) as f:
-                shape_file_desc = connection.put('/file_upload/upload', data=f)
-
+            shape_file_desc = connection.upload_file(filename, callback)
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create vector layer. Server response:\n%s' % e.message)
 
@@ -118,9 +97,7 @@ class ResourceCreator():
         connection = parent_ngw_resource._res_factory.connection
 
         try:
-            with File2Upload(filename, callback) as f:
-                raster_file_desc = connection.put('/file_upload/upload', data=f)
-
+            raster_file_desc = connection.upload_file(filename, callback)
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create raster layer. Server response:\n%s' % e.message)
 

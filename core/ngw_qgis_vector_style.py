@@ -20,7 +20,7 @@
 """
 from os import path
 import requests
-from ngw_resource import NGWResource, File2Upload
+from ngw_resource import NGWResource
 
 from ..utils import ICONS_DIR
 
@@ -46,8 +46,7 @@ class NGWQGISVectorStyle(NGWResource):
         connection = self._res_factory.connection
 
         try:
-            with File2Upload(qml, callback) as f:
-                style_file_desc = connection.put('/file_upload/upload', data=f)
+            style_file_desc = connection.upload_file(filename, callback)
         except requests.exceptions.RequestException, e:
             raise NGWError('Cannot create style. Upload qml file. Server response:\n%s' % e.message)
 

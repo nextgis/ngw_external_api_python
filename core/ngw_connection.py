@@ -18,7 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-
+import os
 import json
 import requests
 from base64 import b64encode
@@ -30,6 +30,25 @@ from ..utils import log
 
 UPLOAD_FILE_URL = '/api/component/file_upload/upload'
 GET_VERSION_URL = '/api/component/pyramid/pkg_version'
+
+
+class File2Upload(file):
+    def __init__(self, path, callback):
+        file.__init__(self, path, "rb")
+        self.seek(0, os.SEEK_END)
+        self._total = self.tell()
+        self._readed = 0
+        self.seek(0)
+        self._callback = callback
+
+    def __len__(self):
+        return self._total
+
+    def read(self, size):
+        data = file.read(self, size)
+        self._readed += len(data)
+        self._callback(self._total, self._readed)
+        return data
 
 
 def _basic_auth_str(username, password):
@@ -156,8 +175,8 @@ class NGWConnection(object):
     def get_upload_file_url(self):
         return UPLOAD_FILE_URL
 
-    def upload_file(self, filename):
-        with open(filename, 'rb') as fd:
+    def upload_file(self, filename, callback):
+        with File2Upload(filename, callback) as fd:
             upload_info = self.put(self.get_upload_file_url(), data=fd)
             return upload_info
 
