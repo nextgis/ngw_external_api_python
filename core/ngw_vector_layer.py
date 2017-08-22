@@ -146,6 +146,12 @@ class NGWVectorLayer(NGWResource):
                 return self.__GEOMETRIES.get(self._json[self.type_id]["geometry_type"], self.UNKNOWN)
         return self.UNKNOWN
 
+    def is_geom_multy(self):
+        return self.geom_type() in [self.MULTIPOINT, self.MULTILINESTRING, self.MULTIPOLYGON]
+
+    def srs(self):
+        return self._json.get(self.type_id, {}).get("srs", {}).get("id")
+
     def get_geojson_url(self):
         return '%s/%s/' % (
             self.get_absolute_url_with_auth(),
