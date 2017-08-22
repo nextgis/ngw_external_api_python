@@ -27,7 +27,7 @@ ICONS_DIR = os.path.join(
 )
 
 ngw_api_logger = None
-debug = True
+debug = False
 
 def setLogger(logger):
     global ngw_api_logger
