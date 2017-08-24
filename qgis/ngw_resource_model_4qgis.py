@@ -385,8 +385,9 @@ class QGISResourceJob(NGWResourceModelJob):
                     JobError(msg)
                 )
 
+        import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
         qgs_vector_layer_dst = QgsVectorLayer(
-            "%s?crs=%s" % (geometry_type, qgs_vector_layer_src.crs().authid()),
+            "%s?crs=%s" % (geometry_type, import_crs.authid()),
             "temp",
             "memory"
         )
@@ -408,13 +409,16 @@ class QGISResourceJob(NGWResourceModelJob):
             if feature.id() in fids_with_notvalid_geom:
                 continue
 
-            if has_mixed_geoms:
-                new_geometry = feature.geometry()
+            new_geometry = feature.geometry()
+            new_geometry.transform(QgsCoordinateTransform(qgs_vector_layer_src.crs(), import_crs))
 
+            if has_mixed_geoms:
                 new_geometry.convertToMultiType()
-                feature.setGeometry(
-                    new_geometry
-                )
+            
+            feature.setGeometry(
+                new_geometry
+            )
+
             qgs_vector_layer_dst.addFeature(feature)
 
             tmp_progress = features_counter * 100 / features_count
@@ -843,17 +847,16 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                 ngw_resource_group
             )
         except Exception as e:
-            exception = JobError(
-                "Import '%s'" % qgsLayerTreeItem.layer().name(),
-                e
-            )
             if NgwPluginSettings.get_force_qgis_project_import():
                 self.warningOccurred.emit(
-                    exception
+                    JobError(
+                        self.tr("Import '%s' failed.") % qgsLayerTreeItem.layer().name(),
+                        e
+                    )
                 )
                 return
             else:
-                raise exception
+                raise e
 
         if ngw_layer_resource is None:
             return

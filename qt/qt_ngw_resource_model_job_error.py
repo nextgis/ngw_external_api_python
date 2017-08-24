@@ -6,8 +6,9 @@ class NGWResourceModelJobError(object):
 
 class JobError(NGWResourceModelJobError):
 	"""Specific job error"""
-	def __init__(self, msg):
+	def __init__(self, msg, wrapped_exception=None):
 		super(JobError, self).__init__(msg)
+		self.wrapped_exception = wrapped_exception
 
 class JobInternalError(NGWResourceModelJobError):
 	"""Unexpected job error. With trace"""
@@ -31,5 +32,3 @@ class JobAuthorizationError(JobNGWError):
 	"""NGW cann't execute request for perform the job because user does not have rights"""
 	def __init__(self, url):
 		super(JobAuthorizationError, self).__init__("", url)
-
-
