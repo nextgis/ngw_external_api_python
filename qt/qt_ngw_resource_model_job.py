@@ -107,13 +107,18 @@ class NGWResourceModelJob(QObject):
                 if ngw_exeption_type in ["HTTPForbidden", "ForbiddenError"]:
                     self.errorOccurred.emit(JobAuthorizationError(e.url))
                 else:
-                    self.errorOccurred.emit(JobNGWError())
+                    self.errorOccurred.emit(
+                        JobNGWError(
+                            "%s" % ngw_exeption_dict.get("message", "No message"),
+                             e.url
+                        )
+                    )
 
             elif e.type == NGWError.TypeRequestError:
                 self.errorOccurred.emit(JobServerRequestError(self.tr("Bad http comunication.") + "%s"%e, e.url))
 
             elif e.type == NGWError.TypeNGWUnexpectedAnswer:
-                self.errorOccurred.emit(JobNGWError(self.tr("Cann't parse server answer")))
+                self.errorOccurred.emit(JobNGWError(self.tr("Cann't parse server answer"), e.url))
 
             else:
                 self.errorOccurred.emit(JobServerRequestError(self.tr("Something wrong with request to server"), e.url))                
