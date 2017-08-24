@@ -18,12 +18,10 @@
  *                                                                         *
  ***************************************************************************/
 """
-import requests
 from os import path
 from ngw_resource import NGWResource, API_LAYER_EXTENT
 from ngw_qgis_vector_style import NGWQGISVectorStyle
 from ngw_mapserver_style import NGWMapServerStyle
-from ngw_error import NGWError
 from ngw_feature import NGWFeature
 
 from ..utils import ICONS_DIR, log
@@ -124,21 +122,17 @@ class NGWVectorLayer(NGWResource):
 
         connection = ngw_resource_parent._res_factory.connection
 
-        try:
-            url = cls.get_api_collection_url()
-            result = connection.post(url, params=parameters)
-            ngw_resource = NGWVectorLayer(
-                ngw_resource_parent._res_factory,
-                NGWResource.receive_resource_obj(
-                    ngw_resource_parent._res_factory.connection,
-                    result['id']
-                )
+        url = cls.get_api_collection_url()
+        result = connection.post(url, params=parameters)
+        ngw_resource = NGWVectorLayer(
+            ngw_resource_parent._res_factory,
+            NGWResource.receive_resource_obj(
+                ngw_resource_parent._res_factory.connection,
+                result['id']
             )
+        )
 
-            return ngw_resource
-
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create e,pty vector layer. Server response:\n%s' % e.message)
+        return ngw_resource
 
     def geom_type(self):
         if self.type_id in self._json:
@@ -152,9 +146,9 @@ class NGWVectorLayer(NGWResource):
     def srs(self):
         return self._json.get(self.type_id, {}).get("srs", {}).get("id")
 
-    def get_geojson_url(self):
-        return '%s/%s/' % (
-            self.get_absolute_url_with_auth(),
+    def get_absolute_geojson_url(self):
+        return '%s/%s' % (
+            self.get_absolute_api_url(),
             'geojson'
         )
 
@@ -177,37 +171,25 @@ class NGWVectorLayer(NGWResource):
 
         connection = self._res_factory.connection
 
-        try:
-            # connection.delete(self.get_feature_deleting_url())
-
-            url = self.get_feature_adding_url()
-            log ("!!! update_features %s" % features_dict_list)
-            result = connection.patch(url, params=features_dict_list)
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot patch vector layer. Server response:\n%s' % e.message)
+        url = self.get_feature_adding_url()
+        result = connection.patch(url, params=features_dict_list)
 
     def delete_all_features(self):
         connection = self._res_factory.connection
-        try:
-            connection.delete(self.get_feature_deleting_url())
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot delete all features from vector layer. Server response:\n%s' % e.message)
+        connection.delete(self.get_feature_deleting_url())
 
     # TODO Need refactoring. Paging loading with process
     def get_features(self):
         connection = self._res_factory.connection
 
-        try:
-            url = self.get_feature_adding_url()
-            result = connection.get(url)
+        url = self.get_feature_adding_url()
+        result = connection.get(url)
 
-            ngw_features = []
-            for feature in result:
-                ngw_features.append(NGWFeature(feature, self))
+        ngw_features = []
+        for feature in result:
+            ngw_features.append(NGWFeature(feature, self))
 
-            return ngw_features
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot get all features from vector layer. Server response:\n%s' % e.message)
+        return ngw_features
 
     def extent(self):
         result = self._res_factory.connection.get(
@@ -235,10 +217,7 @@ class NGWVectorLayer(NGWResource):
             self.common.display_name + '-style'
         )
 
-        try:
-            style_file_desc = connection.upload_file(qml, callback)
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create style. Upload qml file. Server response:\n%s' % e.message)
+        style_file_desc = connection.upload_file(qml, callback)
 
         params = dict(
             resource=dict(
@@ -251,20 +230,17 @@ class NGWVectorLayer(NGWResource):
             file_upload=style_file_desc
         )
 
-        try:
-            url = self.get_api_collection_url()
-            result = connection.post(url, params=params)
-            ngw_resource = NGWQGISVectorStyle(
-                self._res_factory,
-                NGWResource.receive_resource_obj(
-                    connection,
-                    result['id']
-                )
+        url = self.get_api_collection_url()
+        result = connection.post(url, params=params)
+        ngw_resource = NGWQGISVectorStyle(
+            self._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
             )
+        )
 
-            return ngw_resource
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create vector layer style. Server response:\n%s' % e.message)
+        return ngw_resource
 
     def create_map_server_style(self):
         """Create default Map Srver style for this layer
@@ -283,29 +259,26 @@ class NGWVectorLayer(NGWResource):
             ),
         )
 
-        try:
-            url = self.get_api_collection_url()
-            result = connection.post(url, params=params)
-            ngw_resource = NGWMapServerStyle(
-                self._res_factory,
-                NGWResource.receive_resource_obj(
-                    connection,
-                    result['id']
-                )
+        url = self.get_api_collection_url()
+        result = connection.post(url, params=params)
+        ngw_resource = NGWMapServerStyle(
+            self._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
             )
+        )
 
-            return ngw_resource
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create vector layer style. Server response:\n%s' % e.message)
+        return ngw_resource
 
     def add_aliases(self, aliases):
         flayer_dict = self._json.get('feature_layer')
-        if flayer_dict is None:
-            raise NGWError('Cannot add alias for resource. There is no feature_layer in Resource JSON')
+        # if flayer_dict is None:
+        #     raise NGWError('Cannot add alias for resource. There is no feature_layer in Resource JSON')
 
         fields_list = flayer_dict.get('fields')
-        if fields_list is None:
-            raise NGWError('Cannot add alias for resource. There is no feature_layer-fields in Resource JSON')
+        # if fields_list is None:
+        #     raise NGWError('Cannot add alias for resource. There is no feature_layer-fields in Resource JSON')
 
         aliases_keynames = aliases.keys()
 
@@ -314,16 +287,13 @@ class NGWVectorLayer(NGWResource):
             if field_keyname in aliases_keynames:
                  flayer_dict['fields'][field_index]['display_name'] = aliases[field_keyname]
 
-        try:
-            connection = self._res_factory.connection
-            url = self.get_relative_api_url()
+        connection = self._res_factory.connection
+        url = self.get_relative_api_url()
 
-            params = dict(
-                feature_layer = flayer_dict
-            )
+        params = dict(
+            feature_layer = flayer_dict
+        )
 
-            res = connection.put(url, params=params)
+        res = connection.put(url, params=params)
 
-            self.update()
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot add alias for resource. Server response:\n%s' % e.message)
+        self.update()

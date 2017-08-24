@@ -34,6 +34,7 @@ from qgis.gui import *
 from ..qt.qt_ngw_resource_base_model import *
 from ..qt.qt_ngw_resource_edit_model import *
 from ..qt.qt_ngw_resource_model_job import *
+from ..qt.qt_ngw_resource_model_job_error import *
 
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
 from ..core.ngw_resource_creator import ResourceCreator
@@ -226,7 +227,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         if self.isSuitableLayer(qgs_vector_layer) == self.SUITABLE_LAYER_BAD_GEOMETRY:
             self.errorOccurred.emit(
-                QNGWResourcesModelExeption(
+                JobError(
                     "Vector layer '%s' has no suitable geometry" % qgs_vector_layer.name()
                 )
             )
@@ -236,7 +237,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         if filepath is None:
             self.errorOccurred.emit(
-                QNGWResourcesModelExeption(
+                JobError(
                     "Can't prepare layer'%s'. Skiped!" % qgs_vector_layer.name()
                 )
             )
@@ -381,7 +382,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
 
                 self.warningOccurred.emit(
-                    QNGWResourcesModelExeption(msg)
+                    JobError(msg)
                 )
 
         qgs_vector_layer_dst = QgsVectorLayer(
@@ -439,7 +440,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
 
                 self.warningOccurred.emit(
-                    QNGWResourcesModelExeption(msg)
+                    JobError(msg)
                 )
 
         return qgs_vector_layer_dst, field_name_map
@@ -842,7 +843,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                 ngw_resource_group
             )
         except Exception as e:
-            exception = QNGWResourcesModelExeption(
+            exception = JobError(
                 "Import '%s'" % qgsLayerTreeItem.layer().name(),
                 e
             )

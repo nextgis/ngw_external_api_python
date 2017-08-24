@@ -20,8 +20,6 @@
 """
 import os
 from os import path
-import requests
-from ngw_error import NGWError
 
 from ..utils import ICONS_DIR, log
 
@@ -139,13 +137,10 @@ class NGWResource():
             ),
         )
 
-        try:
-            connection = self._res_factory.connection
-            url = self.get_relative_api_url()
-            connection.put(url, params=params)
-            self.update()
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot rename resource. Server response:\n%s' % e.message)
+        connection = self._res_factory.connection
+        url = self.get_relative_api_url()
+        connection.put(url, params=params)
+        self.update()
 
     def update(self):
         self._json = self.receive_resource_obj(

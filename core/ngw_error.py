@@ -21,11 +21,16 @@
 
 
 class NGWError(Exception):
-    def __init__(self, message):
+    TypeUnknownError, TypeRequestError, TypeNGWError, TypeNGWUnexpectedAnswer = range(4)
+
+    def __init__(self, type, message, url=None): 
         if not isinstance(message, unicode):
             self.message = unicode(message, 'utf-8')
         else:
             self.message = message
+
+        self.type = type
+        self.url = url
 
     def __str__(self):
         return self.message

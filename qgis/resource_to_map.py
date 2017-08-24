@@ -22,19 +22,18 @@ from PyQt4.QtCore import *
 from PyQt4.QtNetwork import *
 
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsMapLayer, QgsProject, QgsRectangle
-from ..core.ngw_error import NGWError
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_wfs_service import NGWWfsService
 
 
 def add_resource_as_geojson(resource, return_extent=False):
     if not isinstance(resource, NGWVectorLayer):
-        raise NGWError('Resource type is not VectorLayer!')
+        raise Exception('Resource type is not VectorLayer!')
 
-    qgs_geojson_layer = QgsVectorLayer(resource.get_geojson_url(), resource.common.display_name, 'ogr')
+    qgs_geojson_layer = QgsVectorLayer(resource.get_absolute_geojson_url(), resource.common.display_name, 'ogr')
 
     if not qgs_geojson_layer.isValid():
-        raise NGWError('Layer %s can\'t be added to the map!' % resource.common.display_name)
+        raise Exception('Layer %s can\'t be added to the map!' % resource.common.display_name)
 
     qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
 
@@ -48,12 +47,12 @@ def add_resource_as_geojson(resource, return_extent=False):
 
 def add_resource_as_geojson_with_style(ngw_layer, ngw_style, return_extent=False):
     if not isinstance(ngw_layer, NGWVectorLayer):
-        raise NGWError('Resource type is not VectorLayer!')
+        raise Exception('Resource type is not VectorLayer!')
 
-    qgs_geojson_layer = QgsVectorLayer(ngw_layer.get_geojson_url(), ngw_layer.common.display_name, 'ogr')
+    qgs_geojson_layer = QgsVectorLayer(ngw_layer.get_absolute_geojson_url(), ngw_layer.common.display_name, 'ogr')
 
     if not qgs_geojson_layer.isValid():
-        raise NGWError('Layer %s can\'t be added to the map!' % ngw_layer.common.display_name)
+        raise Exception('Layer %s can\'t be added to the map!' % ngw_layer.common.display_name)
 
     qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
 

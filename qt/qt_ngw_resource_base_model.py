@@ -49,7 +49,7 @@ class NGWResourcesModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
     warningOccurred = pyqtSignal(object)
-    errorOccurred = pyqtSignal(object, object)
+    errorOccurred = pyqtSignal(object)
     finished = pyqtSignal()
 
     def __init__(self, parent, worker, model_response=None):
@@ -63,12 +63,13 @@ class NGWResourcesModelJob(QObject):
         self.__result = None
         self.__worker = worker
         self.__job_id = self.__worker.id
+        self.__error = None
         # self.__job_id = "%s_%s" % (self.__worker.id, str(uuid.uuid1()))
 
         self.__worker.started.connect(self.started.emit)
         self.__worker.dataReceived.connect(self.__rememberResult)
         self.__worker.statusChanged.connect(self.statusChanged.emit)
-        self.__worker.errorOccurred.connect(self.errorOccurred.emit)
+        self.__worker.errorOccurred.connect(self.processJobError)
         self.__worker.warningOccurred.connect(self.warningOccurred.emit)
 
         self.model_response = model_response
@@ -84,6 +85,13 @@ class NGWResourcesModelJob(QObject):
 
     def getResult(self):
         return self.__result
+
+    def error(self):
+        return self.__error
+
+    def processJobError(self, job_error):
+        self.__error = job_error
+        self.errorOccurred.emit(job_error)
 
     def start(self):
         self.__thread = QThread(self)
@@ -106,13 +114,13 @@ class NGWResourcesModelJob(QObject):
         self.finished.emit()
 
 
-class QNGWResourcesModelExeption(Exception):
-    def __init__(self, message, ngw_error=None):
-        self.message = message
-        self.ngw_error = ngw_error
+# class QNGWResourcesModelExeption(Exception):
+#     def __init__(self, message, ngw_error=None):
+#         self.message = message
+#         self.ngw_error = ngw_error
 
-    def __str__(self):
-        return self.message
+#     def __str__(self):
+#         return self.message
 
 
 def modelRequest():
@@ -140,7 +148,7 @@ def modelJobSlot():
 class QNGWResourcesBaseModel(QAbstractItemModel):
     jobStarted = pyqtSignal(unicode)
     jobStatusChanged = pyqtSignal(unicode, unicode)
-    errorOccurred = pyqtSignal(unicode, object, object)
+    errorOccurred = pyqtSignal(unicode, object)
     warningOccurred = pyqtSignal(unicode, object)
     jobFinished = pyqtSignal(unicode)
 
@@ -152,8 +160,12 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         self.__ngw_connection_settings = None
 
         self.__indexes_blocked_by_jobs = {}
+        self.__indexes_blocked_by_job_errors = {}
 
     def resetModel(self, ngw_connection_settings):
+        self.__indexes_blocked_by_jobs = {}
+        self.__indexes_blocked_by_job_errors = {}
+
         self.__ngw_connection_settings = ngw_connection_settings
         self.__cleanModel()
         self.beginResetModel()
@@ -210,7 +222,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
     def canFetchMore(self, parent):
         log("--- canFetchMore start " + str(parent.data(QNGWResourceItem.NGWResourceIdRole)))
-        if self._isIndexBlockedByJob(parent):
+        if self._isIndexBlockedByJob(parent) or self._isIndexBlockedByJobError(parent):
             return False
 
         item = self.item(parent)
@@ -306,9 +318,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         job = self.sender()
         self.jobFinished.emit(job.getJobId())
 
-    def __jobErrorOccurredProcess(self, error, trace):
+    def __jobErrorOccurredProcess(self, error):
         job = self.sender()
-        self.errorOccurred.emit(job.getJobId(), error, trace)
+        self.errorOccurred.emit(job.getJobId(), error)
 
     def __jobWarningOccurredProcess(self, error):
         job = self.sender()
@@ -356,6 +368,10 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             item.release()
             self.endRemoveRows()
 
+            if job.error() is not None:
+                self.__indexes_blocked_by_job_errors[index] = job.error()
+
+
         QCoreApplication.processEvents()
 
     def _isIndexBlockedByJob(self, index):
@@ -363,6 +379,12 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             for blocked_index in blocked_indexes:
                 if index == blocked_index:
                     return True
+        return False
+
+    def _isIndexBlockedByJobError(self, index):
+        for blocked_index, error in self.__indexes_blocked_by_job_errors.items():
+            if index == blocked_index:
+                return True
         return False
 
     def getIndexByNGWResourceId(self, ngw_resource_id, start_with):
@@ -385,9 +407,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
     @modelJobSlot()
     def processJobResult(self, job):
+        log("processJobResult job: %s" % job.getJobId())
         job_result = job.getResult()
 
-        # log(">>> job_result: " + str(job_result))
         if job_result is None:
             # TODO Exception
             self._releaseIndexesByJob(job)

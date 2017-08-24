@@ -19,8 +19,6 @@
  ***************************************************************************/
 """
 import os
-import requests
-from .ngw_error import NGWError
 from .ngw_resource import NGWResource
 from .ngw_group_resource import NGWGroupResource
 from .ngw_vector_layer import NGWVectorLayer
@@ -43,30 +41,22 @@ class ResourceCreator():
                 display_name=new_group_name)
         )
 
-        try:
-            result = connection.post(url, params=params)
-            if type(result)!=dict or not result.has_key("id"):
-                raise NGWError('Cannot create resource. Bad ngw answer! There is no id attribute.')
+        result = connection.post(url, params=params)
 
-            ngw_resource = NGWGroupResource(
-                parent_ngw_resource._res_factory,
-                NGWResource.receive_resource_obj(
-                    connection,
-                    result['id']
-                )
+        ngw_resource = NGWGroupResource(
+            parent_ngw_resource._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
             )
-            return ngw_resource
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create resource. Server response:\n%s' % e.message)
+        )
+        return ngw_resource
 
     @staticmethod
     def create_vector_layer(parent_ngw_resource, filename, layer_name, callback):
         connection = parent_ngw_resource._res_factory.connection
 
-        try:
-            shape_file_desc = connection.upload_file(filename, callback)
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create vector layer. Server response:\n%s' % e.message)
+        shape_file_desc = connection.upload_file(filename, callback)
 
         url = parent_ngw_resource.get_api_collection_url()
         params = dict(
@@ -81,25 +71,19 @@ class ResourceCreator():
             )
         )
 
-        try:
-            result = connection.post(url, params=params)
-            ngw_resource = NGWResource.receive_resource_obj(
-                connection,
-                result['id']
-            )
+        result = connection.post(url, params=params)
+        ngw_resource = NGWResource.receive_resource_obj(
+            connection,
+            result['id']
+        )
 
-            return NGWVectorLayer(parent_ngw_resource._res_factory, ngw_resource)
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create vector layer. Server response:\n%s' % e.message)
+        return NGWVectorLayer(parent_ngw_resource._res_factory, ngw_resource)
 
     @staticmethod
     def create_raster_layer(parent_ngw_resource, filename, layer_name, callback):
         connection = parent_ngw_resource._res_factory.connection
 
-        try:
-            raster_file_desc = connection.upload_file(filename, callback)
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create raster layer. Server response:\n%s' % e.message)
+        raster_file_desc = connection.upload_file(filename, callback)
 
         url = parent_ngw_resource.get_api_collection_url()
         params = dict(
@@ -114,17 +98,14 @@ class ResourceCreator():
             )
         )
 
-        try:
-            result = connection.post(url, params=params)
-            # print "add vector_layer resource result: ", result
-            ngw_resource = NGWResource.receive_resource_obj(
-                connection,
-                result['id']
-            )
+        result = connection.post(url, params=params)
+        # print "add vector_layer resource result: ", result
+        ngw_resource = NGWResource.receive_resource_obj(
+            connection,
+            result['id']
+        )
 
-            return NGWRasterLayer(parent_ngw_resource._res_factory, ngw_resource)
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create raster layer. Server response:\n%s' % e.message)
+        return NGWRasterLayer(parent_ngw_resource._res_factory, ngw_resource)
 
     @staticmethod
     def create_webmap(parent_ngw_resource, ngw_webmap_name, ngw_webmap_items, bbox=[-180, 180, 90, -90]):
@@ -151,20 +132,17 @@ class ResourceCreator():
             )
         )
 
-        try:
-            result = connection.post(url, params=params)
-            # print "add webmap resource result: ", result
-            ngw_resource = NGWWebMap(
-                parent_ngw_resource._res_factory,
-                NGWResource.receive_resource_obj(
-                    connection,
-                    result['id']
-                )
+        result = connection.post(url, params=params)
+        # print "add webmap resource result: ", result
+        ngw_resource = NGWWebMap(
+            parent_ngw_resource._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
             )
+        )
 
-            return ngw_resource
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create webmap. Server response:\n%s' % e.message)
+        return ngw_resource
 
     @staticmethod
     def create_wfs_service(name, ngw_group_resource, ngw_layers, ret_obj_num):
@@ -194,17 +172,14 @@ class ResourceCreator():
             )
         )
 
-        try:
-            result = connection.post(url, params=params)
+        result = connection.post(url, params=params)
 
-            ngw_resource = NGWWfsService(
-                ngw_group_resource._res_factory,
-                NGWResource.receive_resource_obj(
-                    connection,
-                    result['id']
-                )
+        ngw_resource = NGWWfsService(
+            ngw_group_resource._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
             )
+        )
 
-            return ngw_resource
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create wfs service. Server response:\n%s' % e.message)
+        return ngw_resource

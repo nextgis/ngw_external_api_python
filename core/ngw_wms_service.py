@@ -18,8 +18,6 @@
  *                                                                         *
  ***************************************************************************/
 """
-import requests
-
 from os import path
 from ngw_resource import NGWResource
 
@@ -65,17 +63,14 @@ class NGWWmsService(NGWResource):
             layers=params_layers
         )
 
-        try:
-            result = connection.post(url, params=params)
+        result = connection.post(url, params=params)
 
-            ngw_resource = cls(
-                ngw_group_resource._res_factory,
-                NGWResource.receive_resource_obj(
-                    connection,
-                    result['id']
-                )
+        ngw_resource = cls(
+            ngw_group_resource._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
             )
+        )
 
-            return ngw_resource
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create wfs service. Server response:\n%s' % e.message)
+        return ngw_resource

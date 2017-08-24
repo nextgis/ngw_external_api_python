@@ -18,10 +18,8 @@
  *                                                                         *
  ***************************************************************************/
 """
-import requests
 from os import path
 from ngw_resource import NGWResource, API_LAYER_EXTENT
-from ngw_error import NGWError
 
 from ..utils import ICONS_DIR
 
@@ -72,17 +70,14 @@ class NGWRasterLayer(NGWResource):
             ),
         )
 
-        try:
-            url = self.get_api_collection_url()
-            result = connection.post(url, params=params)
-            ngw_resource = NGWResource(
-                self._res_factory,
-                NGWResource.receive_resource_obj(
-                    connection,
-                    result['id']
-                )
+        url = self.get_api_collection_url()
+        result = connection.post(url, params=params)
+        ngw_resource = NGWResource(
+            self._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
             )
+        )
 
-            return ngw_resource
-        except requests.exceptions.RequestException, e:
-            raise NGWError('Cannot create raster layer style. Server response:\n%s' % e.message)
+        return ngw_resource

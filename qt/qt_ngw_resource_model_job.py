@@ -19,16 +19,20 @@
  ***************************************************************************/
 """
 import sys
+import json
 import traceback
 
 from PyQt4.QtCore import *
 
+from ..core.ngw_error import NGWError
 from ..core.ngw_resource import NGWResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapRoot
 
 from ..utils import log
+
+from qt_ngw_resource_model_job_error import *
 
 
 class NGWResourceModelJobResult():
@@ -51,13 +55,13 @@ class NGWResourceModelJobResult():
 
     def putDeletedResource(self, ngw_resource):
         self.deleted_resources.append(ngw_resource)
-
+        
 
 class NGWResourceModelJob(QObject):
     started = pyqtSignal()
     statusChanged = pyqtSignal(unicode)
     warningOccurred = pyqtSignal(object)
-    errorOccurred = pyqtSignal(object, object)
+    errorOccurred = pyqtSignal(object)
     dataReceived = pyqtSignal(object)
     finished = pyqtSignal()
 
@@ -94,9 +98,34 @@ class NGWResourceModelJob(QObject):
         self.started.emit()
         try:
             self._do()
+
+        except NGWError as e:
+            log(">>> NGWError: %s %s" % (type(e), e))
+            if e.type == NGWError.TypeNGWError:
+                ngw_exeption_dict = json.loads(e.message)
+                ngw_exeption_type = ngw_exeption_dict.get("exception")
+                if ngw_exeption_type in ["HTTPForbidden", "ForbiddenError"]:
+                    self.errorOccurred.emit(JobAuthorizationError(e.url))
+                else:
+                    self.errorOccurred.emit(JobNGWError())
+
+            elif e.type == NGWError.TypeRequestError:
+                self.errorOccurred.emit(JobServerRequestError(self.tr("Bad http comunication.") + "%s"%e, e.url))
+
+            elif e.type == NGWError.TypeNGWUnexpectedAnswer:
+                self.errorOccurred.emit(JobNGWError(self.tr("Cann't parse server answer")))
+
+            else:
+                self.errorOccurred.emit(JobServerRequestError(self.tr("Something wrong with request to server"), e.url))                
+                
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.errorOccurred.emit(e, repr(traceback.format_tb(exc_traceback)))
+            extracted_list = traceback.extract_tb(exc_traceback)
+            extracted_list = [(f.split("\\")[-1], l, func, text) for f, l, func, text in extracted_list]
+            log(">>> Unexpected error: %s %s\n%s" % (type(e), e, traceback.format_list(extracted_list)) )
+            self.errorOccurred.emit(JobInternalError(str(e), traceback.format_list(extracted_list)))
+
+
         self.finished.emit()
 
     def _do(self):

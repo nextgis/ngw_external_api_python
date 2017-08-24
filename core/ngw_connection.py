@@ -126,7 +126,7 @@ class NGWConnection(object):
             json_data = kwargs['json']
 
         log(
-            "method: {}\nurl: {}\ndata: {}\njson:".format(
+            "Request\nmethod: {}\nurl: {}\ndata: {}\njson:".format(
                 method,
                 self.server_url + sub_url,
                 payload,
@@ -141,19 +141,25 @@ class NGWConnection(object):
 
         try:
             resp = self.__session.send(prep, proxies=self.__proxy)
-        except requests.exceptions.RequestException, e:
-            raise NGWError('{"exception": "ConnectionError", "message": "RequestException: %s"}' % type(e))
+        except requests.exceptions.ConnectionError:
+            raise NGWError(NGWError.TypeRequestError, "Connection error", req.url)
+        except requests.exceptions.RequestException as e:
+            log( "Response\nerror {}: {}".format(type(e), e) )
+            raise NGWError(NGWError.TypeRequestError, "%s" % type(e), req.url)
 
         if resp.status_code == 502:
-            raise NGWError('{"exception": "ConnectionError", "message": "Response status code: 502"}')
+            log( "Response\nerror status_code 502" )
+            raise NGWError(NGWError.TypeRequestError, "Response status code is 502", req.url)
 
         if resp.status_code / 100 != 2:
-            raise NGWError(resp.content)
+            log("Response\nerror status_code {}\nmsg: {}".format(resp.status_code, resp.content))
+            raise NGWError(NGWError.TypeNGWError, resp.content, req.url)
 
         try:
             json_response = resp.json()
         except:
-            raise NGWError('{"exception": "ResponceError", "message": "Response does not contain json. Perhaps the server does not support this functionality."}')
+            log("Response\nerror response JSON parse")
+            raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url)
 
         return json_response
 
@@ -176,9 +182,12 @@ class NGWConnection(object):
         return UPLOAD_FILE_URL
 
     def upload_file(self, filename, callback):
-        with File2Upload(filename, callback) as fd:
-            upload_info = self.put(self.get_upload_file_url(), data=fd)
-            return upload_info
+        try:
+            with File2Upload(filename, callback) as fd:
+                upload_info = self.put(self.get_upload_file_url(), data=fd)
+                return upload_info
+        except requests.exceptions.RequestException, e:
+            raise NGWError(NGWError.TypeRequestError, e.message.args[0], self.get_upload_file_url())
 
     def download_file(self, url):
         req = requests.Request('GET', self.server_url + url)
@@ -187,10 +196,10 @@ class NGWConnection(object):
         try:
             resp = self.__session.send(prep, stream=True)
         except requests.exceptions.RequestException, e:
-            raise NGWError(e.message.args[0])
+            raise NGWError(NGWError.TypeRequestError, e.message.args[0], req.url)
 
         if resp.status_code / 100 != 2:
-            raise NGWError(resp.content)
+            raise NGWError(NGWError.TypeNGWError, resp.content, req.url)
         
         return resp.content
 
