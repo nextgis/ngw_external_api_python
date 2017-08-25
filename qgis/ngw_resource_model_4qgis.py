@@ -1101,20 +1101,32 @@ class NGWUpdateVectorLayer(QGISResourceJob):
 
         # id need only for update not for create
         # feature_dict["id"] = qgs_feature.id() + 1 # Fix NGW behavior
-        feature_dict["geom"] = qgs_feature.constGeometry().exportToWkt()
+        import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
+        
+        g = qgs_feature.constGeometry()
+        g.transform(QgsCoordinateTransform(self.qgis_layer.crs(), import_crs))
+        if self.ngw_layer.is_geom_multy():
+            g.convertToMultiType()
+        feature_dict["geom"] = g.exportToWkt()
+
         feature_dict["fields"] = {}
 
         for qgsField in qgs_feature.fields().toList():
             field_type = self.ngw_layer.fieldType(qgsField.name())
-            # value = unicode(qgs_feature.attribute(qgsField.name()))
-            if field_type == NGWVectorLayer.FieldTypeString:
-                value = unicode(qgs_feature.attribute(qgsField.name()))
+            value = qgs_feature.attribute(qgsField.name())
+            log(">>> value %s %s" % (value, type(value)))
+            if value is None or isinstance(value, QPyNullVariant):
+                value = None
+            elif field_type == NGWVectorLayer.FieldTypeString:
+                value = unicode(value)
             elif field_type == NGWVectorLayer.FieldTypeReal:
-                value = float(qgs_feature.attribute(qgsField.name()))
+                value = float(value)
             else:
-                value = unicode(qgs_feature.attribute(qgsField.name()))
+                value = unicode(value)
 
             feature_dict["fields"][qgsField.name()] = value
+
+        log(">>> feature_dict %s" % feature_dict)
 
         return feature_dict
 
