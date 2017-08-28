@@ -48,12 +48,17 @@ from ..core.ngw_wms_layer import NGWWmsLayer
 from ..utils import log
 
 from ngw_plugin_settings import NgwPluginSettings
+from qgis_ngw_connection import QgsNgwConnection
 
 
 class QNGWResourcesModel4QGIS(QNGWResourcesModel):
 
     def __init__(self, parent):
         QNGWResourcesModel.__init__(self, parent)
+
+    def _getConnectionClass(self):
+        log(">>> _getConnectionClass: QGIS")
+        return QgsNgwConnection
 
     @modelRequest()
     def createNGWLayers(self, qgs_map_layers, parent_index):
@@ -221,7 +226,7 @@ class QGISResourceJob(NGWResourceModelJob):
             self.statusChanged.emit(
                 "%s - Upload (%d%%)" % (
                     qgs_vector_layer.name(),
-                    readed_size * 100 / total_size
+                    readed_size * 100 / (total_size + 0.1)
                 )
             )
 

@@ -138,16 +138,16 @@ class NGWResourceModelJob(QObject):
 
 
 class NGWRootResourcesLoader(NGWResourceModelJob):
-    def __init__(self, ngw_connection_settings):
+    def __init__(self, ngw_connection_settings, ngw_connection_class):
         log("NGWRootResourcesLoader")
         NGWResourceModelJob.__init__(self)
         self.ngw_connection_settings = ngw_connection_settings
-
+        self.ngw_connection_class = ngw_connection_class
     def _do(self):
         # result = []
         result = NGWResourceModelJobResult()
 
-        rsc_factory = NGWResourceFactory(self.ngw_connection_settings)
+        rsc_factory = NGWResourceFactory(self.ngw_connection_settings, self.ngw_connection_class)
         ngw_root_resource = rsc_factory.get_root_resource()
         if ngw_root_resource is not None:
             # result.append(ngw_root_resource)

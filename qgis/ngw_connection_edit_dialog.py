@@ -31,6 +31,8 @@ from PyQt4.QtGui import *
 from ..core.ngw_connection_settings import NGWConnectionSettings
 from ..core.ngw_resource_factory import NGWResourceFactory
 
+from qgis_ngw_connection import QgsNgwConnection
+
 __author__ = 'NextGIS'
 __date__ = 'October 2014'
 __copyright__ = '(C) 2014, NextGIS'
@@ -299,7 +301,8 @@ class NGWPinger(QObject):
 
     def run(self):
         rsc_factory = NGWResourceFactory(
-            self.__ngw_connection_settings
+            self.__ngw_connection_settings,
+            QgsNgwConnection
         )
 
         try:

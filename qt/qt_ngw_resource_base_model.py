@@ -497,8 +497,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             return
 
         if item == self.root_item:
+            log(">>> _getConnectionClass: %s" % self._getConnectionClass())
             job = self._startJob(
-                NGWRootResourcesLoader(self.__ngw_connection_settings),
+                NGWRootResourcesLoader(self.__ngw_connection_settings, self._getConnectionClass()),
                 index
             )
         else:
@@ -509,3 +510,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             )
 
         return job
+
+    def _getConnectionClass(self):
+        log(">>> _getConnectionClass: Base")
+        pass
