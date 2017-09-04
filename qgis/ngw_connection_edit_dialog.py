@@ -301,8 +301,7 @@ class NGWPinger(QObject):
 
     def run(self):
         rsc_factory = NGWResourceFactory(
-            self.__ngw_connection_settings,
-            QgsNgwConnection
+            QgsNgwConnection(self.__ngw_connection_settings, self)
         )
 
         try:

@@ -56,9 +56,8 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
     def __init__(self, parent):
         QNGWResourcesModel.__init__(self, parent)
 
-    def _getConnectionClass(self):
-        log(">>> _getConnectionClass: QGIS")
-        return QgsNgwConnection
+    def _setNgwConnection(self):
+        self._ngw_connection = QgsNgwConnection(self.connectionSettings, self)
 
     @modelRequest()
     def createNGWLayers(self, qgs_map_layers, parent_index):

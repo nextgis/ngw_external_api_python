@@ -15,27 +15,14 @@ from ..utils import log
 UPLOAD_FILE_URL = '/api/component/file_upload/upload'
 
 
-def _basic_auth_str(username, password):
-    """Returns a Basic Auth string."""
-
-    authstr = QByteArray('Basic ' +  QByteArray((u'%s:%s' % (username, password)).encode('utf-8')).toBase64())
-
-    return authstr
-
-class QgsNgwConnection(object):
+class QgsNgwConnection(QObject):
     """docstring for QgsNgwConnection"""
-    def __init__(self, conn_settings):
-        super(QgsNgwConnection, self).__init__()
+    def __init__(self, conn_settings, parent):
+        super(QgsNgwConnection, self).__init__(parent)
         
         self.__server_url = None
         self.__auth = ("", "")
         self.set_from_settings(conn_settings)
-
-        # QgsNetworkAccessManager.instance().authenticationRequired.connect(self.set_auth_to_reply)
-        # self.nam = QgsNetworkAccessManager.instance()
-        self.nam = QNetworkAccessManager(iface.mainWindow())
-        self.loop = QEventLoop(iface.mainWindow())
-        self.nam.finished.connect(self.loop.quit)
 
     def set_from_settings(self, conn_settings):
         self.server_url = conn_settings.server_url
@@ -44,10 +31,8 @@ class QgsNgwConnection(object):
     def set_auth(self, username, password):
         self.__auth = (username, password)
 
-    # def set_auth_to_reply(self, reply, authenticator):
-    #     log(">>> set_auth_to_reply")
-    #     authenticator.setUser(self.__auth[0])
-    #     authenticator.setPassword(self.__auth[0])
+    def get_auth(self):
+        return self.__auth
 
     def get(self, sub_url, params=None, **kwargs):
         return self.__request(sub_url, 'GET', params, **kwargs)
@@ -58,61 +43,67 @@ class QgsNgwConnection(object):
     def put(self, sub_url, params=None, **kwargs):
         return self.__request(sub_url, 'PUT', params, **kwargs)
 
+    def patch(self, sub_url, params=None, **kwargs):
+        return self.__request(sub_url, 'PATCH', params, **kwargs)
+
+    def delete(self, sub_url, params=None, **kwargs):
+        return self.__request(sub_url, 'DELETE', params, **kwargs)
 
     def __request(self, sub_url, method, params=None, **kwargs):
         json_data = None
         if params:
             json_data = json.dumps(params)
 
-        # if 'data' in kwargs:
-        #     json_data = kwargs['data']
-
-        # json_data = None
-        # if 'json' in kwargs:
-        #     json_data = kwargs['json']
-
         file = kwargs.get("file")
 
         log(
-            "Request\nmethod: {}\nurl: {}\njson: {}\nfile: {}".format(
+            "Request\nmethod: {}\nurl: {}\njson({}): {}\nfile: {}".format(
                 method,
                 self.server_url + sub_url,
+                type(json_data),
                 json_data,
                 file
             )
         )
 
-        data = None
-
         req = QNetworkRequest(QUrl(self.server_url + sub_url))
-        # req.setAttribute(QNetworkRequest.AuthenticationReuseAttribute, _basic_auth_str(self.__auth[0], self.__auth[1]));
 
+        authstr = (u'%s:%s' % self.__auth).encode('utf-8')        
+        authstr = QByteArray('Basic ' +  QByteArray(authstr).toBase64())
+        req.setRawHeader("Authorization", authstr);
+
+        data = QBuffer(QByteArray())
         if file is not None:
             data = QFile(file)
-            data.open(QFile.ReadOnly)
         elif json_data is not None:
             req.setHeader(QNetworkRequest.ContentTypeHeader, "application/json");
-            data = QBuffer(QByteArray(json_data))
+            json_data = QByteArray(json_data)
+            data = QBuffer(json_data)
+            
+        data.open(QIODevice.ReadOnly)
 
+        loop = QEventLoop(self)
+        nam = QgsNetworkAccessManager.instance()
 
-
-        rep = self.nam.sendCustomRequest(req, method, data)
-        # rep.finished.connect(loop.quit)
+        if method == "GET":
+            rep = nam.get(req)
+        elif method == "POST":
+            rep = nam.post(req, data)
+        elif method == "DELETE":
+            rep = nam.deleteResource(req)
+        else:            
+            rep = nam.sendCustomRequest(req, method, data)
+        
+        rep.finished.connect(loop.quit)
         if file is not None:
             rep.uploadProgress.connect(self.sendUploadProgress)
-        
-        self.loop.exec_()
-        # self.nam.finished.connect(loop.quit)
-        # self.nam.finished.disconnect(loop.quit)
 
-        if isinstance(data, QFile):
-            data.close()
+        loop.exec_()
+        rep.finished.disconnect(loop.quit)
 
+        data.close()
         data = rep.readAll()
-        rep.deleteLater()
-        log(">>> data: %s" % type(data))
-        log(">>> data: %s" % data)
-
+        
         # try:
         #     resp = self.__session.send(prep, proxies=self.__proxy)
         # except requests.exceptions.ConnectionError:
@@ -146,6 +137,11 @@ class QgsNgwConnection(object):
             log("Response\nerror response JSON parse")
             raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url().toString())
 
+        rep.deleteLater()
+        del rep
+        loop.deleteLater()
+        del loop
+
         return json_response
 
     def get_upload_file_url(self):
@@ -158,3 +154,24 @@ class QgsNgwConnection(object):
     def sendUploadProgress(self, sent, total):
         log("Download %d from %s" % (sent, total,))
         self.uploadProgressCallback(total, sent)
+
+    def get_ngw_components(self):
+        if self.__ngw_components is None:
+            try:
+                self.__ngw_components = self.get(GET_VERSION_URL)
+            except requests.exceptions.RequestException, e:
+                self.__ngw_components = {}
+
+        return self.__ngw_components
+
+    def get_version(self):
+        ngw_components = self.get_ngw_components()
+        return ngw_components.get("nextgisweb")
+        
+    def get_abilities(self):
+        ngw_components = self.get_ngw_components()
+        abilities = []
+        if ngw_components.has_key("nextgisweb_basemap"):
+            abilities.append(self.AbilityBaseMap)
+
+        return abilities

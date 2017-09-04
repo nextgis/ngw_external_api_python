@@ -37,7 +37,7 @@ API_NGW_VERSION = '/api/component/pyramid/pkg_version'
 
 class NGWResourceFactory():
 
-    def __init__(self, conn_settings, conn_class=NGWConnection):
+    def __init__(self, ngw_connection):
         self.__res_types_register = {
             NGWResource.type_id: NGWResource,
             NGWWfsService.type_id: NGWWfsService,
@@ -53,7 +53,7 @@ class NGWResourceFactory():
             NGWWmsLayer.type_id: NGWWmsLayer,
         }
         self.__default_type = NGWResource.type_id
-        self.__conn = conn_class(conn_settings)
+        self.__conn = ngw_connection
 
     @property
     def resources_types_registry(self):
