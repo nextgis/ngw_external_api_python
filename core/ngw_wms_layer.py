@@ -34,7 +34,7 @@ class NGWWmsLayer(NGWResource):
         NGWResource.__init__(self, resource_factory, resource_json)
 
     @classmethod
-    def create_in_group(cls, name, ngw_group_resource, ngw_wms_connection_id, wms_layers):
+    def create_in_group(cls, name, ngw_group_resource, ngw_wms_connection_id, wms_layers, wms_format):
         connection = ngw_group_resource._res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
 
@@ -52,8 +52,8 @@ class NGWWmsLayer(NGWResource):
             connection=dict(
                 id=ngw_wms_connection_id
             ),
-            wmslayers=wms_layers,
-            imgformat="image/png",
+            wmslayers=",".join(wms_layers),
+            imgformat=wms_format,
             srs=dict(
                 id=3857
             ),

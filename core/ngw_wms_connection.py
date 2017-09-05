@@ -36,11 +36,10 @@ class NGWWmsConnection(NGWResource):
     def layers(self):
         layers = self._json.get(self.type_id, {}).get("capcache", {}).get("layers",{})
         layer_ids = [l.get("id") for l in layers if l.get("id") is not None]
-        return ",".join(layer_ids)
-
+        return layer_ids
 
     @classmethod
-    def create_in_group(cls, name, ngw_group_resource, wms_url):
+    def create_in_group(cls, name, ngw_group_resource, wms_url, version="1.1.1", auth=(None, None)):
         connection = ngw_group_resource._res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
 
@@ -56,9 +55,9 @@ class NGWWmsConnection(NGWResource):
 
         params[cls.type_id] = dict(
             url=wms_url,
-            user=None,
-            password=None,
-            version="1.1.1",
+            username=auth[0],
+            password=auth[1],
+            version=version,
             capcache="query",
         )
 

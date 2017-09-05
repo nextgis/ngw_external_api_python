@@ -69,6 +69,8 @@ class NGWResourceModelJob(QObject):
         QObject.__init__(self)
         self.id = self.__class__.__name__
 
+        self.result = NGWResourceModelJobResult()
+
     def generate_unique_name(self, name, present_names):
         new_name = name
         id = 1
@@ -94,11 +96,19 @@ class NGWResourceModelJob(QObject):
 
         return chain
 
+    def putAddedResourceToResult(self, ngw_resource, is_main=False):
+        self.result.putAddedResource(ngw_resource, is_main)
+
+    def putEditedResourceToResult(self, ngw_resource, is_main=False):
+        self.result.putEditedResource(ngw_resource, is_main)
+
+    def putDeletedResourceToResult(self, ngw_resource):
+        self.result.putDeletedResource(ngw_resource)
+
     def run(self):
         self.started.emit()
         try:
             self._do()
-
         except NGWError as e:
             log(">>> NGWError: %s %s" % (type(e), e))
             if e.type == NGWError.TypeNGWError:
@@ -130,7 +140,7 @@ class NGWResourceModelJob(QObject):
             log(">>> Unexpected error: %s %s\n%s" % (type(e), e, traceback.format_list(extracted_list)) )
             self.errorOccurred.emit(JobInternalError(str(e), traceback.format_list(extracted_list)))
 
-
+        self.dataReceived.emit(self.result)
         self.finished.emit()
 
     def _do(self):
@@ -144,15 +154,10 @@ class NGWRootResourcesLoader(NGWResourceModelJob):
         self.ngw_connection_settings = ngw_connection_settings
 
     def _do(self):
-        # result = []
-        result = NGWResourceModelJobResult()
-
         rsc_factory = NGWResourceFactory(self.ngw_connection_settings)
         ngw_root_resource = rsc_factory.get_root_resource()
         if ngw_root_resource is not None:
-            # result.append(ngw_root_resource)
-            result.putAddedResource(ngw_root_resource, is_main=True)
-        self.dataReceived.emit(result)
+            self.putAddedResourceToResult(ngw_root_resource, is_main=True)
 
 
 class NGWResourceUpdater(NGWResourceModelJob):
@@ -161,15 +166,10 @@ class NGWResourceUpdater(NGWResourceModelJob):
         self.ngw_resource = ngw_resource
 
     def _do(self):
-        result = NGWResourceModelJobResult()
-
-        # self.ngw_resource.update()
         ngw_resource_children = self.ngw_resource.get_children()
         for ngw_resource_child in ngw_resource_children:
-            result.putAddedResource(ngw_resource_child)
+            self.putAddedResourceToResult(ngw_resource_child)
             
-        # self.dataReceived.emit((self.ngw_resource, ngw_resource_children))
-        self.dataReceived.emit(result)
 
 class NGWGroupCreater(NGWResourceModelJob):
     def __init__(self, new_group_name, ngw_resource_parent):
@@ -185,12 +185,8 @@ class NGWGroupCreater(NGWResourceModelJob):
             new_group_name
         )
 
-        result = NGWResourceModelJobResult()
-        result.putAddedResource(ngw_group_resource, is_main=True)
-
+        self.putAddedResourceToResult(ngw_group_resource, is_main=True)
         self.ngw_resource_parent.update()
-
-        self.dataReceived.emit(result)
 
 
 class NGWResourceDelete(NGWResourceModelJob):
@@ -201,9 +197,7 @@ class NGWResourceDelete(NGWResourceModelJob):
     def _do(self):
         NGWResource.delete_resource(self.ngw_resource)
 
-        result = NGWResourceModelJobResult()
-        result.putDeletedResource(self.ngw_resource)
-        self.dataReceived.emit(result)
+        self.putDeletedResourceToResult(self.ngw_resource)
 
 
 class NGWCreateWFSForVector(NGWResourceModelJob):
@@ -225,10 +219,7 @@ class NGWCreateWFSForVector(NGWResourceModelJob):
             self.ret_obj_num
         )
 
-        result = NGWResourceModelJobResult()
-        result.putAddedResource(ngw_wfs_resource, is_main=True)
-
-        self.dataReceived.emit(result)
+        self.putAddedResourceToResult(ngw_wfs_resource, is_main=True)
 
 
 class NGWCreateMapForStyle(NGWResourceModelJob):
@@ -261,10 +252,7 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
             bbox=ngw_layer.extent()
         )
 
-        result = NGWResourceModelJobResult()
-        result.putAddedResource(ngw_resource, is_main=True)
-
-        self.dataReceived.emit(result)
+        self.putAddedResourceToResult(ngw_resource, is_main=True)
 
 
 class NGWRenameResource(NGWResourceModelJob):
@@ -276,7 +264,4 @@ class NGWRenameResource(NGWResourceModelJob):
     def _do(self):
         self.ngw_resource.change_name(self.new_name)
 
-        result = NGWResourceModelJobResult()
-        result.putEditedResource(self.ngw_resource, is_main=True)
-
-        self.dataReceived.emit(result)
+        self.putAddedResourceToResult(self.ngw_resource, is_main=True)

@@ -152,7 +152,7 @@ class NGWConnection(object):
             raise NGWError(NGWError.TypeRequestError, "Response status code is 502", req.url)
 
         if resp.status_code / 100 != 2:
-            log("Response\nerror status_code {}\nmsg: {}".format(resp.status_code, resp.content))
+            log("Response\nerror status_code {}\nmsg: {!r}".format(resp.status_code, resp.content))
             raise NGWError(NGWError.TypeNGWError, resp.content, req.url)
 
         try:
