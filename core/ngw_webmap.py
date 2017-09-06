@@ -39,6 +39,60 @@ class NGWWebMap(NGWResource):
             'display'
         )
 
+    @classmethod
+    def create_in_group(cls, name, ngw_group_resource, ngw_webmap_items, ngw_base_maps=[], bbox=[-180, 180, 90, -90]):
+        connection = ngw_group_resource._res_factory.connection
+        url = ngw_group_resource.get_api_collection_url()
+
+        base_maps = []
+        for ngw_base_map in ngw_base_maps:
+            base_maps.append(
+                {
+                    "display_name": ngw_base_map.common.display_name,
+                    "resource_id": ngw_base_map.common.id,
+                    "enabled": True,
+                    "opacity": None,
+                }
+            )
+        web_map_base_maps = dict(
+            basemaps=base_maps,
+        )
+
+        web_map = dict(
+            extent_left=bbox[0],
+            extent_right=bbox[1],
+            extent_top=bbox[2],
+            extent_bottom=bbox[3],
+            root_item=dict(
+                item_type="root",
+                children=ngw_webmap_items
+            )
+        )
+
+        params = dict(
+            resource=dict(
+                cls=NGWWebMap.type_id,
+                display_name=name,
+                parent=dict(
+                    id=ngw_group_resource.common.id
+                )
+            ),
+            webmap=web_map,
+            basemap_webmap=web_map_base_maps,
+        )
+
+        result = connection.post(url, params=params)
+
+        ngw_resource = NGWWebMap(
+            ngw_group_resource._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
+            )
+        )
+
+        return ngw_resource
+
 
 class NGWWebMapItem(object):
     ITEM_TYPE_ROOT = "root"

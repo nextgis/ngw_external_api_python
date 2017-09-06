@@ -22,6 +22,7 @@
 """
 import os
 import glob
+import json
 import urllib
 import shutil
 import zipfile
@@ -46,9 +47,18 @@ from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_wms_service import NGWWmsService
 from ..core.ngw_wms_connection import NGWWmsConnection
 from ..core.ngw_wms_layer import NGWWmsLayer
+from ..core.ngw_webmap import NGWWebMap
+from ..core.ngw_base_map import NGWBaseMap
 from ..utils import log
 
 from ngw_plugin_settings import NgwPluginSettings
+
+
+# def getQgsMapLayerEPSG(qgs_map_layer):
+#     crs = qgs_map_layer.crs().authid()
+#     if crs.find("EPSG:") >= 0:
+#         return crs.split(":")[1]
+#     return None
 
 
 class QNGWResourcesModel4QGIS(QNGWResourcesModel):
@@ -157,26 +167,60 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def importQGISMapLayer(self, qgs_map_layer, ngw_parent_resource):
         ngw_parent_resource.update()
-        layer_name = qgs_map_layer.name()
-
-        new_layer_name = self.unique_resource_name(layer_name, ngw_parent_resource)
 
         layer_type = qgs_map_layer.type()
 
         if layer_type == qgs_map_layer.VectorLayer:
-            return [self.importQgsVectorLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)]
+            return [self.importQgsVectorLayer(qgs_map_layer, ngw_parent_resource)]
 
         elif layer_type == QgsMapLayer.RasterLayer:
             layer_data_provider = qgs_map_layer.dataProvider().name()
             if layer_data_provider == "gdal":
-                return [self.importQgsRasterLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)]
+                return [self.importQgsRasterLayer(qgs_map_layer, ngw_parent_resource)]
 
             elif layer_data_provider == "wms":
-                return self.importQgsWMSLayer(qgs_map_layer, ngw_parent_resource, new_layer_name)
+                return self.importQgsWMSLayer(qgs_map_layer, ngw_parent_resource)
+
+        elif layer_type == QgsMapLayer.PluginLayer:
+            return self.importQgsPluginLayer(qgs_map_layer, ngw_parent_resource)
 
         return []
 
-    def importQgsWMSLayer(self, qgs_wms_layer, ngw_group, ngw_wms_connection_name):
+    def importQgsPluginLayer(self, qgs_plugin_layer, ngw_group):
+        # Look for QMS plugin layer
+        if qgs_plugin_layer.pluginLayerType() == u'PyTiledLayer' and hasattr(qgs_plugin_layer, "layerDef") and hasattr(qgs_plugin_layer.layerDef, "serviceUrl"):
+            new_layer_name = self.unique_resource_name(qgs_plugin_layer.name(), ngw_group)
+
+            # qms_json_desc = {}
+            # rools = {
+            #     "url": "serviceUrl",
+            #     "epsg": "epsg_crs_id",
+            #     "z_min": "zmin",
+            #     "z_max": "zmax",
+            #     "y_origin_top": "yOriginTop",
+            #     "copyright_text": "copyright_text",
+            # }
+            # for dest_opt, src_opt in rools.items():
+            #     qms_json_desc[dest_opt] = getattr(qgs_plugin_layer.layerDef, src_opt, None)
+            
+            # if qms_json_desc.get("epsg") is None:
+            #     epsgid = getQgsMapLayerEPSG(qgs_plugin_layer)
+            #     if epsgid is not None:
+            #         qms_json_desc["epsg"] = epsgid
+
+            # if qms_json_desc.get("epsg") is None:
+            #     qms_json_desc = None
+            # else:    
+            #     qms_json_desc = json.dumps(qms_json_desc)
+
+            # qms_json_desc = "{\"url\": \"http://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png\", \"epsg\": \"3857\", \"z_max\": 19, \"z_min\": 0, \"copyright_text\": \"\", \"y_origin_top\": true}"
+            
+            return [
+                # NGWBaseMap.create_in_group(new_layer_name, ngw_group, qgs_plugin_layer.layerDef.serviceUrl, qms_json_desc)
+                NGWBaseMap.create_in_group(new_layer_name, ngw_group, qgs_plugin_layer.layerDef.serviceUrl)
+            ]
+
+    def importQgsWMSLayer(self, qgs_wms_layer, ngw_group):
         self.statusChanged.emit(
             "%s - Import as WMS Connection " % (
                 qgs_wms_layer.name(),
@@ -197,39 +241,47 @@ class QGISResourceJob(NGWResourceModelJob):
             else:
                 parameters[key] = value
 
-        log(">>> parameters: %s" % parameters)
-        wms_connection = NGWWmsConnection.create_in_group(
-            ngw_wms_connection_name,
-            ngw_group,
-            parameters.get("url", ""),
-            parameters.get("version", "1.1.1"),
-            (parameters.get("username"), parameters.get("password"))
-        )
-
-        self.statusChanged.emit(
-            "%s - Import as WMS Layer " % (
-                qgs_wms_layer.name(),
+        if parameters.get("type", "") == "xyz":
+            ngw_basemap_name = self.unique_resource_name(qgs_wms_layer.name(), ngw_group)
+            return [
+                NGWBaseMap.create_in_group(ngw_basemap_name, ngw_group, parameters.get("url", "")),
+            ]
+        else:        
+            ngw_wms_connection_name = self.unique_resource_name(qgs_wms_layer.name(), ngw_group)
+            wms_connection = NGWWmsConnection.create_in_group(
+                ngw_wms_connection_name,
+                ngw_group,
+                parameters.get("url", ""),
+                parameters.get("version", "1.1.1"),
+                (parameters.get("username"), parameters.get("password"))
             )
-        )
-        ngw_wfs_layer_name = self.unique_resource_name(
-            wms_connection.common.display_name + "_layer",
-            ngw_group
-        )
 
-        layer_ids = parameters.get("layers", wms_connection.layers())
-        if not isinstance(layer_ids, list):
-            layer_ids = [layer_ids]
+            self.statusChanged.emit(
+                "%s - Import as WMS Layer " % (
+                    qgs_wms_layer.name(),
+                )
+            )
+            ngw_wms_layer_name = self.unique_resource_name(
+                wms_connection.common.display_name + "_layer",
+                ngw_group
+            )
 
-        wfs_layer = NGWWmsLayer.create_in_group(
-            ngw_wfs_layer_name,
-            ngw_group,
-            wms_connection.common.id,
-            layer_ids,
-            parameters.get("format"),
-        )
-        return [wms_connection, wfs_layer]
+            layer_ids = parameters.get("layers", wms_connection.layers())
+            if not isinstance(layer_ids, list):
+                layer_ids = [layer_ids]
 
-    def importQgsRasterLayer(self, qgs_raster_layer, ngw_parent_resource, new_layer_name):
+            wms_layer = NGWWmsLayer.create_in_group(
+                ngw_wms_layer_name,
+                ngw_group,
+                wms_connection.common.id,
+                layer_ids,
+                parameters.get("format"),
+            )
+            return [wms_connection, wms_layer]
+
+    def importQgsRasterLayer(self, qgs_raster_layer, ngw_parent_resource):
+        new_layer_name = self.unique_resource_name(qgs_raster_layer.name(), ngw_parent_resource)
+
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
                 "%s - Upload (%d%%)" % (
@@ -249,7 +301,9 @@ class QGISResourceJob(NGWResourceModelJob):
 
             return ngw_raster_layer
 
-    def importQgsVectorLayer(self, qgs_vector_layer, ngw_parent_resource, new_layer_name):
+    def importQgsVectorLayer(self, qgs_vector_layer, ngw_parent_resource):
+        new_layer_name = self.unique_resource_name(qgs_vector_layer.name(), ngw_parent_resource)
+
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
                 "%s - Upload (%d%%)" % (
@@ -804,26 +858,29 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             self.putAddedResourceToResult(ngw_group_resource)
 
         ngw_webmap_root_group = NGWWebMapRoot()
-
+        ngw_webmap_basemaps = []
         self.process_one_level_of_layers_tree(
             current_project.layerTreeRoot().children(),
             ngw_group_resource,
-            ngw_webmap_root_group
+            ngw_webmap_root_group,
+            ngw_webmap_basemaps,
         )
 
         if not update_mode:
             self.statusChanged.emit("Import curent qgis project: create webmap")
-            ngw_webmap = self.add_webmap(
+            ngw_webmap = self.create_webmap(
                 ngw_group_resource,
                 self.new_group_name + u"-webmap",
-                ngw_webmap_root_group.children
+                ngw_webmap_root_group.children,
+                ngw_webmap_basemaps
             )
             self.putAddedResourceToResult(ngw_webmap, is_main=True)
 
         # The group was attached resources,  therefore, it is necessary to upgrade for get children flag
         ngw_group_resource.update()
+        self.ngw_resource.update()
 
-    def process_one_level_of_layers_tree(self, qgs_layer_tree_items, ngw_resource_group, ngw_webmap_item):
+    def process_one_level_of_layers_tree(self, qgs_layer_tree_items, ngw_resource_group, ngw_webmap_item, ngw_webmap_basemaps):
         exist_resourse_names = {}
         for r in ngw_resource_group.get_children():
             exist_resourse_names[r.common.display_name] = r
@@ -834,14 +891,14 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                     continue
 
                 if item.layer().name() not in exist_resourse_names:
-                    self.add_layer(ngw_resource_group, item, ngw_webmap_item)
+                    self.add_layer(ngw_resource_group, item, ngw_webmap_item, ngw_webmap_basemaps)
                 elif item.layer().name() in exist_resourse_names:
                     self.update_layer(item, exist_resourse_names[item.layer().name()])
                     exist_resourse_names.pop(item.layer().name())
 
             if isinstance(item, QgsLayerTreeGroup):
                 if item.name() not in exist_resourse_names:
-                    self.add_group(ngw_resource_group, item, ngw_webmap_item)
+                    self.add_group(ngw_resource_group, item, ngw_webmap_item, ngw_webmap_basemaps)
                 elif item.name() in exist_resourse_names:
                     exist_resourse_names.pop(item.name())
         
@@ -849,7 +906,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             # need to delete
             pass
 
-    def add_layer(self, ngw_resource_group, qgsLayerTreeItem, ngw_webmap_item):
+    def add_layer(self, ngw_resource_group, qgsLayerTreeItem, ngw_webmap_item, ngw_webmap_basemaps):
         try:
             ngw_layer_resources = self.importQGISMapLayer(
                 qgsLayerTreeItem.layer(),
@@ -891,28 +948,8 @@ class CurrentQGISProjectImporter(QGISResourceJob):
 
                 # Add style to layer, therefore, it is necessary to upgrade layer resource for get children flag
                 ngw_layer_resource.update()
-                log(">>> style creation Finish")
 
-            if ngw_layer_resource.type_id == NGWWmsLayer.type_id:
-                # self.statusChanged.emit(
-                #     "%s - Import as WMS Layer " % (
-                #         qgsLayerTreeItem.layer().name(),
-                #     )
-                # )
-                # ngw_wfs_layer_name = self.unique_resource_name(
-                #     ngw_layer_resource.common.display_name + "_layer",
-                #     ngw_resource_group
-                # )
-                # wfs_layer = NGWWmsLayer.create_in_group(
-                #     ngw_wfs_layer_name,
-                #     ngw_resource_group,
-                #     ngw_layer_resource.common.id,
-                #     ngw_layer_resource.layers()
-                # )
-
-                # if wfs_layer is None:
-                #     return
-                # self.putAddedResourceToResult(wfs_layer)
+            elif ngw_layer_resource.type_id == NGWWmsLayer.type_id:
                 transparency = None
                 if qgsLayerTreeItem.layer().type() == QgsMapLayer.RasterLayer:
                     transparency = 100 - 100 * qgsLayerTreeItem.layer().renderer().opacity()
@@ -926,6 +963,9 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                     )
                 )
 
+            elif ngw_layer_resource.type_id == NGWBaseMap.type_id:
+                ngw_webmap_basemaps.append(ngw_layer_resource)
+
     def update_layer(self, qgsLayerTreeItem, ngwVectorLayer):
         self.overwriteQGISMapLayer(qgsLayerTreeItem.layer(), ngwVectorLayer)
         self.putEditedResourceToResult(ngwVectorLayer)
@@ -934,7 +974,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             if isinstance(child, NGWQGISVectorStyle):
                 self.updateStyle(qgsLayerTreeItem.layer(), child)
 
-    def add_group(self, ngw_resource_group, qgsLayerTreeGroup, ngw_webmap_item):
+    def add_group(self, ngw_resource_group, qgsLayerTreeGroup, ngw_webmap_item, ngw_webmap_basemaps):
         chd_names = [ch.common.display_name for ch in ngw_resource_group.get_children()]
 
         group_name = qgsLayerTreeGroup.name()
@@ -963,34 +1003,30 @@ class CurrentQGISProjectImporter(QGISResourceJob):
         self.process_one_level_of_layers_tree(
             qgsLayerTreeGroup.children(),
             ngw_resource_child_group,
-            ngw_webmap_child_group
+            ngw_webmap_child_group,
+            ngw_webmap_basemaps
         )
 
-    def add_webmap(self, ngw_resource, ngw_webmap_name, ngw_webmap_items):
+    def create_webmap(self, ngw_resource, ngw_webmap_name, ngw_webmap_items, ngw_webmap_basemaps):
         rectangle = self.iface.mapCanvas().extent()
         ct = QgsCoordinateTransform(
             self.iface.mapCanvas().mapSettings().destinationCrs(),
             QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
         )
-
-        # log(">>> rectangle: " + str(rectangle.asPolygon()))
-        # bbox = ct.transform(QgsRectangle(-179.9, -89.9, 179.9, 89.9), QgsCoordinateTransform.ReverseTransform)
-        # log(">>> bbox: " + str(bbox.asPolygon()))
-        # rectangle = rectangle.intersect(bbox)
-        # log(">>> rectangle 1: " + str(rectangle.asPolygon()))
         rectangle = ct.transform(rectangle)
         # log(">>> rectangle 2: " + str(rectangle.asPolygon()))
         ngw_webmap_items_as_dicts = [item.toDict() for item in ngw_webmap_items]
-        ngw_resource = ResourceCreator.create_webmap(
-            ngw_resource,
+        ngw_resource = NGWWebMap.create_in_group(
             ngw_webmap_name,
+            ngw_resource,
             ngw_webmap_items_as_dicts,
+            ngw_webmap_basemaps,
             [
                 rectangle.xMinimum(),
                 rectangle.xMaximum(),
                 rectangle.yMaximum(),
                 rectangle.yMinimum(),
-            ]
+            ],
         )
 
         return ngw_resource
@@ -1025,7 +1061,8 @@ class MapForLayerCreater(QGISResourceJob):
             NGWWebMapLayer(
                 self.ngw_style_id,
                 self.ngw_layer.common.display_name,
-                True
+                True,
+                0
             )
         )
 
@@ -1035,10 +1072,11 @@ class MapForLayerCreater(QGISResourceJob):
             self.ngw_layer.common.display_name + "-map",
             ngw_group
         )
-        ngw_resource = ResourceCreator.create_webmap(
-            ngw_group,
+        ngw_resource = NGWWebMap.create_in_group(
             ngw_map_name,
+            ngw_group,
             [item.toDict() for item in ngw_webmap_root_group.children],
+            [],
             bbox=self.ngw_layer.extent()
         )
 
@@ -1052,7 +1090,8 @@ class MapForLayerCreater(QGISResourceJob):
             NGWWebMapLayer(
                 self.ngw_style_id,
                 self.ngw_layer.common.display_name,
-                True
+                True,
+                0
             )
         )
 
@@ -1063,13 +1102,15 @@ class MapForLayerCreater(QGISResourceJob):
             ngw_group
         )
 
-        ngw_resource = ResourceCreator.create_webmap(
-            ngw_group,
+        ngw_resource = NGWWebMap.create_in_group(
             ngw_map_name,
+            ngw_group,
             [item.toDict() for item in ngw_webmap_root_group.children],
+            [],
         )
 
         self.putAddedResourceToResult(ngw_resource, is_main=True)
+
 
 class QGISStyleImporter(QGISResourceJob):
     def __init__(self, qgs_map_layer, ngw_resource):

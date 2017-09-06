@@ -245,7 +245,7 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
             )
         )
 
-        ngw_resource = ResourceCreator.create_webmap(
+        ngw_resource = NGWWebMap.create_in_group(
             ngw_group,
             ngw_map_name,
             [item.toDict() for item in ngw_webmap_root_group.children],

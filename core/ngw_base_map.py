@@ -3,7 +3,7 @@
 /***************************************************************************
     NextGIS WEB API
                               -------------------
-        begin                : 2016-06-02
+        begin                : 2014-11-19
         git sha              : $Format:%H$
         copyright            : (C) 2014 by NextGIS
         email                : info@nextgis.com
@@ -19,43 +19,46 @@
  ***************************************************************************/
 """
 from os import path
-from ngw_resource import NGWResource
+from ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 
-from ..utils import ICONS_DIR
+from ..utils import ICONS_DIR, log
 
 
-class NGWQGISVectorStyle(NGWResource):
+class NGWBaseMap(NGWResource):
 
-    type_id = 'qgis_vector_style'
-    icon_path = path.join(ICONS_DIR, 'style.png')
-    type_title = 'NGW QGIS Vector Style'
+    type_id = 'basemap_layer'
+    icon_path = path.join(ICONS_DIR, 'base_map.svg')
+    type_title = 'NGW Base Map layer'
 
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
 
-    def download_qml_url(self):
-        return self.get_absolute_api_url() + "/qml"
-
-    def update_qml(self, qml, callback):
-        """Create QML style for this layer
-
-        qml - full path to qml file
-        callback - upload file callback, pass to File2Upload (ngw_resource.py)
-        """
-        connection = self._res_factory.connection
-
-        style_file_desc = connection.upload_file(qml, callback)
-
+    @classmethod
+    def create_in_group(cls, name, ngw_group_resource, base_map_url, qms_parameters=None):
+        connection = ngw_group_resource._res_factory.connection
         params = dict(
             resource=dict(
-                display_name=self.common.display_name,
-
-            ),
+                cls=cls.type_id,
+                display_name=name,
+                parent=dict(
+                    id=ngw_group_resource.common.id
+                )
+            )
         )
-        params[self.type_id] = dict(
-            file_upload=style_file_desc
+
+        params[cls.type_id] = dict(
+            url=base_map_url,
+            qms=qms_parameters
+        )
+        result = connection.post(ngw_group_resource.get_api_collection_url(), params=params)
+
+        ngw_resource = cls(
+            ngw_group_resource._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
+            )
         )
 
-        url = self.get_relative_api_url()
-        connection.put(url, params=params)
-        self.update()
+        return ngw_resource
+

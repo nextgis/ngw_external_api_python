@@ -108,43 +108,6 @@ class ResourceCreator():
         return NGWRasterLayer(parent_ngw_resource._res_factory, ngw_resource)
 
     @staticmethod
-    def create_webmap(parent_ngw_resource, ngw_webmap_name, ngw_webmap_items, bbox=[-180, 180, 90, -90]):
-        connection = parent_ngw_resource._res_factory.connection
-        url = parent_ngw_resource.get_api_collection_url()
-
-        params = dict(
-            resource=dict(
-                cls=NGWWebMap.type_id,
-                display_name=ngw_webmap_name,
-                parent=dict(
-                    id=parent_ngw_resource.common.id
-                )
-            ),
-            webmap=dict(
-                extent_left=bbox[0],
-                extent_right=bbox[1],
-                extent_top=bbox[2],
-                extent_bottom=bbox[3],
-                root_item=dict(
-                    item_type="root",
-                    children=ngw_webmap_items
-                )
-            )
-        )
-
-        result = connection.post(url, params=params)
-        # print "add webmap resource result: ", result
-        ngw_resource = NGWWebMap(
-            parent_ngw_resource._res_factory,
-            NGWResource.receive_resource_obj(
-                connection,
-                result['id']
-            )
-        )
-
-        return ngw_resource
-
-    @staticmethod
     def create_wfs_service(name, ngw_group_resource, ngw_layers, ret_obj_num):
         connection = ngw_group_resource._res_factory.connection
         url = ngw_group_resource.get_api_collection_url()

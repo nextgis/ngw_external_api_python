@@ -31,6 +31,7 @@ from ngw_group_resource import NGWGroupResource
 from ngw_wfs_service import NGWWfsService
 from ngw_resource import NGWResource
 from ngw_connection import NGWConnection
+from ngw_base_map import NGWBaseMap
 
 API_NGW_VERSION = '/api/component/pyramid/pkg_version'
 
@@ -51,6 +52,7 @@ class NGWResourceFactory():
             NGWRasterStyle.type_id: NGWRasterStyle,
             NGWWmsConnection.type_id: NGWWmsConnection,
             NGWWmsLayer.type_id: NGWWmsLayer,
+            NGWBaseMap.type_id: NGWBaseMap,
         }
         self.__default_type = NGWResource.type_id
         self.__conn = NGWConnection(conn_settings)
