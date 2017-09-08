@@ -157,26 +157,37 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
     def __init__(self, parent):
         QAbstractItemModel.__init__(self, parent)
 
+        self.__ngw_connection_settings = None
+        self._ngw_connection = None
+
         self.jobs = []
         self.root_item = QNGWConnectionItem()
-        self.__ngw_connection_settings = None
 
         self.__indexes_blocked_by_jobs = {}
         self.__indexes_blocked_by_job_errors = {}
+
+    @property
+    def connectionSettings(self):
+        return self.__ngw_connection_settings
+
+    def isCurrentConnectionSame(self, connection_settings):
+        return self.__ngw_connection_settings == connection_settings
 
     def resetModel(self, ngw_connection_settings):
         self.__indexes_blocked_by_jobs = {}
         self.__indexes_blocked_by_job_errors = {}
 
         self.__ngw_connection_settings = ngw_connection_settings
+        self._setNgwConnection()
+
         self.__cleanModel()
         self.beginResetModel()
         self.root_item = QNGWConnectionItem(self.__ngw_connection_settings)
         self.endResetModel()
         self.modelReset.emit()
 
-    def isCurrentConnectionSame(self, connection_settings):
-        return self.__ngw_connection_settings == connection_settings
+    def _setNgwConnection(self):
+        self._ngw_connection = NGWConnection(self.__ngw_connection_settings)
 
     def cleanModel(self):
         self.__cleanModel()
@@ -499,7 +510,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
         if item == self.root_item:
             job = self._startJob(
-                NGWRootResourcesLoader(self.__ngw_connection_settings),
+                NGWRootResourcesLoader(self._ngw_connection),
                 index
             )
         else:
