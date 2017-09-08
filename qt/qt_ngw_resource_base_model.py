@@ -39,11 +39,15 @@ class NGWResourcesModelResponse(QObject):
     def __init__(self, parent):
         QObject.__init__(self, parent)
 
+        self.job_id = None
         self.__errors = {}
+        self._warnings = []
 
     def errors(self):
         return self.__errors
 
+    def warnings(self):
+        return self._warnings
 
 class NGWResourcesModelJob(QObject):
     started = pyqtSignal()
@@ -64,18 +68,20 @@ class NGWResourcesModelJob(QObject):
         self.__worker = worker
         self.__job_id = self.__worker.id
         self.__error = None
+        self.__warnings = []
         # self.__job_id = "%s_%s" % (self.__worker.id, str(uuid.uuid1()))
 
         self.__worker.started.connect(self.started.emit)
         self.__worker.dataReceived.connect(self.__rememberResult)
         self.__worker.statusChanged.connect(self.statusChanged.emit)
         self.__worker.errorOccurred.connect(self.processJobError)
-        self.__worker.warningOccurred.connect(self.warningOccurred.emit)
+        self.__worker.warningOccurred.connect(self.processJobWarnings)
 
         self.model_response = model_response
 
     def setResponseObject(self, resp):
         self.model_response = resp
+        self.model_response.job_id = self.__job_id
 
     def __rememberResult(self, result):
         self.__result = result
@@ -92,6 +98,11 @@ class NGWResourcesModelJob(QObject):
     def processJobError(self, job_error):
         self.__error = job_error
         self.errorOccurred.emit(job_error)
+
+    def processJobWarnings(self, job_error):
+        if self.model_response:
+            self.model_response._warnings.append(job_error)
+        # self.warningOccurred.emit(job_error)
 
     def start(self):
         self.__thread = QThread(self)
@@ -111,17 +122,8 @@ class NGWResourcesModelJob(QObject):
 
         self.__thread.quit()
         self.__thread.wait()
+        
         self.finished.emit()
-
-
-# class QNGWResourcesModelExeption(Exception):
-#     def __init__(self, message, ngw_error=None):
-#         self.message = message
-#         self.ngw_error = ngw_error
-
-#     def __str__(self):
-#         return self.message
-
 
 def modelRequest():
     def modelRequestDecorator(method):
@@ -170,7 +172,6 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         self.__cleanModel()
         self.beginResetModel()
         self.root_item = QNGWConnectionItem(self.__ngw_connection_settings)
-        # self.__startLoadRootResources(ngw_connection_settings)
         self.endResetModel()
         self.modelReset.emit()
 

@@ -1,8 +1,11 @@
-class NGWResourceModelJobError(object):
+class NGWResourceModelJobError(Exception):
     """Common error"""
-    def __init__(self, msg, trace=None):
+    def __init__(self, msg):
         super(NGWResourceModelJobError, self).__init__()
         self.msg = msg
+
+    def __str__(self):
+        return self.msg
 
 class JobError(NGWResourceModelJobError):
 	"""Specific job error"""
@@ -10,10 +13,15 @@ class JobError(NGWResourceModelJobError):
 		super(JobError, self).__init__(msg)
 		self.wrapped_exception = wrapped_exception
 
+class JobWarning(NGWResourceModelJobError):
+	"""Specific job warning"""
+	def __init__(self, msg ):
+		super(JobWarning, self).__init__(msg)
+
 class JobInternalError(NGWResourceModelJobError):
 	"""Unexpected job error. With trace"""
 	def __init__(self, msg, trace):
-		super(JobInternalError, self).__init__(msg, trace)
+		super(JobInternalError, self).__init__(msg)
 		self.trace = trace
 
 class JobServerRequestError(NGWResourceModelJobError):

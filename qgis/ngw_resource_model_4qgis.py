@@ -22,7 +22,6 @@
 """
 import os
 import glob
-import json
 import urllib
 import shutil
 import zipfile
@@ -48,18 +47,21 @@ from ..core.ngw_wms_service import NGWWmsService
 from ..core.ngw_wms_connection import NGWWmsConnection
 from ..core.ngw_wms_layer import NGWWmsLayer
 from ..core.ngw_webmap import NGWWebMap
-from ..core.ngw_base_map import NGWBaseMap
+from ..core.ngw_base_map import NGWBaseMap, NGWBaseMapExtSettings
 from ..utils import log
 
 from ngw_plugin_settings import NgwPluginSettings
 
 
-# def getQgsMapLayerEPSG(qgs_map_layer):
-#     crs = qgs_map_layer.crs().authid()
-#     if crs.find("EPSG:") >= 0:
-#         return crs.split(":")[1]
-#     return None
+def getQgsMapLayerEPSG(qgs_map_layer):
+    crs = qgs_map_layer.crs().authid()
+    if crs.find("EPSG:") >= 0:
+        return int(crs.split(":")[1])
+    return None
 
+
+def yOriginTopFromQgisTmsUrl(qgs_tms_url):
+    return qgs_tms_url.find("{-y}")
 
 class QNGWResourcesModel4QGIS(QNGWResourcesModel):
 
@@ -186,39 +188,34 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return []
 
+    def baseMapCreationAvailabilityCheck(self, ngw_connection):
+        abilities = ngw_connection.get_abilities()
+        return ngw_connection.AbilityBaseMap in abilities
+
     def importQgsPluginLayer(self, qgs_plugin_layer, ngw_group):
         # Look for QMS plugin layer
         if qgs_plugin_layer.pluginLayerType() == u'PyTiledLayer' and hasattr(qgs_plugin_layer, "layerDef") and hasattr(qgs_plugin_layer.layerDef, "serviceUrl"):
+            
+            if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
+                raise JobError(self.tr("Your web GIS cann't create base maps."))
+
             new_layer_name = self.unique_resource_name(qgs_plugin_layer.name(), ngw_group)
 
-            # qms_json_desc = {}
-            # rools = {
-            #     "url": "serviceUrl",
-            #     "epsg": "epsg_crs_id",
-            #     "z_min": "zmin",
-            #     "z_max": "zmax",
-            #     "y_origin_top": "yOriginTop",
-            #     "copyright_text": "copyright_text",
-            # }
-            # for dest_opt, src_opt in rools.items():
-            #     qms_json_desc[dest_opt] = getattr(qgs_plugin_layer.layerDef, src_opt, None)
-            
-            # if qms_json_desc.get("epsg") is None:
-            #     epsgid = getQgsMapLayerEPSG(qgs_plugin_layer)
-            #     if epsgid is not None:
-            #         qms_json_desc["epsg"] = epsgid
+            epsg = getattr(qgs_plugin_layer.layerDef, "epsg_crs_id", None)
+            if epsg is None:
+                epsg = getQgsMapLayerEPSG(qgs_plugin_layer)
 
-            # if qms_json_desc.get("epsg") is None:
-            #     qms_json_desc = None
-            # else:    
-            #     qms_json_desc = json.dumps(qms_json_desc)
-
-            # qms_json_desc = "{\"url\": \"http://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png\", \"epsg\": \"3857\", \"z_max\": 19, \"z_min\": 0, \"copyright_text\": \"\", \"y_origin_top\": true}"
+            basemap_ext_settings = NGWBaseMapExtSettings(
+                getattr(qgs_plugin_layer.layerDef, "serviceUrl", None),
+                epsg,
+                getattr(qgs_plugin_layer.layerDef, "zmin", None),
+                getattr(qgs_plugin_layer.layerDef, "zmax", None),
+                getattr(qgs_plugin_layer.layerDef, "yOriginTop", None)
+            )
             
-            return [
-                # NGWBaseMap.create_in_group(new_layer_name, ngw_group, qgs_plugin_layer.layerDef.serviceUrl, qms_json_desc)
-                NGWBaseMap.create_in_group(new_layer_name, ngw_group, qgs_plugin_layer.layerDef.serviceUrl)
-            ]
+            ngw_basemap = NGWBaseMap.create_in_group(new_layer_name, ngw_group, qgs_plugin_layer.layerDef.serviceUrl, basemap_ext_settings)
+
+            return [ngw_basemap]
 
     def importQgsWMSLayer(self, qgs_wms_layer, ngw_group):
         self.statusChanged.emit(
@@ -242,10 +239,23 @@ class QGISResourceJob(NGWResourceModelJob):
                 parameters[key] = value
 
         if parameters.get("type", "") == "xyz":
+
+            if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
+                raise JobError(self.tr("Your web GIS cann't create base maps."))
+
+            epsg = getQgsMapLayerEPSG(qgs_wms_layer)
+
+            basemap_ext_settings = NGWBaseMapExtSettings(
+                parameters.get("url"),
+                epsg,
+                parameters.get("zmin"),
+                parameters.get("zmax"),
+                yOriginTopFromQgisTmsUrl(parameters.get("url", ""))
+            )
+            
             ngw_basemap_name = self.unique_resource_name(qgs_wms_layer.name(), ngw_group)
-            return [
-                NGWBaseMap.create_in_group(ngw_basemap_name, ngw_group, parameters.get("url", "")),
-            ]
+            ngw_basemap = NGWBaseMap.create_in_group(ngw_basemap_name, ngw_group, parameters.get("url", ""), basemap_ext_settings)
+            return [ngw_basemap]
         else:        
             ngw_wms_connection_name = self.unique_resource_name(qgs_wms_layer.name(), ngw_group)
             wms_connection = NGWWmsConnection.create_in_group(
@@ -469,7 +479,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
 
                 self.warningOccurred.emit(
-                    JobError(msg)
+                    JobWarning(msg)
                 )
 
         import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
@@ -531,7 +541,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
 
                 self.warningOccurred.emit(
-                    JobError(msg)
+                    JobWarning(msg)
                 )
 
         return qgs_vector_layer_dst, field_name_map

@@ -63,6 +63,8 @@ def _basic_auth_str(username, password):
 
 class NGWConnection(object):
 
+    AbilityBaseMap = range(1)
+
     def __init__(self):
         self.__server_url = None
         self.__session = requests.Session()
@@ -74,6 +76,8 @@ class NGWConnection(object):
         self.__auth = ("", "")
         self.__proxy = None
         self.set_from_settings(conn_settings)
+
+        self.__ngw_components = None
 
     def set_from_settings(self, conn_settings):
         self.server_url = conn_settings.server_url
@@ -203,9 +207,23 @@ class NGWConnection(object):
         
         return resp.content
 
+    def get_ngw_components(self):
+        if self.__ngw_components is None:
+            try:
+                self.__ngw_components = self.get(GET_VERSION_URL)
+            except requests.exceptions.RequestException, e:
+                self.__ngw_components = {}
+
+        return self.__ngw_components
+
     def get_version(self):
-        try:
-            pkg_versions_json = self.get(GET_VERSION_URL)
-            return pkg_versions_json.get("nextgisweb")
-        except requests.exceptions.RequestException, e:
-            return None
+        ngw_components = self.get_ngw_components()
+        return ngw_components.get("nextgisweb")
+        
+    def get_abilities(self):
+        ngw_components = self.get_ngw_components()
+        abilities = []
+        if ngw_components.has_key("nextgisweb_basemap"):
+            abilities.append(self.AbilityBaseMap)
+
+        return abilities

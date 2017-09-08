@@ -18,6 +18,8 @@
  *                                                                         *
  ***************************************************************************/
 """
+import json
+
 from os import path
 from ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 
@@ -34,7 +36,7 @@ class NGWBaseMap(NGWResource):
         NGWResource.__init__(self, resource_factory, resource_json)
 
     @classmethod
-    def create_in_group(cls, name, ngw_group_resource, base_map_url, qms_parameters=None):
+    def create_in_group(cls, name, ngw_group_resource, base_map_url, qms_ext_settings=None):
         connection = ngw_group_resource._res_factory.connection
         params = dict(
             resource=dict(
@@ -45,6 +47,10 @@ class NGWBaseMap(NGWResource):
                 )
             )
         )
+
+        qms_parameters = None
+        if qms_ext_settings is not None:
+            qms_parameters = qms_ext_settings.toJSON()
 
         params[cls.type_id] = dict(
             url=base_map_url,
@@ -62,3 +68,30 @@ class NGWBaseMap(NGWResource):
 
         return ngw_resource
 
+
+class NGWBaseMapExtSettings(object):
+    """docstring for NGWBaseMapExtSettings"""
+    def __init__(self, url, epsg, z_min, z_max, y_origin_top):
+        super(NGWBaseMapExtSettings, self).__init__()
+        self.url = url
+        self.epsg = int(epsg)
+        self.z_min = z_min
+        self.z_max = z_max
+        self.y_origin_top = y_origin_top
+    
+    def toJSON(self):
+        d = {}
+        if self.url is None:
+            return None
+        d["url"] = self.url
+        if self.epsg is None:
+            return None
+        d["epsg"] = self.epsg
+        if self.z_min is not None:
+            d["z_min"] = self.z_min
+        if self.z_max is not None:
+            d["z_max"] = self.z_max
+        if self.y_origin_top is not None:
+            d["y_origin_top"] = self.y_origin_top
+
+        return json.dumps(d)

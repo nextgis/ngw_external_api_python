@@ -132,7 +132,10 @@ class NGWResourceModelJob(QObject):
 
             else:
                 self.errorOccurred.emit(JobServerRequestError(self.tr("Something wrong with request to server"), e.url))                
-                
+        
+        except NGWResourceModelJobError as e:
+            self.errorOccurred.emit(e)
+
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             extracted_list = traceback.extract_tb(exc_traceback)
