@@ -33,6 +33,18 @@ class NGWWmsLayer(NGWResource):
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
 
+    def _construct(self):
+        NGWResource._construct(self)
+        self.ngw_wms_connection_url = None
+        self.ngw_wms_layers = []
+
+        wms_layer_desc = self._json.get(self.type_id, {})
+        wms_connection_id = wms_layer_desc.get("connection", {}).get("id")
+        if wms_connection_id is not None:
+            wms_connection = self._res_factory.get_resource(wms_connection_id)
+            self.ngw_wms_connection_url = wms_connection.get_connection_url()
+        self.ngw_wms_layers = wms_layer_desc.get("wmslayers").split(",")
+
     @classmethod
     def create_in_group(cls, name, ngw_group_resource, ngw_wms_connection_id, wms_layers, wms_format):
         connection = ngw_group_resource._res_factory.connection

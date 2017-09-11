@@ -32,6 +32,9 @@ class NGWWmsConnection(NGWResource):
 
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
+    
+    def get_connection_url(self):
+        return self._json.get(self.type_id, {}).get("url")
 
     def layers(self):
         layers = self._json.get(self.type_id, {}).get("capcache", {}).get("layers",{})

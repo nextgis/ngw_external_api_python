@@ -33,6 +33,18 @@ class NGWWmsService(NGWResource):
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
 
+    def get_url(self):
+        return '%s%s' % (
+            self.get_absolute_api_url(),
+            '/wms'
+        )
+
+    def get_layer_keys(self):
+        layer_keys = []
+        for layer_desc in self._json.get(self.type_id, {}).get("layers", []):
+            layer_keys.append(layer_desc.get("keyname", ""))
+        return layer_keys
+
     @classmethod
     def create_in_group(cls, name, ngw_group_resource, ngw_layers_with_style):
         connection = ngw_group_resource._res_factory.connection
