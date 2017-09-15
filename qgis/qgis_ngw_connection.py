@@ -135,18 +135,20 @@ class QgsNgwConnection(QObject):
             raise NGWError(NGWError.TypeRequestError, "Connection error qt code: {}".format(rep.error()), req.url().toString())
 
         status_code = rep.attribute( QNetworkRequest.HttpStatusCodeAttribute )
-        if  status_code / 100 != 2:
-            log("Response\nerror status_code {}\nmsg: {}".format(status_code, data))
-            raise NGWError(NGWError.TypeNGWError, data, req.url().toString())
 
         if  status_code == 502:
             log( "Response\nerror status_code 502" )
             raise NGWError(NGWError.TypeRequestError, "Response status code is 502", req.url().toString())
 
+        if  status_code / 100 != 2:
+            log("Response\nerror status_code {}\nmsg: {}".format(status_code, data))
+            raise NGWError(NGWError.TypeNGWError, data, req.url().toString())
+
+
         try:
             json_response = json.loads(unicode(data))
         except:
-            log("Response\nerror response JSON parse")
+            log("Response\nerror response JSON parse\n%s" % data)
             raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url().toString())
 
         rep.deleteLater()
