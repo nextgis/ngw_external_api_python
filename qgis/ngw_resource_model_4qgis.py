@@ -442,6 +442,22 @@ class QGISResourceJob(NGWResourceModelJob):
                 else:
                     if len(g.asPolyline()) < 2:
                         fids_with_not_valid_geom.append(feature.id())
+            
+            elif feature.geometry().type() == QGis.Polygon:
+                g = feature.geometry()
+                if g.isMultipart():
+                    for polygon in g.asMultiPolygon():
+                        for polyline in polygon:
+                            if len(polyline) < 4:
+                                log("Feature %s has not valid geometry (less then 4 points)" % str(feature.id()))
+                                fids_with_not_valid_geom.append(feature.id())
+                                break
+                else:
+                    for polyline in g.asPolygon():
+                        if len(polyline) < 4:
+                            log("Feature %s has not valid geometry (less then 4 points)" % str(feature.id()))
+                            fids_with_not_valid_geom.append(feature.id())
+                            break
 
             if feature.geometry().isMultipart():
                 has_multipart_geometries = True

@@ -39,8 +39,8 @@ ngwResourceFactory = None
 
 def connect(connection_string=None):
     url = None
-    user = ""
-    pwd = ""
+    user = None
+    pwd = None
     
     if connection_string is not None:
         url, userpwd = connection_string.split("@")
