@@ -353,9 +353,14 @@ class QGISResourceJob(NGWResourceModelJob):
 
         aliases = {}
         src_layer_aliases = qgs_vector_layer.attributeAliases()
-        for fn, rfn in rename_fields_map.items():
-            if src_layer_aliases.has_key(fn):
-               aliases[rfn] = src_layer_aliases[fn]
+        for fieldname, alias in src_layer_aliases.items():
+            if fieldname in rename_fields_map:
+                aliases[rename_fields_map[fieldname]] = alias
+            else:
+                aliases[fieldname] = alias
+        # for fn, rfn in rename_fields_map.items():
+        #     if src_layer_aliases.has_key(fn):
+        #        aliases[rfn] = src_layer_aliases[fn]
 
         if len(aliases) > 0:
             self.statusChanged.emit(
