@@ -33,12 +33,6 @@ class NGWRasterLayer(NGWResource):
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
 
-    def get_geojson_url(self):
-        return '%s/%s/' % (
-            self.get_absolute_url_with_auth(),
-            'geojson'
-        )
-
     def extent(self):
         result = self._res_factory.connection.get(
             API_LAYER_EXTENT(self.common.id)

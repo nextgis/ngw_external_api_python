@@ -35,7 +35,7 @@ class NGWWebMap(NGWResource):
 
     def get_display_url(self):
         return '%s/%s' % (
-            self.get_absolute_url_with_auth(),
+            self.get_absolute_url(),
             'display'
         )
 
