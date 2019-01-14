@@ -160,6 +160,14 @@ class QgsNgwConnection(QObject):
             log( "Response\nerror status_code 502" )
             raise NGWError(NGWError.TypeRequestError, "Response status code is 502", req.url().toString())
 
+        if  status_code == 404:
+            log( "Response\nerror status_code 404" )
+            raise NGWError(NGWError.TypeRequestError, "Response status code is 404", req.url().toString())
+
+        if  status_code == 401:
+            log("Response\nerror status_code {}\nmsg: {}".format(status_code, data))
+            raise NGWError(NGWError.TypeRequestError, "Response status code is 404", req.url().toString())
+
         if  status_code / 100 != 2:
             log("Response\nerror status_code {}\nmsg: {}".format(status_code, data))
             raise NGWError(NGWError.TypeNGWError, data, req.url().toString())
