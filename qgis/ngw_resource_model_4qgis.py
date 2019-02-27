@@ -532,11 +532,17 @@ class QGISResourceJob(NGWResourceModelJob):
                 continue
 
             new_geometry = feature.geometry()
-            new_geometry.transform(QgsCoordinateTransform(qgs_vector_layer_src.crs(), import_crs))
-
+            new_geometry.geometry().convertTo(
+                QgsWKBTypes.dropZ(
+                    new_geometry.geometry().wkbType()
+                )
+            )
+            new_geometry.transform(
+                QgsCoordinateTransform(qgs_vector_layer_src.crs(), import_crs)
+            )
             if has_mixed_geoms:
                 new_geometry.convertToMultiType()
-            
+
             feature.setGeometry(
                 new_geometry
             )
@@ -544,7 +550,7 @@ class QGISResourceJob(NGWResourceModelJob):
             qgs_vector_layer_dst.addFeature(feature)
 
             tmp_progress = features_counter * 100 / features_count
-            if  tmp_progress > progress:
+            if tmp_progress > progress:
                 progress = tmp_progress
                 self.statusChanged.emit(
                     "%s - Prepare layer for import (%d%%)" % (
@@ -583,6 +589,11 @@ class QGISResourceJob(NGWResourceModelJob):
         # if has_multipart_geometries:
         if has_mixed_geoms:
             geometry_type = "multi" + geometry_type
+        else:
+            for feature in qgs_vector_layer.getFeatures():
+                if feature.geometry().isMultipart():
+                    geometry_type = "multi" + geometry_type
+                break
 
         return geometry_type
 
