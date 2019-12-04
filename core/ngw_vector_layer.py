@@ -214,7 +214,7 @@ class NGWVectorLayer(NGWResource):
         """
         connection = self._res_factory.connection
         style_name = self.generate_unique_child_name(
-            self.common.display_name + '-style'
+            self.common.display_name + ''
         )
 
         style_file_desc = connection.upload_file(qml, callback)
@@ -248,7 +248,7 @@ class NGWVectorLayer(NGWResource):
         connection = self._res_factory.connection
 
         style_name = self.generate_unique_child_name(
-            self.common.display_name + '-style'
+            self.common.display_name + ''
         )
 
         params = dict(
