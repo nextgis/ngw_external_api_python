@@ -110,11 +110,9 @@ class NGWResourceModelJob(QObject):
         try:
             self._do()
         except NGWError as e:
-            log(">>> NGWError: %s %s" % (type(e), e))
             if e.type == NGWError.TypeNGWError:
                 ngw_exeption_dict = json.loads(e.message)
-                ngw_exeption_type = ngw_exeption_dict.get("exception")
-                if ngw_exeption_type in ["HTTPForbidden", "ForbiddenError"]:
+                if ngw_exeption_dict.get("status_code") == 403:    
                     self.errorOccurred.emit(JobAuthorizationError(e.url))
                 else:
                     self.errorOccurred.emit(

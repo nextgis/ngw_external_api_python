@@ -156,18 +156,20 @@ class QgsNgwConnection(QObject):
 
         status_code = rep.attribute( QNetworkRequest.HttpStatusCodeAttribute )
 
-        if  status_code == 502:
-            log( "Response\nerror status_code 502" )
-            raise NGWError(NGWError.TypeRequestError, "Response status code is 502", req.url().toString())
-
-        if  status_code in [401, 403, 404]:
-            log("Response\nerror status_code {}\nmsg: {}".format(status_code, data))
-            raise NGWError(NGWError.TypeRequestError, "Response status code is %s" % status_code, req.url().toString())
-
         if  status_code / 100 != 2:
             log("Response\nerror status_code {}\nmsg: {}".format(status_code, data))
-            raise NGWError(NGWError.TypeNGWError, data, req.url().toString())
+            
+            ngw_message_present = False
+            try:
+                json.loads(unicode(data))
+                ngw_message_present = True
+            except Exception as e:
+                pass
 
+            if ngw_message_present:
+                raise NGWError(NGWError.TypeNGWError, data, req.url().toString())
+            else:
+                raise NGWError(NGWError.TypeRequestError, "Response status code is %s" % status_code, req.url().toString())                
 
         try:
             json_response = json.loads(unicode(data))
