@@ -18,6 +18,8 @@
  *                                                                         *
  ***************************************************************************/
 """
+import datetime
+
 from os import path
 from ngw_resource import NGWResource, API_LAYER_EXTENT
 from ngw_qgis_vector_style import NGWQGISVectorStyle
@@ -68,7 +70,9 @@ class NGWVectorLayer(NGWResource):
         MULTIPOLYGON: "vector_layer_mpolygon.svg",
     }
 
-    FieldTypeString, FieldTypeReal = range(2)
+    FieldTypeInteger, FieldTypeBigint, FieldTypeReal, FieldTypeString, FieldTypeDate, FieldTypeTime, FieldTypeDatetime = [
+    "INTEGER", "BIGINT", "REAL", "STRING", "DATE", "TIME", "DATETIME"]
+    FieldTypes = [FieldTypeInteger, FieldTypeBigint, FieldTypeReal, FieldTypeString, FieldTypeDate, FieldTypeTime, FieldTypeDatetime]
 
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
@@ -83,11 +87,9 @@ class NGWVectorLayer(NGWResource):
 
     def fieldType(self, name):
         field_def = self._field_defs.get(name, {})
-        if field_def.get("datatype") == "REAL":
-            return self.FieldTypeReal
-        elif field_def.get("datatype") == "STRING":
-            return self.FieldTypeString
-
+        datatype = field_def.get("datatype")
+        if datatype in self.FieldTypes:
+            return datatype
         return None
 
     # TODO Need refactoring.
@@ -164,7 +166,6 @@ class NGWVectorLayer(NGWResource):
 
     # TODO Need refactoring 
     def patch_features(self, ngw_feature_list):
-        log ("!!! update_features %s" % ngw_feature_list)
         features_dict_list = []
         for ngw_feature in ngw_feature_list:
             features_dict_list.append(ngw_feature.asDict())
@@ -173,6 +174,45 @@ class NGWVectorLayer(NGWResource):
 
         url = self.get_feature_adding_url()
         result = connection.patch(url, params=features_dict_list)
+
+    def construct_ngw_feature_as_json(self, attributes):
+        json_feature = {}
+
+        for field_name, pyvalue in attributes.items():
+            field_type = self.fieldType(field_name)
+            field_value = None
+            if field_type == NGWVectorLayer.FieldTypeDate:
+                if isinstance(pyvalue, datetime.date):
+                    field_value = {
+                        'year': pyvalue.year,
+                        'month': pyvalue.month,
+                        'day': pyvalue.day,
+                    }
+            elif field_type == NGWVectorLayer.FieldTypeTime:
+                if isinstance(pyvalue, datetime.time):
+                    field_value = {
+                        'hour': pyvalue.hour,
+                        'minute': pyvalue.minute,
+                        'second': pyvalue.second,
+                    }
+            elif field_type == NGWVectorLayer.FieldTypeDatetime:
+                if isinstance(pyvalue, datetime.datetime):
+                    field_value = {
+                        'year': pyvalue.year,
+                        'month': pyvalue.month,
+                        'day': pyvalue.day,
+                        'hour': pyvalue.hour,
+                        'minute': pyvalue.minute,
+                        'second': pyvalue.second,
+                    }
+            elif field_type is None:
+                field_value = None
+            else:
+                field_value = pyvalue
+
+            json_feature[field_name] = field_value
+
+        return json_feature
 
     def delete_all_features(self):
         connection = self._res_factory.connection

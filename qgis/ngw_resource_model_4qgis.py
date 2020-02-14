@@ -64,6 +64,24 @@ def getQgsMapLayerEPSG(qgs_map_layer):
 def yOriginTopFromQgisTmsUrl(qgs_tms_url):
     return qgs_tms_url.find("{-y}")
 
+
+def get_clean_python_value(qvariant_value):
+    clean_value = None
+
+    if isinstance(qvariant_value, QPyNullVariant):
+        clean_value = None
+    elif isinstance(qvariant_value, QDateTime):
+        clean_value = qvariant_value.toPyDateTime()
+    elif isinstance(qvariant_value, QDate):
+        clean_value = qvariant_value.toPyDate()
+    elif isinstance(qvariant_value, QTime):
+        clean_value = qvariant_value.toPyTime()
+    else:
+        clean_value = qvariant_value
+
+    return clean_value
+
+
 class QNGWResourcesModel4QGIS(QNGWResourcesModel):
 
     def __init__(self, parent):
@@ -823,19 +841,12 @@ class QGISResourceJob(NGWResourceModelJob):
             g.convertToMultiType()
         feature_dict["geom"] = g.exportToWkt()
 
-        feature_dict["fields"] = {}
-
+        attributes = {}
         for qgsField in qgs_feature.fields().toList():
-            field_type = ngw_layer_resource.fieldType(qgsField.name())
-            # value = unicode(qgs_feature.attribute(qgsField.name()))
-            if field_type == NGWVectorLayer.FieldTypeString:
-                value = unicode(qgs_feature.attribute(qgsField.name()))
-            elif field_type == NGWVectorLayer.FieldTypeReal:
-                value = float(qgs_feature.attribute(qgsField.name()))
-            else:
-                value = unicode(qgs_feature.attribute(qgsField.name()))
+            value = qgs_feature.attribute(qgsField.name())
+            attributes[qgsField.name()] = get_clean_python_value(value)
 
-            feature_dict["fields"][qgsField.name()] = value
+        feature_dict["fields"] = self.ngw_layer.construct_ngw_feature_as_json(attributes)
 
         return feature_dict
 
@@ -1224,24 +1235,12 @@ class NGWUpdateVectorLayer(QGISResourceJob):
             g.convertToMultiType()
         feature_dict["geom"] = g.exportToWkt()
 
-        feature_dict["fields"] = {}
-
+        attributes = {}
         for qgsField in qgs_feature.fields().toList():
-            field_type = self.ngw_layer.fieldType(qgsField.name())
             value = qgs_feature.attribute(qgsField.name())
-            log(">>> value %s %s" % (value, type(value)))
-            if value is None or isinstance(value, QPyNullVariant):
-                value = None
-            elif field_type == NGWVectorLayer.FieldTypeString:
-                value = unicode(value)
-            elif field_type == NGWVectorLayer.FieldTypeReal:
-                value = float(value)
-            else:
-                value = unicode(value)
+            attributes[qgsField.name()] = get_clean_python_value(value)
 
-            feature_dict["fields"][qgsField.name()] = value
-
-        log(">>> feature_dict %s" % feature_dict)
+        feature_dict["fields"] = self.ngw_layer.construct_ngw_feature_as_json(attributes)
 
         return feature_dict
 
