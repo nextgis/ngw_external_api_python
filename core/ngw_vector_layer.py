@@ -50,6 +50,12 @@ class NGWVectorLayer(NGWResource):
     MULTILINESTRING = 4
     POLYGON = 5
     MULTIPOLYGON = 6
+    POINTZ = 7
+    MULTIPOINTZ = 8
+    LINESTRINGZ = 9
+    MULTILINESTRINGZ = 10
+    POLYGONZ = 11
+    MULTIPOLYGONZ = 12
 
     __GEOMETRIES = {
         "POINT": POINT,
@@ -58,6 +64,12 @@ class NGWVectorLayer(NGWResource):
         "MULTILINESTRING": MULTILINESTRING,
         "POLYGON": POLYGON,
         "MULTIPOLYGON": MULTIPOLYGON,
+        "POINTZ": POINTZ,
+        "MULTIPOINTZ": MULTIPOINTZ,
+        "LINESTRINGZ": LINESTRINGZ,
+        "MULTILINESTRINGZ": MULTILINESTRINGZ,
+        "POLYGONZ": POLYGONZ,
+        "MULTIPOLYGONZ": MULTIPOLYGONZ,
     }
 
     icons = {
@@ -68,6 +80,12 @@ class NGWVectorLayer(NGWResource):
         MULTILINESTRING: "vector_layer_mline.svg",
         POLYGON: "vector_layer_polygon.svg",
         MULTIPOLYGON: "vector_layer_mpolygon.svg",
+        POINTZ: "vector_layer_point.svg",
+        MULTIPOINTZ: "vector_layer_mpoint.svg",
+        LINESTRINGZ: "vector_layer_line.svg",
+        MULTILINESTRINGZ: "vector_layer_mline.svg",
+        POLYGONZ: "vector_layer_polygon.svg",
+        MULTIPOLYGONZ: "vector_layer_mpolygon.svg",
     }
 
     FieldTypeInteger, FieldTypeBigint, FieldTypeReal, FieldTypeString, FieldTypeDate, FieldTypeTime, FieldTypeDatetime = [

@@ -82,6 +82,25 @@ def get_clean_python_value(qvariant_value):
     return clean_value
 
 
+def get_wkt(qgis_geometry):
+    wkt = qgis_geometry.exportToWkt()
+    if qgis_geometry.wkbType() < 0:
+        wkb_type = qgis_geometry.wkbType()
+        wkt_fixes = {
+            QGis.WKBPoint25D: ('PointZ', 'Point Z'), 
+            QGis.WKBLineString25D: ('LineStringZ', 'LineString Z'), 
+            QGis.WKBPolygon25D: ('PolygonZ', 'Polygon Z'), 
+            QGis.WKBMultiPoint25D: ('MultiPointZ', 'MultiPoint Z'), 
+            QGis.WKBMultiLineString25D: ('MultiLineStringZ', 'MultiLineString Z'), 
+            QGis.WKBMultiPolygon25D: ('MultiPolygonZ', 'MultiPolygon Z'), 
+        }
+
+        if wkb_type in wkt_fixes:
+            wkt = wkt.replace(*wkt_fixes[wkb_type])
+
+    return wkt
+
+
 class QNGWResourcesModel4QGIS(QNGWResourcesModel):
 
     def __init__(self, parent):
@@ -839,7 +858,7 @@ class QGISResourceJob(NGWResourceModelJob):
         )
         if ngw_layer_resource.is_geom_multy():
             g.convertToMultiType()
-        feature_dict["geom"] = g.exportToWkt()
+        feature_dict["geom"] = get_wkt(g)
 
         attributes = {}
         for qgsField in qgs_feature.fields().toList():
@@ -1233,7 +1252,8 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         g.transform(QgsCoordinateTransform(self.qgis_layer.crs(), import_crs))
         if self.ngw_layer.is_geom_multy():
             g.convertToMultiType()
-        feature_dict["geom"] = g.exportToWkt()
+
+        feature_dict["geom"] = get_wkt(g)
 
         attributes = {}
         for qgsField in qgs_feature.fields().toList():
