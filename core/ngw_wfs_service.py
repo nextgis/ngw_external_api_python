@@ -49,3 +49,6 @@ class NGWWfsService(NGWResource):
     
     def get_layers(self):
         return self._json["wfsserver_service"]["layers"]
+
+    def get_source_layer(self, layer_id):
+        return self._res_factory.get_resource(layer_id) 

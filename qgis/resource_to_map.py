@@ -26,6 +26,16 @@ from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_wfs_service import NGWWfsService
 
 
+def _add_aliases(qgs_vector_layer, ngw_vector_layer):
+    for field_name, field_def in ngw_vector_layer.field_defs.items():
+        field_alias = field_def.get('display_name') 
+        if not field_alias:
+            continue
+        qgs_vector_layer.addAttributeAlias(
+            qgs_vector_layer.fieldNameIndex(field_name),
+            field_alias
+        )
+
 def add_resource_as_geojson(resource, return_extent=False):
     if not isinstance(resource, NGWVectorLayer):
         raise Exception('Resource type is not VectorLayer!')
@@ -36,6 +46,8 @@ def add_resource_as_geojson(resource, return_extent=False):
         raise Exception('Layer %s can\'t be added to the map!' % resource.common.display_name)
 
     qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
+
+    _add_aliases(qgs_geojson_layer, resource)
 
     QgsMapLayerRegistry.instance().addMapLayer(qgs_geojson_layer)
 
@@ -74,6 +86,8 @@ def add_resource_as_geojson_with_style(ngw_layer, ngw_style, return_extent=False
         file.fileName()
     )
 
+    _add_aliases(qgs_geojson_layer, ngw_layer)
+
     QgsMapLayerRegistry.instance().addMapLayer(qgs_geojson_layer)
 
     if return_extent:
@@ -96,6 +110,10 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
     for wfs_layer in wfs_resource.wfs.layers:
         url = wfs_resource.get_wfs_url(wfs_layer.keyname) + '&srsname=EPSG:3857&VERSION=1.0.0&REQUEST=GetFeature'
         qgs_wfs_layer = QgsVectorLayer(url, wfs_layer.display_name, 'WFS')
+
+        ngw_vector_layer = wfs_resource.get_source_layer(wfs_layer.resource_id)
+        _add_aliases(qgs_wfs_layer, ngw_vector_layer)
+
         #summarize extent
         if return_extent:
             _summ_extent(summary_extent, qgs_wfs_layer)

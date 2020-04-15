@@ -103,6 +103,10 @@ class NGWVectorLayer(NGWResource):
         for field_def in self._json.get("feature_layer", {}).get("fields", []):
             self._field_defs[field_def.get("keyname")] = field_def
 
+    @property
+    def field_defs(self):
+        return self._field_defs
+
     def fieldType(self, name):
         field_def = self._field_defs.get(name, {})
         datatype = field_def.get("datatype")
