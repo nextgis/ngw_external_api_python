@@ -30,6 +30,9 @@ from ngw_vector_layer import NGWVectorLayer
 
 from ngw_error import NGWError
 
+from ..utils import log
+
+
 def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     o = urlparse(qgs_map_layer.source())
         
@@ -41,7 +44,7 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     # m.group() is '.../resource/<resource id>/'
     basePathStructure = m.group().strip('/').split('/')
 
-    baseURL = o.scheme + '://' + o.netloc + '/' + '/'.join(basePathStructure[:-2])
+    baseURL = o.scheme + '://' + o.netloc.split('@')[-1] + '/' + '/'.join(basePathStructure[:-3])
     ngw_resources_id = int(basePathStructure[-1])
     requestAttrs = parse_qs(o.query)
 
@@ -69,17 +72,23 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     ngwConnectionSettings = NGWConnectionSettings("ngw", baseURL, ngw_username, ngw_password)
     ngwConnection = NGWConnection(ngwConnectionSettings)
     
-    ngwResourceFactory = NGWResourceFactory(ngwConnectionSettings)
+    ngwResourceFactory = NGWResourceFactory(ngwConnection)
     
-    ngw_resource = ngwResourceFactory.get_resource(ngw_resources_id)
-    if ngw_resource.type_id == 'wfsserver_service':
-        layers = ngw_resource.get_layers()
-        for layer in layers:
-            if layer["keyname"] ==  layer_name:
-                ngw_resources_id = layer["resource_id"]
-                break
     try:
+        ngw_resource = ngwResourceFactory.get_resource(ngw_resources_id)
+        
+        if ngw_resource is None:
+            return None
+
+        if ngw_resource.type_id == 'wfsserver_service':
+            layers = ngw_resource.get_layers()
+            for layer in layers:
+                if layer["keyname"] ==  layer_name:
+                    ngw_resources_id = layer["resource_id"]
+                    break
+            return ngwResourceFactory.get_resource(ngw_resources_id)
+        else:
+            return ngw_resource
         #return NGWVectorLayer(ngwResourceFactory, NGWResource.receive_resource_obj(ngwConnection, ngw_resources_id))
-        return ngwResourceFactory.get_resource(ngw_resources_id)
     except NGWError as e:
         return None

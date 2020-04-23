@@ -27,19 +27,19 @@ class NGWAttachment(object):
         self.ngw_feature = ngw_feature
     
     def get_attachmet_url(self):
-        return FEATURE_ATTACHMENT_URL(self.ngw_feature.ngw_resource.common.id, self.ngw_feature.id, self.id)
+        return FEATURE_ATTACHMENT_URL(self.ngw_feature.ngw_vector_layer.common.id, self.ngw_feature.id, self.id)
         
     def unlink(self):
-        self.ngw_feature.ngw_resource._res_factory.connection.delete(self.get_attachmet_url())
+        self.ngw_feature.ngw_vector_layer._res_factory.connection.delete(self.get_attachmet_url())
         
     def get_image_url(self):
-        return IMAGE_URL(self.ngw_feature.ngw_resource.common.id, self.ngw_feature.id, self.id)
+        return IMAGE_URL(self.ngw_feature.ngw_vector_layer.common.id, self.ngw_feature.id, self.id)
     
     def get_image_full_url(self):
-        return self.ngw_feature.ngw_resource._res_factory.connection.server_url + self.get_image_url()
+        return self.ngw_feature.ngw_vector_layer._res_factory.connection.server_url + self.get_image_url()
     
     def get_image(self):
-        attachment_info = self.ngw_feature.ngw_resource._res_factory.connection.get( self.get_attachmet_url() )
+        attachment_info = self.ngw_feature.ngw_vector_layer._res_factory.connection.get( self.get_attachmet_url() )
         name = attachment_info['name']
         if name is None:
              name = "image_%d"%attachment_info['id']
@@ -50,6 +50,6 @@ class NGWAttachment(object):
         else:
             format = "jpeg"
         
-        file_contetnt = self.ngw_feature.ngw_resource._res_factory.connection.download_file( self.get_image_url() )
+        file_contetnt = self.ngw_feature.ngw_vector_layer._res_factory.connection.download_file( self.get_image_url() )
         
         return [name, format, file_contetnt]
