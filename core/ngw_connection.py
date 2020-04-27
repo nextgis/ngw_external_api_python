@@ -195,6 +195,8 @@ class NGWConnection(object):
 
     def download_file(self, url):
         req = requests.Request('GET', self.server_url + url)
+        req.headers['Authorization'] = _basic_auth_str(self.__auth[0], self.__auth[1])
+
         prep = self.__session.prepare_request(req)
 
         try:
