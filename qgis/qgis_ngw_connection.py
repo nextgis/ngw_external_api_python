@@ -93,9 +93,10 @@ class QgsNgwConnection(QObject):
 
         req = QNetworkRequest(QUrl(self.server_url + sub_url))
 
-        authstr = (u'%s:%s' % self.__auth).encode('utf-8')        
-        authstr = QByteArray('Basic ' +  QByteArray(authstr).toBase64())
-        req.setRawHeader("Authorization", authstr);
+        if all(map(len, self.__auth)):
+            authstr = (u'%s:%s' % self.__auth).encode('utf-8')
+            authstr = QByteArray('Basic ' +  QByteArray(authstr).toBase64())
+            req.setRawHeader("Authorization", authstr);
 
         data = QBuffer(QByteArray())
         if file is not None:
