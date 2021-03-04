@@ -18,19 +18,19 @@
  *                                                                         *
  ***************************************************************************/
 """
-from ngw_webmap import NGWWebMap
-from ngw_mapserver_style import NGWMapServerStyle
-from ngw_qgis_vector_style import NGWQGISVectorStyle
-from ngw_wms_service import NGWWmsService
-from ngw_wms_connection import NGWWmsConnection
-from ngw_wms_layer import NGWWmsLayer
-from ngw_vector_layer import NGWVectorLayer
-from ngw_raster_layer import NGWRasterLayer
-from ngw_raster_style import NGWRasterStyle
-from ngw_group_resource import NGWGroupResource
-from ngw_wfs_service import NGWWfsService
-from ngw_resource import NGWResource
-from ngw_base_map import NGWBaseMap
+from .ngw_webmap import NGWWebMap
+from .ngw_mapserver_style import NGWMapServerStyle
+from .ngw_qgis_vector_style import NGWQGISVectorStyle
+from .ngw_wms_service import NGWWmsService
+from .ngw_wms_connection import NGWWmsConnection
+from .ngw_wms_layer import NGWWmsLayer
+from .ngw_vector_layer import NGWVectorLayer
+from .ngw_raster_layer import NGWRasterLayer
+from .ngw_raster_style import NGWRasterStyle
+from .ngw_group_resource import NGWGroupResource
+from .ngw_wfs_service import NGWWfsService
+from .ngw_resource import NGWResource
+from .ngw_base_map import NGWBaseMap
 
 API_NGW_VERSION = '/api/component/pyramid/pkg_version'
 

@@ -21,15 +21,15 @@
 import datetime
 
 from os import path
-from ngw_resource import NGWResource, API_LAYER_EXTENT
-from ngw_qgis_vector_style import NGWQGISVectorStyle
-from ngw_mapserver_style import NGWMapServerStyle
-from ngw_feature import NGWFeature
+from .ngw_resource import NGWResource, API_LAYER_EXTENT
+from .ngw_qgis_vector_style import NGWQGISVectorStyle
+from .ngw_mapserver_style import NGWMapServerStyle
+from .ngw_feature import NGWFeature
 
 from ..utils import ICONS_DIR, log
 
-ADD_FEATURE_URL = u"/api/resource/%s/feature/"
-DEL_ALL_FEATURES_URL = u"/api/resource/%s/feature/"
+ADD_FEATURE_URL = "/api/resource/%s/feature/"
+DEL_ALL_FEATURES_URL = "/api/resource/%s/feature/"
 
 
 class NGWVectorLayer(NGWResource):
@@ -200,7 +200,7 @@ class NGWVectorLayer(NGWResource):
     def construct_ngw_feature_as_json(self, attributes):
         json_feature = {}
 
-        for field_name, pyvalue in attributes.items():
+        for field_name, pyvalue in list(attributes.items()):
             field_type = self.fieldType(field_name)
             field_value = None
             if field_type == NGWVectorLayer.FieldTypeDate:
@@ -342,7 +342,7 @@ class NGWVectorLayer(NGWResource):
         # if fields_list is None:
         #     raise NGWError('Cannot add alias for resource. There is no feature_layer-fields in Resource JSON')
 
-        aliases_keynames = aliases.keys()
+        aliases_keynames = list(aliases.keys())
 
         for field_index in range(len(fields_list)):
             field_keyname = fields_list[field_index]['keyname']

@@ -36,11 +36,11 @@ if __name__=="__main__":
     for file_name in files:
         attachment_info = ngwConnection.upload_file( file_name )
         id = ngwFeature.link_attachment(attachment_info)
-        print "link attachment with id %s"%str(id)
+        print("link attachment with id %s"%str(id))
     
     attachments = ngwFeature.get_attachments()
     for attachment in attachments:
-        if attachment[u'is_image'] == True:
-            ngw_attachment = NGWAttachment( attachment[u'id'], ngwFeature)
-            print ngw_attachment.get_image_full_url()
+        if attachment['is_image'] == True:
+            ngw_attachment = NGWAttachment( attachment['id'], ngwFeature)
+            print(ngw_attachment.get_image_full_url())
             #ngwFeature.unlink_attachment( attachment[u'id'] )

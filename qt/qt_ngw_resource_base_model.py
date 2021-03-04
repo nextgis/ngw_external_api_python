@@ -21,13 +21,13 @@
 import os
 import uuid
 
-from PyQt4.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject, pyqtSignal, QThread, QCoreApplication
+from qgis.PyQt.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject, pyqtSignal, QThread, QCoreApplication
 
 from ..core.ngw_group_resource import NGWGroupResource
 from ..utils import log
 
-from qt_ngw_resource_item import *
-from qt_ngw_resource_model_job import *
+from .qt_ngw_resource_item import *
+from .qt_ngw_resource_model_job import *
 
 
 class NGWResourcesModelResponse(QObject):
@@ -51,7 +51,7 @@ class NGWResourcesModelResponse(QObject):
 
 class NGWResourcesModelJob(QObject):
     started = pyqtSignal()
-    statusChanged = pyqtSignal(unicode)
+    statusChanged = pyqtSignal(str)
     warningOccurred = pyqtSignal(object)
     errorOccurred = pyqtSignal(object)
     finished = pyqtSignal()
@@ -148,11 +148,11 @@ def modelJobSlot():
 
 
 class QNGWResourcesBaseModel(QAbstractItemModel):
-    jobStarted = pyqtSignal(unicode)
-    jobStatusChanged = pyqtSignal(unicode, unicode)
-    errorOccurred = pyqtSignal(unicode, object)
-    warningOccurred = pyqtSignal(unicode, object)
-    jobFinished = pyqtSignal(unicode)
+    jobStarted = pyqtSignal(str)
+    jobStatusChanged = pyqtSignal(str, str)
+    errorOccurred = pyqtSignal(str, object)
+    warningOccurred = pyqtSignal(str, object)
+    jobFinished = pyqtSignal(str)
 
     def __init__(self, parent):
         QAbstractItemModel.__init__(self, parent)
@@ -387,14 +387,14 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
         QCoreApplication.processEvents()
 
     def _isIndexBlockedByJob(self, index):
-        for job, blocked_indexes in self.__indexes_blocked_by_jobs.items():
+        for job, blocked_indexes in list(self.__indexes_blocked_by_jobs.items()):
             for blocked_index in blocked_indexes:
                 if index == blocked_index:
                     return True
         return False
 
     def _isIndexBlockedByJobError(self, index):
-        for blocked_index, error in self.__indexes_blocked_by_job_errors.items():
+        for blocked_index, error in list(self.__indexes_blocked_by_job_errors.items()):
             if index == blocked_index:
                 return True
         return False

@@ -20,15 +20,15 @@
 """
 
 import re, traceback
-from urlparse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs
 
-from ngw_connection_settings import NGWConnectionSettings
-from ngw_connection import NGWConnection
-from ngw_resource_factory import NGWResourceFactory
-from ngw_resource import NGWResource
-from ngw_vector_layer import NGWVectorLayer
+from .ngw_connection_settings import NGWConnectionSettings
+from .ngw_connection import NGWConnection
+from .ngw_resource_factory import NGWResourceFactory
+from .ngw_resource import NGWResource
+from .ngw_vector_layer import NGWVectorLayer
 
-from ngw_error import NGWError
+from .ngw_error import NGWError
 
 from ..utils import log
 
@@ -48,12 +48,12 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     ngw_resources_id = int(basePathStructure[-1])
     requestAttrs = parse_qs(o.query)
 
-    if qgs_map_layer.providerType() == u'WFS':
-        if requestAttrs.has_key(u'username'):
-            ngw_username = requestAttrs.get(u'username')[0]
-        if requestAttrs.has_key(u'password'):
-            ngw_password = requestAttrs.get(u'password')[0]
-    elif qgs_map_layer.providerType() == u'ogr':
+    if qgs_map_layer.providerType() == 'WFS':
+        if 'username' in requestAttrs:
+            ngw_username = requestAttrs.get('username')[0]
+        if 'password' in requestAttrs:
+            ngw_password = requestAttrs.get('password')[0]
+    elif qgs_map_layer.providerType() == 'ogr':
         if o.netloc.find('@') != -1:
             auth_data = o.netloc.split('@')[0]
             ngw_username = auth_data.split(':')[0]
@@ -64,8 +64,8 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     #if requestAttrs.get(u'TYPENAME') is not None:
     #    additionAttrs.update({u'LayerName': requestAttrs[u'TYPENAME'][0]})
     layer_name = ""
-    if requestAttrs.get(u'TYPENAME') is not None:
-        layer_name = requestAttrs[u'TYPENAME'][0]
+    if requestAttrs.get('TYPENAME') is not None:
+        layer_name = requestAttrs['TYPENAME'][0]
     #additionAttrs.update({u'auth':(ngw_username, ngw_password)})
     #additionAttrs.update({u'baseURL':baseURL})
     #additionAttrs.update({u'resourceId':ngw_resources_id})

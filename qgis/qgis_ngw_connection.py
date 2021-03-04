@@ -21,8 +21,8 @@
 import json
 from base64 import b64encode
 
-from PyQt4.QtCore import *
-from PyQt4.QtNetwork import *
+from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtNetwork import *
 
 from qgis.core import *
 from qgis.utils import iface
@@ -37,7 +37,7 @@ GET_VERSION_URL = '/api/component/pyramid/pkg_version'
 
 class QgsNgwConnection(QObject):
 
-    AbilityBaseMap = range(1)
+    AbilityBaseMap = list(range(1))
 
     """docstring for QgsNgwConnection"""
     def __init__(self, conn_settings, parent):
@@ -82,7 +82,7 @@ class QgsNgwConnection(QObject):
         file = kwargs.get("file")
 
         log(
-            u"Request\nmethod: {}\nurl: {}\njson({}): {}\nfile: {}".format(
+            "Request\nmethod: {}\nurl: {}\njson({}): {}\nfile: {}".format(
                 method,
                 self.server_url + sub_url,
                 type(json_data),
@@ -93,9 +93,10 @@ class QgsNgwConnection(QObject):
 
         req = QNetworkRequest(QUrl(self.server_url + sub_url))
 
-        authstr = (u'%s:%s' % self.__auth).encode('utf-8')        
-        authstr = QByteArray('Basic ' +  QByteArray(authstr).toBase64())
-        req.setRawHeader("Authorization", authstr);
+        authstr = ('%s:%s' % self.__auth).encode('utf-8')
+        authstr = QByteArray(authstr).toBase64()
+        authstr = QByteArray(('Basic ').encode('utf-8')).append(authstr)
+        req.setRawHeader(("Authorization").encode('utf-8'), authstr);
 
         data = QBuffer(QByteArray())
         if file is not None:
@@ -161,7 +162,7 @@ class QgsNgwConnection(QObject):
             
             ngw_message_present = False
             try:
-                json.loads(unicode(data))
+                json.loads(bytes(data).decode())
                 ngw_message_present = True
             except Exception as e:
                 pass
@@ -172,7 +173,7 @@ class QgsNgwConnection(QObject):
                 raise NGWError(NGWError.TypeRequestError, "Response status code is %s" % status_code, req.url().toString())                
 
         try:
-            json_response = json.loads(unicode(data))
+            json_response = json.loads(bytes(data).decode())
         except:
             log("Response\nerror response JSON parse\n%s" % data)
             raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url().toString())
@@ -207,7 +208,7 @@ class QgsNgwConnection(QObject):
     def get_abilities(self):
         ngw_components = self.get_ngw_components()
         abilities = []
-        if ngw_components.has_key("nextgisweb_basemap"):
+        if "nextgisweb_basemap" in ngw_components:
             abilities.append(self.AbilityBaseMap)
 
         return abilities

@@ -45,7 +45,7 @@ class NGWFeature(object):
     def link_attachment(self, uploaded_file_info):
         json_data= dict(file_upload = uploaded_file_info)
         res = self.ngw_vector_layer._res_factory.connection.post(self.get_feature_attachmets_url(), json=json_data)
-        return res[u'id']
+        return res['id']
 
     def asDict(self):
         feature_dict = {}
@@ -62,7 +62,7 @@ class NGWFeature(object):
         self.geom_wkt = wkt
 
     def setFieldAsString(self, name, value):
-        self.fields[name] = unicode(value)
+        self.fields[name] = str(value)
 
     def setFieldAsInt(self, name, value):
         self.fields[name] = int(value)

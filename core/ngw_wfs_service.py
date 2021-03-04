@@ -19,7 +19,7 @@
  ***************************************************************************/
 """
 from os import path
-from ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
+from .ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 
 from ..utils import ICONS_DIR, log
 

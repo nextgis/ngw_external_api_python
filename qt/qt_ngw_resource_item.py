@@ -18,8 +18,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QIcon, QTreeWidgetItem
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QTreeWidgetItem
 
 from ..core.ngw_group_resource import NGWGroupResource
 from ..core.ngw_qgis_vector_style import NGWQGISVectorStyle

@@ -22,7 +22,7 @@ import sys
 import json
 import traceback
 
-from PyQt4.QtCore import *
+from qgis.PyQt.QtCore import *
 
 from ..core.ngw_error import NGWError
 from ..core.ngw_resource import NGWResource
@@ -32,7 +32,7 @@ from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapRoot
 
 from ..utils import log
 
-from qt_ngw_resource_model_job_error import *
+from .qt_ngw_resource_model_job_error import *
 
 
 class NGWResourceModelJobResult():
@@ -59,7 +59,7 @@ class NGWResourceModelJobResult():
 
 class NGWResourceModelJob(QObject):
     started = pyqtSignal()
-    statusChanged = pyqtSignal(unicode)
+    statusChanged = pyqtSignal(str)
     warningOccurred = pyqtSignal(object)
     errorOccurred = pyqtSignal(object)
     dataReceived = pyqtSignal(object)

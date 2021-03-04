@@ -23,15 +23,15 @@
  ***************************************************************************/
 """
 import os
-from urlparse import urlparse
+from urllib.parse import urlparse
 
-from PyQt4 import uic
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from qgis.PyQt import uic
+from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtWidgets import *
 from ..core.ngw_connection_settings import NGWConnectionSettings
 from ..core.ngw_resource_factory import NGWResourceFactory
 
-from qgis_ngw_connection import QgsNgwConnection
+from .qgis_ngw_connection import QgsNgwConnection
 
 __author__ = 'NextGIS'
 __date__ = 'October 2014'
@@ -95,7 +95,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.__user_change_connection_name = False
         self.leName.editingFinished.connect(self.__name_changed_finished)
 
-        accessLinkHtml = u'<a href="{}"><span style=" text-decoration: underline; color:#0000ff;">{}</span></a>'.format(
+        accessLinkHtml = '<a href="{}"><span style=" text-decoration: underline; color:#0000ff;">{}</span></a>'.format(
             self.tr('http://docs.nextgis.com/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection'),
             self.tr('Where do I get these?')
         )
