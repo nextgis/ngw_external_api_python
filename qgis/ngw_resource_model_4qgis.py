@@ -419,6 +419,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         layer_has_mixed_geoms = False
         layer_has_bad_fields = False
+        fids_with_notvalid_geom = []
         if NgwPluginSettings.get_sanitize_fix_geometry():
             layer_has_mixed_geoms, fids_with_notvalid_geom = self.checkGeometry(qgs_vector_layer)
         if NgwPluginSettings.get_sanitize_rename_fields():
