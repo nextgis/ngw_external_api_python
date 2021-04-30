@@ -19,7 +19,7 @@
  ***************************************************************************/
 """
 from os import path
-from ngw_resource import NGWResource, API_LAYER_EXTENT
+from .ngw_resource import NGWResource, API_LAYER_EXTENT
 
 from ..utils import ICONS_DIR
 

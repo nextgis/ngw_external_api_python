@@ -22,7 +22,7 @@ import os
 import sys
 
 ICONS_DIR = os.path.join(
-    os.path.dirname(__file__).decode(sys.getfilesystemencoding()),
+    os.path.dirname(__file__),
     'icons'
 )
 

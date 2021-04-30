@@ -18,10 +18,10 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import Qt, QModelIndex
+from qgis.PyQt.QtCore import Qt, QModelIndex
 
-from qt_ngw_resource_model_job import *
-from qt_ngw_resource_base_model import *
+from .qt_ngw_resource_model_job import *
+from .qt_ngw_resource_base_model import *
 
 from ..utils import log
 

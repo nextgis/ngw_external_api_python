@@ -22,12 +22,12 @@
 """
 import os
 import glob
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import shutil
 import zipfile
 import tempfile
 
-from PyQt4.QtCore import *
+from qgis.PyQt.QtCore import *
 
 from qgis.core import *
 from qgis.gui import *
@@ -50,8 +50,8 @@ from ..core.ngw_webmap import NGWWebMap
 from ..core.ngw_base_map import NGWBaseMap, NGWBaseMapExtSettings
 from ..utils import log
 
-from ngw_plugin_settings import NgwPluginSettings
-from qgis_ngw_connection import QgsNgwConnection
+from .ngw_plugin_settings import NgwPluginSettings
+from .qgis_ngw_connection import QgsNgwConnection
 
 
 def getQgsMapLayerEPSG(qgs_map_layer):
@@ -83,16 +83,16 @@ def get_clean_python_value(qvariant_value):
 
 
 def get_wkt(qgis_geometry):
-    wkt = qgis_geometry.exportToWkt()
+    wkt = qgis_geometry.asWkt()
     if qgis_geometry.wkbType() < 0:
         wkb_type = qgis_geometry.wkbType()
         wkt_fixes = {
-            QGis.WKBPoint25D: ('PointZ', 'Point Z'), 
-            QGis.WKBLineString25D: ('LineStringZ', 'LineString Z'), 
-            QGis.WKBPolygon25D: ('PolygonZ', 'Polygon Z'), 
-            QGis.WKBMultiPoint25D: ('MultiPointZ', 'MultiPoint Z'), 
-            QGis.WKBMultiLineString25D: ('MultiLineStringZ', 'MultiLineString Z'), 
-            QGis.WKBMultiPolygon25D: ('MultiPolygonZ', 'MultiPolygon Z'), 
+            QgsWkbTypes.Point25D: ('PointZ', 'Point Z'), 
+            QgsWkbTypes.LineString25D: ('LineStringZ', 'LineString Z'), 
+            QgsWkbTypes.Polygon25D: ('PolygonZ', 'Polygon Z'), 
+            QgsWkbTypes.MultiPoint25D: ('MultiPointZ', 'MultiPoint Z'), 
+            QgsWkbTypes.MultiLineString25D: ('MultiLineStringZ', 'MultiLineString Z'), 
+            QgsWkbTypes.MultiPolygon25D: ('MultiPolygonZ', 'MultiPolygon Z'), 
         }
 
         if wkb_type in wkt_fixes:
@@ -203,7 +203,7 @@ class QGISResourceJob(NGWResourceModelJob):
         layer_type = qgs_map_layer.type()
 
         if layer_type == qgs_map_layer.VectorLayer:
-            if qgs_map_layer.geometryType() in [QGis.NoGeometry, QGis.UnknownGeometry]:
+            if qgs_map_layer.geometryType() in [QgsWkbTypes.NoGeometry, QgsWkbTypes.UnknownGeometry]:
                 return self.SUITABLE_LAYER_BAD_GEOMETRY
 
         return self.SUITABLE_LAYER
@@ -235,7 +235,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def importQgsPluginLayer(self, qgs_plugin_layer, ngw_group):
         # Look for QMS plugin layer
-        if qgs_plugin_layer.pluginLayerType() == u'PyTiledLayer' and hasattr(qgs_plugin_layer, "layerDef") and hasattr(qgs_plugin_layer.layerDef, "serviceUrl"):
+        if qgs_plugin_layer.pluginLayerType() == 'PyTiledLayer' and hasattr(qgs_plugin_layer, "layerDef") and hasattr(qgs_plugin_layer.layerDef, "serviceUrl"):
             
             if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
                 raise JobError(self.tr("Your web GIS cann't create base maps."))
@@ -269,9 +269,9 @@ class QGISResourceJob(NGWResourceModelJob):
         parameters = {}
         for parameter in layer_source.split('&'):
             key, value = parameter.split("=")
-            value = urllib.unquote_plus(value)
+            value = urllib.parse.unquote_plus(value)
 
-            if parameters.has_key(key):
+            if key in parameters:
                 if not isinstance(parameters[key], list):
                     parameters[key] = [parameters[key], ]
 
@@ -390,7 +390,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         aliases = {}
         src_layer_aliases = qgs_vector_layer.attributeAliases()
-        for fieldname, alias in src_layer_aliases.items():
+        for fieldname, alias in list(src_layer_aliases.items()):
             if fieldname in rename_fields_map:
                 aliases[rename_fields_map[fieldname]] = alias
             else:
@@ -432,15 +432,15 @@ class QGISResourceJob(NGWResourceModelJob):
         else:
             layer = qgs_vector_layer
 
-        import_format = u'ESRI Shapefile'
+        import_format = 'ESRI Shapefile'
         if layer.featureCount() > 0:
             layer_provider = layer.dataProvider()
-            if layer_provider.storageType() in [u'ESRI Shapefile']:
+            if layer_provider.storageType() in ['ESRI Shapefile']:
                 import_format = layer_provider.storageType()
             else:
-                import_format = u"GeoJSON"
+                import_format = "GeoJSON"
 
-        if import_format == u'ESRI Shapefile':
+        if import_format == 'ESRI Shapefile':
             return self.prepareAsShape(layer), rename_fields_map
         else:
             return self.prepareAsJSON(layer), rename_fields_map
@@ -475,7 +475,7 @@ class QGISResourceJob(NGWResourceModelJob):
             #     fids_with_not_valid_geom.append(feature.id())
 
             # Fix one point line. Method isGeosValid return true for same geometry.
-            if feature.geometry().type() == QGis.Line:
+            if feature.geometry().type() == QgsWkbTypes.LineGeometry:
                 g = feature.geometry()
                 if g.isMultipart():
                     for polyline in g.asMultiPolyline():
@@ -486,7 +486,7 @@ class QGISResourceJob(NGWResourceModelJob):
                     if len(g.asPolyline()) < 2:
                         fids_with_not_valid_geom.append(feature.id())
             
-            elif feature.geometry().type() == QGis.Polygon:
+            elif feature.geometry().type() == QgsWkbTypes.PolygonGeometry:
                 g = feature.geometry()
                 if g.isMultipart():
                     for polygon in g.asMultiPolygon():
@@ -537,7 +537,7 @@ class QGISResourceJob(NGWResourceModelJob):
                     "QGISResourceJob",
                     "We've renamed fields {0} for layer '{1}'. Style for this layer may become invalid."
                 ).format(
-                    field_name_map.keys(),
+                    list(field_name_map.keys()),
                     qgs_vector_layer_src.name()
                 )
 
@@ -576,7 +576,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
             )
             new_geometry.transform(
-                QgsCoordinateTransform(qgs_vector_layer_src.crs(), import_crs)
+                QgsCoordinateTransform(qgs_vector_layer_src.crs(), import_crs, QgsProject.instance())
             )
             if has_mixed_geoms:
                 new_geometry.convertToMultiType()
@@ -617,11 +617,11 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def determineGeometry4MemoryLayer(self, qgs_vector_layer, has_mixed_geoms):
         geometry_type = None
-        if qgs_vector_layer.geometryType() == QGis.Point:
+        if qgs_vector_layer.geometryType() == QgsWkbTypes.PointGeometry:
             geometry_type = "point"
-        elif qgs_vector_layer.geometryType() == QGis.Line:
+        elif qgs_vector_layer.geometryType() == QgsWkbTypes.LineGeometry:
             geometry_type = "linestring"
-        elif qgs_vector_layer.geometryType() == QGis.Polygon:
+        elif qgs_vector_layer.geometryType() == QgsWkbTypes.PolygonGeometry:
             geometry_type = "polygon"
 
         # if has_multipart_geometries:
@@ -854,7 +854,8 @@ class QGISResourceJob(NGWResourceModelJob):
         g.transform(
             QgsCoordinateTransform(
                 qgs_map_layer.crs(),
-                QgsCoordinateReferenceSystem(ngw_layer_resource.srs(), QgsCoordinateReferenceSystem.EpsgCrsId)
+                QgsCoordinateReferenceSystem(ngw_layer_resource.srs(), QgsCoordinateReferenceSystem.EpsgCrsId),
+                QgsProject.instance()
             )
         )
         if ngw_layer_resource.is_geom_multy():
@@ -947,7 +948,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             self.statusChanged.emit("Import curent qgis project: create webmap")
             ngw_webmap = self.create_webmap(
                 ngw_group_resource,
-                self.new_group_name + u"-webmap",
+                self.new_group_name + "-webmap",
                 ngw_webmap_root_group.children,
                 ngw_webmap_basemaps
             )
@@ -1088,7 +1089,8 @@ class CurrentQGISProjectImporter(QGISResourceJob):
         rectangle = self.iface.mapCanvas().extent()
         ct = QgsCoordinateTransform(
             self.iface.mapCanvas().mapSettings().destinationCrs(),
-            QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
+            QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId),
+            QgsProject.instance()
         )
         rectangle = ct.transform(rectangle)
         # log(">>> rectangle 2: " + str(rectangle.asPolygon()))
@@ -1250,7 +1252,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
         
         g = qgs_feature.constGeometry()
-        g.transform(QgsCoordinateTransform(self.qgis_layer.crs(), import_crs))
+        g.transform(QgsCoordinateTransform(self.qgis_layer.crs(), import_crs, QgsProject.instance()))
         if self.ngw_layer.is_geom_multy():
             g.convertToMultiType()
 
