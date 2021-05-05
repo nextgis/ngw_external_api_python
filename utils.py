@@ -21,8 +21,11 @@
 import os
 import sys
 
+from .compat_py import CompatPy
+
+
 ICONS_DIR = os.path.join(
-    os.path.dirname(__file__),
+    CompatPy.get_dirname(__file__),
     'icons'
 )
 

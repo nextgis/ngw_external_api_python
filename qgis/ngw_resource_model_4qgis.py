@@ -22,7 +22,6 @@
 """
 import os
 import glob
-import urllib.request, urllib.parse, urllib.error
 import shutil
 import zipfile
 import tempfile
@@ -52,6 +51,9 @@ from ..utils import log
 
 from .ngw_plugin_settings import NgwPluginSettings
 from .qgis_ngw_connection import QgsNgwConnection
+
+from ..compat_py import CompatPy
+from .compat_qgis import CompatQgis, CompatQgisMsgLogLevel, CompatQgisMsgBarLevel, CompatQgisGeometryType, CompatQgisWkbType
 
 
 def getQgsMapLayerEPSG(qgs_map_layer):
@@ -83,16 +85,16 @@ def get_clean_python_value(qvariant_value):
 
 
 def get_wkt(qgis_geometry):
-    wkt = qgis_geometry.asWkt()
+    wkt = CompatQgis.wkt_geometry(qgis_geometry)
     if qgis_geometry.wkbType() < 0:
         wkb_type = qgis_geometry.wkbType()
         wkt_fixes = {
-            QgsWkbTypes.Point25D: ('PointZ', 'Point Z'), 
-            QgsWkbTypes.LineString25D: ('LineStringZ', 'LineString Z'), 
-            QgsWkbTypes.Polygon25D: ('PolygonZ', 'Polygon Z'), 
-            QgsWkbTypes.MultiPoint25D: ('MultiPointZ', 'MultiPoint Z'), 
-            QgsWkbTypes.MultiLineString25D: ('MultiLineStringZ', 'MultiLineString Z'), 
-            QgsWkbTypes.MultiPolygon25D: ('MultiPolygonZ', 'MultiPolygon Z'), 
+            CompatQgisWkbType.WKBPoint25D: ('PointZ', 'Point Z'),
+            CompatQgisWkbType.WKBLineString25D: ('LineStringZ', 'LineString Z'),
+            CompatQgisWkbType.WKBPolygon25D: ('PolygonZ', 'Polygon Z'),
+            CompatQgisWkbType.WKBMultiPoint25D: ('MultiPointZ', 'MultiPoint Z'),
+            CompatQgisWkbType.WKBMultiLineString25D: ('MultiLineStringZ', 'MultiLineString Z'),
+            CompatQgisWkbType.WKBMultiPolygon25D: ('MultiPolygonZ', 'MultiPolygon Z'),
         }
 
         if wkb_type in wkt_fixes:
@@ -203,7 +205,7 @@ class QGISResourceJob(NGWResourceModelJob):
         layer_type = qgs_map_layer.type()
 
         if layer_type == qgs_map_layer.VectorLayer:
-            if qgs_map_layer.geometryType() in [QgsWkbTypes.NoGeometry, QgsWkbTypes.UnknownGeometry]:
+            if qgs_map_layer.geometryType() in [CompatQgisGeometryType.NoGeometry, CompatQgisGeometryType.UnknownGeometry]:
                 return self.SUITABLE_LAYER_BAD_GEOMETRY
 
         return self.SUITABLE_LAYER
@@ -236,7 +238,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def importQgsPluginLayer(self, qgs_plugin_layer, ngw_group):
         # Look for QMS plugin layer
         if qgs_plugin_layer.pluginLayerType() == 'PyTiledLayer' and hasattr(qgs_plugin_layer, "layerDef") and hasattr(qgs_plugin_layer.layerDef, "serviceUrl"):
-            
+
             if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
                 raise JobError(self.tr("Your web GIS cann't create base maps."))
 
@@ -253,7 +255,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 getattr(qgs_plugin_layer.layerDef, "zmax", None),
                 getattr(qgs_plugin_layer.layerDef, "yOriginTop", None)
             )
-            
+
             ngw_basemap = NGWBaseMap.create_in_group(new_layer_name, ngw_group, qgs_plugin_layer.layerDef.serviceUrl, basemap_ext_settings)
 
             return [ngw_basemap]
@@ -269,7 +271,7 @@ class QGISResourceJob(NGWResourceModelJob):
         parameters = {}
         for parameter in layer_source.split('&'):
             key, value = parameter.split("=")
-            value = urllib.parse.unquote_plus(value)
+            value = unquote_plus(value)
 
             if key in parameters:
                 if not isinstance(parameters[key], list):
@@ -293,11 +295,11 @@ class QGISResourceJob(NGWResourceModelJob):
                 parameters.get("zmax"),
                 yOriginTopFromQgisTmsUrl(parameters.get("url", ""))
             )
-            
+
             ngw_basemap_name = self.unique_resource_name(qgs_wms_layer.name(), ngw_group)
             ngw_basemap = NGWBaseMap.create_in_group(ngw_basemap_name, ngw_group, parameters.get("url", ""), basemap_ext_settings)
             return [ngw_basemap]
-        else:        
+        else:
             ngw_wms_connection_name = self.unique_resource_name(qgs_wms_layer.name(), ngw_group)
             wms_connection = NGWWmsConnection.create_in_group(
                 ngw_wms_connection_name,
@@ -475,7 +477,7 @@ class QGISResourceJob(NGWResourceModelJob):
             #     fids_with_not_valid_geom.append(feature.id())
 
             # Fix one point line. Method isGeosValid return true for same geometry.
-            if feature.geometry().type() == QgsWkbTypes.LineGeometry:
+            if feature.geometry().type() == CompatQgisGeometryType.Line:
                 g = feature.geometry()
                 if g.isMultipart():
                     for polyline in g.asMultiPolyline():
@@ -485,8 +487,8 @@ class QGISResourceJob(NGWResourceModelJob):
                 else:
                     if len(g.asPolyline()) < 2:
                         fids_with_not_valid_geom.append(feature.id())
-            
-            elif feature.geometry().type() == QgsWkbTypes.PolygonGeometry:
+
+            elif feature.geometry().type() == CompatQgisGeometryType.Polygon:
                 g = feature.geometry()
                 if g.isMultipart():
                     for polygon in g.asMultiPolygon():
@@ -576,7 +578,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
             )
             new_geometry.transform(
-                QgsCoordinateTransform(qgs_vector_layer_src.crs(), import_crs, QgsProject.instance())
+                Compat.coordinate_transform_obj(qgs_vector_layer_src.crs(), import_crs, QgsProject.instance())
             )
             if has_mixed_geoms:
                 new_geometry.convertToMultiType()
@@ -617,11 +619,11 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def determineGeometry4MemoryLayer(self, qgs_vector_layer, has_mixed_geoms):
         geometry_type = None
-        if qgs_vector_layer.geometryType() == QgsWkbTypes.PointGeometry:
+        if qgs_vector_layer.geometryType() == CompatQgisGeometryType.Point:
             geometry_type = "point"
-        elif qgs_vector_layer.geometryType() == QgsWkbTypes.LineGeometry:
+        elif qgs_vector_layer.geometryType() == CompatQgisGeometryType.Line:
             geometry_type = "linestring"
-        elif qgs_vector_layer.geometryType() == QgsWkbTypes.PolygonGeometry:
+        elif qgs_vector_layer.geometryType() == CompatQgisGeometryType.Polygon:
             geometry_type = "polygon"
 
         # if has_multipart_geometries:
@@ -804,7 +806,7 @@ class QGISResourceJob(NGWResourceModelJob):
         total_count = qgs_map_layer.featureCount()
         current_count = 0
         done = 0
-        
+
         self.statusChanged.emit(
             "%s - Remove all feature" % (
                 ngw_layer_resource.common.display_name,
@@ -830,7 +832,7 @@ class QGISResourceJob(NGWResourceModelJob):
                         done
                     )
                 )
-    
+
     def getFeaturesPart(self, qgs_map_layer, ngw_layer_resource, pack_size):
         ngw_features=[]
         for qgsFeature in qgs_map_layer.getFeatures():
@@ -852,7 +854,7 @@ class QGISResourceJob(NGWResourceModelJob):
         # feature_dict["id"] = qgs_feature.id() + 1 # Fix NGW behavior
         g = qgs_feature.constGeometry()
         g.transform(
-            QgsCoordinateTransform(
+            CompatQgis.coordinate_transform_obj(
                 qgs_map_layer.crs(),
                 QgsCoordinateReferenceSystem(ngw_layer_resource.srs(), QgsCoordinateReferenceSystem.EpsgCrsId),
                 QgsProject.instance()
@@ -979,7 +981,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                     self.add_group(ngw_resource_group, item, ngw_webmap_item, ngw_webmap_basemaps)
                 elif item.name() in exist_resourse_names:
                     exist_resourse_names.pop(item.name())
-        
+
         for exist_resourse_name in exist_resourse_names:
             # need to delete
             pass
@@ -1047,7 +1049,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
     def update_layer(self, qgsLayerTreeItem, ngwVectorLayer):
         self.overwriteQGISMapLayer(qgsLayerTreeItem.layer(), ngwVectorLayer)
         self.putEditedResourceToResult(ngwVectorLayer)
-        
+
         for child in  ngwVectorLayer.get_children():
             if isinstance(child, NGWQGISVectorStyle):
                 self.updateStyle(qgsLayerTreeItem.layer(), child)
@@ -1087,7 +1089,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
 
     def create_webmap(self, ngw_resource, ngw_webmap_name, ngw_webmap_items, ngw_webmap_basemaps):
         rectangle = self.iface.mapCanvas().extent()
-        ct = QgsCoordinateTransform(
+        ct = CompatQgis.coordinate_transform_obj(
             self.iface.mapCanvas().mapSettings().destinationCrs(),
             QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId),
             QgsProject.instance()
@@ -1163,7 +1165,7 @@ class MapForLayerCreater(QGISResourceJob):
 
     def create4WmsLayer(self):
         self.ngw_style_id = self.ngw_layer.common.id
-        
+
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_root_group.appendChild(
             NGWWebMapLayer(
@@ -1250,9 +1252,9 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         # id need only for update not for create
         # feature_dict["id"] = qgs_feature.id() + 1 # Fix NGW behavior
         import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
-        
+
         g = qgs_feature.constGeometry()
-        g.transform(QgsCoordinateTransform(self.qgis_layer.crs(), import_crs, QgsProject.instance()))
+        g.transform(CompatQgis.coordinate_transform_obj(self.qgis_layer.crs(), import_crs, QgsProject.instance()))
         if self.ngw_layer.is_geom_multy():
             g.convertToMultiType()
 
@@ -1280,14 +1282,14 @@ class NGWUpdateVectorLayer(QGISResourceJob):
 
         if len(ngw_features) > 0:
                 yield ngw_features
-                
+
     def _do(self):
         log(">>> NGWUpdateVectorLayer _do")
         block_size = 10
         total_count = self.qgis_layer.featureCount()
         current_count = 0
         done = 0
-        
+
         self.statusChanged.emit(
             "%s - Remove all feature" % (
                 self.qgis_layer ,

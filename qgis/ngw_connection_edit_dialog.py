@@ -23,7 +23,6 @@
  ***************************************************************************/
 """
 import os
-from urllib.parse import urlparse
 
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import *
@@ -32,6 +31,9 @@ from ..core.ngw_connection_settings import NGWConnectionSettings
 from ..core.ngw_resource_factory import NGWResourceFactory
 
 from .qgis_ngw_connection import QgsNgwConnection
+
+from ..compat_py import CompatPy
+
 
 __author__ = 'NextGIS'
 __date__ = 'October 2014'
@@ -81,7 +83,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.leUrl.setCompleter(completer)
 
         self.cbAsGuest.toggled.connect(self.__cbAsGuestChecked)
-        
+
         self.leUrl.textEdited.connect(self.__url_changed)
         self.leUrl.textEdited.connect(self.__fill_conneection_name)
 

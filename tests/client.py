@@ -14,7 +14,7 @@ ngw_root_group = client.get_resource(0)
 
 import os
 import sys
-import json 
+import json
 
 from ngw_api.core.ngw_connection_settings import NGWConnectionSettings
 from ngw_api.core.ngw_connection import NGWConnection
@@ -41,7 +41,7 @@ def connect(connection_string=None):
     url = None
     user = None
     pwd = None
-    
+
     if connection_string is not None:
         url, userpwd = connection_string.split("@")
         user, pwd = userpwd.split(":")
@@ -50,7 +50,7 @@ def connect(connection_string=None):
     user = input("User: ") if user is None else user
 
     if user != "":
-        pwd = input("Password: ") if pwd is None else pwd       
+        pwd = input("Password: ") if pwd is None else pwd
     else:
         pwd = ""
 
@@ -82,7 +82,7 @@ def ngw_client_request(fn):
         except NGWError as err:
             if err.type == NGWError.TypeNGWError:
                 ngw_exeption_dict = json.loads(err.message)
-                print("NGW Error: %s" % ngw_exeption_dict.get("message", "No message")) 
+                print("NGW Error: %s" % ngw_exeption_dict.get("message", "No message"))
                 return None
 
             raise err
@@ -105,12 +105,12 @@ def get_resource(ngw_resource_id):
 @ngw_client_request
 def create_wms(name, url, parent_ngw_resource_id):
     parent_ngw_resource = get_resource(parent_ngw_resource_id)
-    print("parent_ngw_resource: ", parent_ngw_resource)
+    print("parent_ngw_resource: %s" % str(parent_ngw_resource))
 
     #ToDO check resource type
 
     ngw_wms_connection = NGWWmsConnection.create_in_group(name, parent_ngw_resource, url)
-    print("ngw_wms_connection: ", ngw_wms_connection)
+    print("ngw_wms_connection: %s" % str(ngw_wms_connection))
     return ngw_wms_connection
 
 
@@ -148,5 +148,5 @@ def map_for_style(name, ngw_resource_style, parent_ngw_resource, bbox=[-180, 180
     ))
 
     ngw_webmap_items_as_dicts = [item.toDict() for item in root_item.children]
-    
+
     return NGWWebMap.create_in_group(name, parent_ngw_resource, ngw_webmap_items_as_dicts, bbox=bbox)

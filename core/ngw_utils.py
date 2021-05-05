@@ -20,7 +20,6 @@
 """
 
 import re, traceback
-from urllib.parse import urlparse, parse_qs
 
 from .ngw_connection_settings import NGWConnectionSettings
 from .ngw_connection import NGWConnection
@@ -32,14 +31,16 @@ from .ngw_error import NGWError
 
 from ..utils import log
 
+from ..compat_py import CompatPy
+
 
 def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     o = urlparse(qgs_map_layer.source())
-        
+
     m = re.search('^.*/resource/\d+/',o.path)
     if m is None:
         return None
-    
+
     # o.path is '.../resource/<resource id>/.......'
     # m.group() is '.../resource/<resource id>/'
     basePathStructure = m.group().strip('/').split('/')
@@ -71,12 +72,12 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     #additionAttrs.update({u'resourceId':ngw_resources_id})
     ngwConnectionSettings = NGWConnectionSettings("ngw", baseURL, ngw_username, ngw_password)
     ngwConnection = NGWConnection(ngwConnectionSettings)
-    
+
     ngwResourceFactory = NGWResourceFactory(ngwConnection)
-    
+
     try:
         ngw_resource = ngwResourceFactory.get_resource(ngw_resources_id)
-        
+
         if ngw_resource is None:
             return None
 

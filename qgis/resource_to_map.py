@@ -25,16 +25,15 @@ from qgis.core import QgsVectorLayer, QgsMapLayer, QgsProject, QgsRectangle
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_wfs_service import NGWWfsService
 
+from .compat_qgis import CompatQgis, CompatQgisMsgLogLevel, CompatQgisMsgBarLevel, CompatQgisGeometryType, CompatQgisWkbType
+
 
 def _add_aliases(qgs_vector_layer, ngw_vector_layer):
     for field_name, field_def in list(ngw_vector_layer.field_defs.items()):
-        field_alias = field_def.get('display_name') 
+        field_alias = field_def.get('display_name')
         if not field_alias:
             continue
-        qgs_vector_layer.setFieldAlias(
-            qgs_vector_layer.fields().indexFromName(field_name),
-            field_alias
-        )
+        CompatQgis.set_field_alias(qgs_vector_layer, field_name, field_alias)
 
 def add_resource_as_geojson(resource, return_extent=False):
     if not isinstance(resource, NGWVectorLayer):
@@ -49,7 +48,7 @@ def add_resource_as_geojson(resource, return_extent=False):
 
     _add_aliases(qgs_geojson_layer, resource)
 
-    QgsProject.instance().addMapLayer(qgs_geojson_layer)
+    CompatQgis.layers_registry().addMapLayer(qgs_geojson_layer)
 
     if return_extent:
         if qgs_geojson_layer.extent().isEmpty() and qgs_geojson_layer.type() == QgsMapLayer.VectorLayer:
@@ -88,7 +87,7 @@ def add_resource_as_geojson_with_style(ngw_layer, ngw_style, return_extent=False
 
     _add_aliases(qgs_geojson_layer, ngw_layer)
 
-    QgsProject.instance().addMapLayer(qgs_geojson_layer)
+    CompatQgis.layers_registry().addMapLayer(qgs_geojson_layer)
 
     if return_extent:
         if qgs_geojson_layer.extent().isEmpty() and qgs_geojson_layer.type() == QgsMapLayer.VectorLayer:
@@ -117,7 +116,7 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
         #summarize extent
         if return_extent:
             _summ_extent(summary_extent, qgs_wfs_layer)
-        QgsProject.instance().addMapLayer(qgs_wfs_layer, False)
+        CompatQgis.layers_registry().addMapLayer(qgs_wfs_layer, False)
         layers_group.insertLayer(0, qgs_wfs_layer)
 
     if return_extent:
