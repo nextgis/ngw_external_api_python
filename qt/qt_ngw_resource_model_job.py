@@ -55,7 +55,7 @@ class NGWResourceModelJobResult():
 
     def putDeletedResource(self, ngw_resource):
         self.deleted_resources.append(ngw_resource)
-        
+
 
 class NGWResourceModelJob(QObject):
     started = pyqtSignal()
@@ -112,7 +112,7 @@ class NGWResourceModelJob(QObject):
         except NGWError as e:
             if e.type == NGWError.TypeNGWError:
                 ngw_exeption_dict = json.loads(e.message)
-                if ngw_exeption_dict.get("status_code") == 403:    
+                if ngw_exeption_dict.get("status_code") == 403:
                     self.errorOccurred.emit(JobAuthorizationError(e.url))
                 else:
                     self.errorOccurred.emit(
@@ -129,8 +129,8 @@ class NGWResourceModelJob(QObject):
                 self.errorOccurred.emit(JobNGWError(self.tr("Cann't parse server answer"), e.url))
 
             else:
-                self.errorOccurred.emit(JobServerRequestError(self.tr("Something wrong with request to server"), e.url))                
-        
+                self.errorOccurred.emit(JobServerRequestError(self.tr("Something wrong with request to server"), e.url))
+
         except NGWResourceModelJobError as e:
             self.errorOccurred.emit(e)
 
@@ -138,7 +138,8 @@ class NGWResourceModelJob(QObject):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             extracted_list = traceback.extract_tb(exc_traceback)
             extracted_list = [(f.split("\\")[-1], l, func, text) for f, l, func, text in extracted_list]
-            log(">>> Unexpected error: %s %s\n%s" % (type(e), e, traceback.format_list(extracted_list)) )
+            #log(">>> Unexpected error: %s %s\n%s" % (type(e), e, traceback.format_list(extracted_list)) )
+            log('ERROR: \n{}'.format(traceback.format_exc()))
             self.errorOccurred.emit(JobInternalError(str(e), traceback.format_list(extracted_list)))
 
         self.dataReceived.emit(self.result)
@@ -171,7 +172,7 @@ class NGWResourceUpdater(NGWResourceModelJob):
         ngw_resource_children = self.ngw_resource.get_children()
         for ngw_resource_child in ngw_resource_children:
             self.putAddedResourceToResult(ngw_resource_child)
-            
+
 
 class NGWGroupCreater(NGWResourceModelJob):
     def __init__(self, new_group_name, ngw_resource_parent):
