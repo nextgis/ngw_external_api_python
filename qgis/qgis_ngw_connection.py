@@ -42,7 +42,7 @@ class QgsNgwConnection(QObject):
     """docstring for QgsNgwConnection"""
     def __init__(self, conn_settings, parent):
         super(QgsNgwConnection, self).__init__(parent)
-        
+
         self.__server_url = None
         self.__auth = ("", "")
         self.set_from_settings(conn_settings)
@@ -103,9 +103,9 @@ class QgsNgwConnection(QObject):
             data = QFile(file)
         elif json_data is not None:
             req.setHeader(QNetworkRequest.ContentTypeHeader, "application/json");
-            json_data = QByteArray(json_data)
+            json_data = QByteArray(json_data.encode('utf-8'))
             data = QBuffer(json_data)
-            
+
         data.open(QIODevice.ReadOnly)
 
         loop = QEventLoop(self)
@@ -117,9 +117,9 @@ class QgsNgwConnection(QObject):
             rep = nam.post(req, data)
         elif method == "DELETE":
             rep = nam.deleteResource(req)
-        else:            
-            rep = nam.sendCustomRequest(req, method, data)
-        
+        else:
+            rep = nam.sendCustomRequest(req, method.encode('utf-8'), data)
+
         rep.finished.connect(loop.quit)
         if file is not None:
             rep.uploadProgress.connect(self.sendUploadProgress)
@@ -129,7 +129,7 @@ class QgsNgwConnection(QObject):
 
         data.close()
         data = rep.readAll()
-        
+
         # try:
         #     resp = self.__session.send(prep, proxies=self.__proxy)
         # except requests.exceptions.ConnectionError:
@@ -157,9 +157,10 @@ class QgsNgwConnection(QObject):
 
         status_code = rep.attribute( QNetworkRequest.HttpStatusCodeAttribute )
 
-        if  status_code / 100 != 2:
+        #if  status_code / 100 != 2:
+        if int(str(status_code)[:1]) != 2:
             log("Response\nerror status_code {}\nmsg: {}".format(status_code, data))
-            
+
             ngw_message_present = False
             try:
                 json.loads(bytes(data).decode())
@@ -170,7 +171,7 @@ class QgsNgwConnection(QObject):
             if ngw_message_present:
                 raise NGWError(NGWError.TypeNGWError, data, req.url().toString())
             else:
-                raise NGWError(NGWError.TypeRequestError, "Response status code is %s" % status_code, req.url().toString())                
+                raise NGWError(NGWError.TypeRequestError, "Response status code is %s" % status_code, req.url().toString())
 
         try:
             json_response = json.loads(bytes(data).decode())
@@ -193,8 +194,13 @@ class QgsNgwConnection(QObject):
         return self.put(self.get_upload_file_url(), file=filename)
 
     def sendUploadProgress(self, sent, total):
-        log("Download %d from %s" % (sent, total,))
-        self.uploadProgressCallback(total, sent)
+        log("Upload %d from %s" % (sent, total,))
+        # For Qt 5 the uploadProgress signal is sometimes emited when
+        # sent and total are 0.
+        # TODO: understand why. For now prevent calling uploadProgressCallback()
+        # so not to allow zero devision in according callbacks.
+        if sent != 0 and total != 0:
+            self.uploadProgressCallback(total, sent)
 
     def get_ngw_components(self):
         if self.__ngw_components is None:
@@ -204,7 +210,7 @@ class QgsNgwConnection(QObject):
     def get_version(self):
         ngw_components = self.get_ngw_components()
         return ngw_components.get("nextgisweb")
-        
+
     def get_abilities(self):
         ngw_components = self.get_ngw_components()
         abilities = []

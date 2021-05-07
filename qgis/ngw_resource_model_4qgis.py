@@ -662,6 +662,7 @@ class QGISResourceJob(NGWResourceModelJob):
             tmp_shp,
             'utf-8',
             import_crs,
+            driverName='ESRI Shapefile' # required for QGIS >= 3.0, otherwise GPKG is used
         )
 
         tmp = tempfile.mktemp('.zip')
@@ -690,7 +691,7 @@ class QGISResourceJob(NGWResourceModelJob):
             tmp,
             'utf-8',
             import_crs,
-            'GeoJSON'
+            driverName='GeoJSON'
         )
 
         return tmp
