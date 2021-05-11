@@ -26,13 +26,15 @@ import os
 
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtWidgets import *
+
 from ..core.ngw_connection_settings import NGWConnectionSettings
 from ..core.ngw_resource_factory import NGWResourceFactory
-
 from .qgis_ngw_connection import QgsNgwConnection
+from ..utils import log
 
-from ..compat_py import CompatPy
+from ..compat_py import urlparse
 
 
 __author__ = 'NextGIS'
@@ -97,7 +99,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.__user_change_connection_name = False
         self.leName.editingFinished.connect(self.__name_changed_finished)
 
-        accessLinkHtml = '<a href="{}"><span style=" text-decoration: underline; color:#0000ff;">{}</span></a>'.format(
+        accessLinkHtml = u'<a href="{}"><span style=" text-decoration: underline; color:#0000ff;">{}</span></a>'.format(
             self.tr('http://docs.nextgis.com/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection'),
             self.tr('Where do I get these?')
         )
@@ -265,6 +267,12 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         if self.needNextPing:
             self.needNextPing = False
             self.__check_connection()
+
+            # It seems that it is important to return here so mutexPing will not
+            # be unlocked while new thread works inside __check_connection().
+            # Otherwise there are crashes in QGIS 3.
+            # TODO: understand why it does not lead to crash in QGIS 2?
+            return
 
         self.mutexPing.unlock()
 

@@ -32,6 +32,12 @@ from ngw_api.core.ngw_error import NGWError
 from ngw_api import utils
 
 
+try: # for python 2 try to rebind
+    input = raw_input
+except NameError:
+    pass
+
+
 ngwConnectionSettings = None
 ngwConnection = None
 ngwResourceFactory = None

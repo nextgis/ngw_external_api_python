@@ -52,7 +52,7 @@ from ..utils import log
 from .ngw_plugin_settings import NgwPluginSettings
 from .qgis_ngw_connection import QgsNgwConnection
 
-from ..compat_py import CompatPy
+from ..compat_py import unquote_plus
 from .compat_qgis import CompatQgis, CompatQgisMsgLogLevel, CompatQgisMsgBarLevel, CompatQgisGeometryType, CompatQgisWkbType
 
 

@@ -15,19 +15,16 @@ elif sys.version_info[0] == 3:
 
 
 if COMPAT_PY_VERSION == 2:
-    import urllib
+    #import urllib
     from urllib import unquote_plus
-    from urlparse import urlparse, parse_qs
-
-    try:
-        input = raw_input
-    except NameError:
-        pass
+    from urlparse import urlparse
+    from urlparse import parse_qs
 
 elif COMPAT_PY_VERSION == 3:
-    import urllib.request, urllib.parse, urllib.error
+    #import urllib.request, urllib.parse, urllib.error
     from urllib.parse import unquote_plus
-    from urllib.parse import urlparse, parse_qs
+    from urllib.parse import urlparse
+    from urllib.parse import parse_qs
 
 else:
     raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)

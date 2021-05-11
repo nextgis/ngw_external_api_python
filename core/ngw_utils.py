@@ -31,7 +31,7 @@ from .ngw_error import NGWError
 
 from ..utils import log
 
-from ..compat_py import CompatPy
+from ..compat_py import urlparse, parse_qs
 
 
 def ngw_resource_from_qgs_map_layer(qgs_map_layer):
