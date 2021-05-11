@@ -23,9 +23,9 @@
 class NGWError(Exception):
     TypeUnknownError, TypeRequestError, TypeNGWError, TypeNGWUnexpectedAnswer = list(range(4))
 
-    def __init__(self, type, message, url=None): 
+    def __init__(self, type, message, url=None):
         if not isinstance(message, str):
-            self.message = str(message, 'utf-8')
+            self.message = str(message)#, 'utf-8')
         else:
             self.message = message
 
