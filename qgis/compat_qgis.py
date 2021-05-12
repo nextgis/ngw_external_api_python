@@ -16,10 +16,13 @@ COMPAT_QGIS_UNSUPPORTED_MSG = 'Unsupported QGIS version'
 
 
 COMPAT_QGIS_VERSION = None
+COMPAT_QT_VERSION = None
 if QGis.QGIS_VERSION_INT >= 30000:
     COMPAT_QGIS_VERSION = 3
+    COMPAT_QT_VERSION = 5
 else: # currently for all versions less than 3
     COMPAT_QGIS_VERSION = 2
+    COMPAT_QT_VERSION = 4
 
 
 if COMPAT_QGIS_VERSION == 2:
@@ -152,13 +155,26 @@ class CompatQgis:
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
 
+
+class CompatQt:
+
     @classmethod
     def set_section_resize_mod(cls, header, mode):
-        if COMPAT_QGIS_VERSION == 2:
+        if COMPAT_QT_VERSION == 4:
             header.setResizeMode(mode)
-        elif COMPAT_QGIS_VERSION == 3:
+        elif COMPAT_QT_VERSION == 5:
             header.setSectionResizeMode(mode)
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
+    @classmethod
+    def get_dialog_result_path(cls, filepath):
+        if COMPAT_QT_VERSION == 4:
+            return filepath
+        elif COMPAT_QT_VERSION == 5:
+            return filepath[0]
+        else:
+            raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
 
 
