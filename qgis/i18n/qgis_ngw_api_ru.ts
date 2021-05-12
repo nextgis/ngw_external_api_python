@@ -100,8 +100,8 @@
     </message>
     <message>
         <location filename="ngw_connection_edit_dialog.py" line="260"/>
-        <source>Specified URL webgis not found! Or your webgis version is below 3</source>
-        <translation>По заданному URL Веб ГИС не найдена! Или версия Вашей Веб ГИС ниже 3</translation>
+        <source>Specified URL webgis not found! Or your webgis version is below 3. Also try "https://" connection</source>
+        <translation>По заданному URL Веб ГИС не найдена! Или версия Вашей Веб ГИС ниже 3. Также попробуйте подключение через "https://"</translation>
     </message>
     <message>
         <location filename="ngw_connection_edit_dialog.py" line="256"/>

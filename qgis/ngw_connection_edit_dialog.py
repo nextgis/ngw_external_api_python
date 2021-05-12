@@ -260,7 +260,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             self.lbConnectionTesting.setStyleSheet("color: green")
         else:
             # self.lbConnectionTesting.setText(self.tr("Connection failed! Please check the URL."))
-            self.lbConnectionTesting.setText(self.tr("Specified URL webgis not found! Or your webgis version is below 3"))
+            self.lbConnectionTesting.setText(self.tr('Specified URL webgis not found! Or your webgis version is below 3. Also try "https://" connection'))
             self.lbConnectionTesting.setStyleSheet("color: red")
 
     def __process_ping_finish(self):

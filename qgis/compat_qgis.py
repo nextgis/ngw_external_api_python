@@ -3,6 +3,8 @@
 import os
 import sys
 
+from qgis.PyQt import QtCore
+
 from qgis import core
 from qgis import gui
 
@@ -23,6 +25,9 @@ if QGis.QGIS_VERSION_INT >= 30000:
 else: # currently for all versions less than 3
     COMPAT_QGIS_VERSION = 2
     COMPAT_QT_VERSION = 4
+
+COMPAT_PYQT_VERSION = QtCore.PYQT_VERSION_STR
+COMPAT_PYQT_VERSION = COMPAT_PYQT_VERSION.split('.')
 
 
 if COMPAT_QGIS_VERSION == 2:
@@ -175,6 +180,15 @@ class CompatQt:
             return filepath[0]
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
+    @classmethod
+    def has_redirect_policy(cls):
+        try:
+            if int(COMPAT_PYQT_VERSION[0]) >= 5 and int(COMPAT_PYQT_VERSION[1]) >= 9:
+                return True
+            return False
+        except:
+            return False
 
 
 

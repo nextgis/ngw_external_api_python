@@ -31,6 +31,8 @@ from ..core.ngw_error import NGWError
 
 from ..utils import log
 
+from .compat_qgis import CompatQt
+
 
 UPLOAD_FILE_URL = '/api/component/file_upload/upload'
 GET_VERSION_URL = '/api/component/pyramid/pkg_version'
@@ -111,6 +113,11 @@ class QgsNgwConnection(QObject):
 
         loop = QEventLoop(self)
         nam = QgsNetworkAccessManager.instance()
+
+        has_redirect_policy = False
+        if CompatQt.has_redirect_policy():
+            nam.setRedirectPolicy(QNetworkRequest.NoLessSafeRedirectPolicy)
+            has_redirect_policy = True
 
         if method == "GET":
             rep = nam.get(req)
