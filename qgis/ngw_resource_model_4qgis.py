@@ -393,6 +393,11 @@ class QGISResourceJob(NGWResourceModelJob):
         aliases = {}
         src_layer_aliases = qgs_vector_layer.attributeAliases()
         for fieldname, alias in list(src_layer_aliases.items()):
+            # Check alias. This check is for QGIS 3: attributeAliases() returns dict where all
+            # values are ''. In QGIS 2 it returns void dict so this loop is skipped.
+            # We should avoid void aliases due to NGW limitations (NGW returns 422 error).
+            if alias == '':
+                continue
             if fieldname in rename_fields_map:
                 aliases[rename_fields_map[fieldname]] = alias
             else:
