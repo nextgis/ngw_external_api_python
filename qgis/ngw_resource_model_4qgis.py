@@ -509,6 +509,11 @@ class QGISResourceJob(NGWResourceModelJob):
             else:
                 has_simple_geometries = True
 
+            errors = feature.geometry().validateGeometry()
+            if len(errors) != 0:
+                log("Feature %s has invalid geometry: %s" % (str(feature.id()), ', '.join(err.what() for err in errors)))
+                fids_with_not_valid_geom.append(feature.id())
+
         self.statusChanged.emit(
             "%s - Check geometry (%d%%)" % (
                 qgs_vector_layer.name(),
