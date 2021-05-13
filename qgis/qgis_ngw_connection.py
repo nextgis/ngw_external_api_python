@@ -41,6 +41,7 @@ class QgsNgwConnection(QObject):
 
     AbilityBaseMap = list(range(1))
 
+
     """docstring for QgsNgwConnection"""
     def __init__(self, conn_settings, parent):
         super(QgsNgwConnection, self).__init__(parent)
@@ -51,15 +52,18 @@ class QgsNgwConnection(QObject):
 
         self.__ngw_components = None
 
+
     def set_from_settings(self, conn_settings):
         self.server_url = conn_settings.server_url
         self.set_auth(conn_settings.username, conn_settings.password)
+
 
     def set_auth(self, username, password):
         self.__auth = (username, password)
 
     def get_auth(self):
         return self.__auth
+
 
     def get(self, sub_url, params=None, **kwargs):
         return self.__request(sub_url, 'GET', params, **kwargs)
@@ -76,6 +80,7 @@ class QgsNgwConnection(QObject):
     def delete(self, sub_url, params=None, **kwargs):
         return self.__request(sub_url, 'DELETE', params, **kwargs)
 
+
     def __request(self, sub_url, method, params=None, **kwargs):
         json_data = None
         if params:
@@ -83,17 +88,19 @@ class QgsNgwConnection(QObject):
 
         file = kwargs.get("file")
 
+        url = self.server_url + sub_url
+
         log(
             "Request\nmethod: {}\nurl: {}\njson({}): {}\nfile: {}".format(
                 method,
-                self.server_url + sub_url,
+                url,
                 type(json_data),
                 json_data,
                 file
             )
         )
 
-        req = QNetworkRequest(QUrl(self.server_url + sub_url))
+        req = QNetworkRequest(QUrl(url))
 
         if all(map(len, self.__auth)):
             authstr = ('%s:%s' % self.__auth).encode('utf-8')
@@ -177,7 +184,7 @@ class QgsNgwConnection(QObject):
                 pass
 
             if ngw_message_present:
-                raise NGWError(NGWError.TypeNGWError, data, req.url().toString())
+                raise NGWError(NGWError.TypeNGWError, bytes(data).decode(), req.url().toString())
             else:
                 raise NGWError(NGWError.TypeRequestError, "Response status code is %s" % status_code, req.url().toString())
 
@@ -194,12 +201,15 @@ class QgsNgwConnection(QObject):
 
         return json_response
 
+
     def get_upload_file_url(self):
         return UPLOAD_FILE_URL
+
 
     def upload_file(self, filename, callback):
         self.uploadProgressCallback = callback
         return self.put(self.get_upload_file_url(), file=filename)
+
 
     def sendUploadProgress(self, sent, total):
         log("Upload %d from %s" % (sent, total,))
@@ -210,14 +220,17 @@ class QgsNgwConnection(QObject):
         if sent != 0 and total != 0:
             self.uploadProgressCallback(total, sent)
 
+
     def get_ngw_components(self):
         if self.__ngw_components is None:
             self.__ngw_components = self.get(GET_VERSION_URL)
         return self.__ngw_components
 
+
     def get_version(self):
         ngw_components = self.get_ngw_components()
         return ngw_components.get("nextgisweb")
+
 
     def get_abilities(self):
         ngw_components = self.get_ngw_components()
@@ -226,3 +239,6 @@ class QgsNgwConnection(QObject):
             abilities.append(self.AbilityBaseMap)
 
         return abilities
+
+
+

@@ -156,10 +156,16 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.__validate_fields()
 
     def __make_valid_url(self, url):
+        # Always remove trailing slashes.
+        # TODO: is it ok? Or we should leave trailing slash in some cases?
+        while url.endswith('/'):
+            url = url[:-1]
+
         o = urlparse(url)
         hostname = o.hostname
         if hostname is None:
             hostname = "http://"
+            #hostname = "https://"
             return hostname + url
         return url
 
