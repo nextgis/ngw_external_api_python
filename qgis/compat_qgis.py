@@ -31,6 +31,8 @@ COMPAT_PYQT_VERSION = COMPAT_PYQT_VERSION.split('.')
 
 
 if COMPAT_QGIS_VERSION == 2:
+    from qgis.core import QgsWKBTypes as QgsWkbTypes
+
     compat_qgis_msglog_levels = {
         'Info': core.QgsMessageLog.INFO,
         'Warning': core.QgsMessageLog.WARNING,
@@ -60,6 +62,8 @@ if COMPAT_QGIS_VERSION == 2:
     }
 
 elif COMPAT_QGIS_VERSION == 3:
+    from qgis.core import QgsWkbTypes
+
     compat_qgis_msglog_levels = {
         'Info': QGis.Info,
         'Warning': QGis.Warning,
@@ -160,6 +164,15 @@ class CompatQgis:
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
 
+    @classmethod
+    def get_inner_geometry(cls, geometry): # returns non-const geometry
+        if COMPAT_QGIS_VERSION == 2:
+            return geometry.geometry()
+        elif COMPAT_QGIS_VERSION == 3:
+            return geometry.get()
+        else:
+            raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
 
 class CompatQt:
 
@@ -189,6 +202,4 @@ class CompatQt:
             return False
         except:
             return False
-
-
 

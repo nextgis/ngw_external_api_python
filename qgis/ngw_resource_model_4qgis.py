@@ -53,7 +53,10 @@ from .ngw_plugin_settings import NgwPluginSettings
 from .qgis_ngw_connection import QgsNgwConnection
 
 from ..compat_py import unquote_plus
-from .compat_qgis import CompatQgis, CompatQgisMsgLogLevel, CompatQgisMsgBarLevel, CompatQgisGeometryType, CompatQgisWkbType
+from .compat_qgis import QgsWkbTypes
+from .compat_qgis import CompatQgis
+from .compat_qgis import CompatQgisMsgLogLevel, CompatQgisMsgBarLevel
+from .compat_qgis import CompatQgisGeometryType, CompatQgisWkbType
 
 
 def getQgsMapLayerEPSG(qgs_map_layer):
@@ -582,13 +585,13 @@ class QGISResourceJob(NGWResourceModelJob):
                 continue
 
             new_geometry = feature.geometry()
-            new_geometry.geometry().convertTo(
-                QgsWKBTypes.dropZ(
-                    new_geometry.geometry().wkbType()
+            CompatQgis.get_inner_geometry(new_geometry).convertTo(
+                QgsWkbTypes.dropZ(
+                    CompatQgis.get_inner_geometry(new_geometry).wkbType()
                 )
             )
             new_geometry.transform(
-                Compat.coordinate_transform_obj(qgs_vector_layer_src.crs(), import_crs, QgsProject.instance())
+                CompatQgis.coordinate_transform_obj(qgs_vector_layer_src.crs(), import_crs, QgsProject.instance())
             )
             if has_mixed_geoms:
                 new_geometry.convertToMultiType()
@@ -617,7 +620,7 @@ class QGISResourceJob(NGWResourceModelJob):
                     "QGISResourceJob",
                     "We've excluded features with id {0} for layer '{1}'. Reason: invalid geometry."
                 ).format(
-                    fids_with_notvalid_geom,
+                    "[" + ", ".join(str(fid) for fid in fids_with_notvalid_geom) + "]",
                     qgs_vector_layer_src.name()
                 )
 
