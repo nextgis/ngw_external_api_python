@@ -173,28 +173,28 @@ class QgsNgwConnection(QObject):
 
         status_code = rep.attribute( QNetworkRequest.HttpStatusCodeAttribute )
 
-        data = CompatPy.decode_reply_escape(data)
+        rep_str = CompatPy.decode_reply_escape(data)
 
         #if  status_code / 100 != 2:
         if int(str(status_code)[:1]) != 2:
-            log("Response\nerror status_code {}\nmsg: {}".format(status_code, data))
+            log("Response\nerror status_code {}\nmsg: {}".format(status_code, rep_str))
 
             ngw_message_present = False
             try:
-                json.loads(data)
+                json.loads(bytes(data).decode())
                 ngw_message_present = True
             except Exception as e:
                 pass
 
             if ngw_message_present:
-                raise NGWError(NGWError.TypeNGWError, data, req.url().toString())
+                raise NGWError(NGWError.TypeNGWError, rep_str, req.url().toString())
             else:
                 raise NGWError(NGWError.TypeRequestError, "Response status code is %s" % status_code, req.url().toString())
 
         try:
-            json_response = json.loads(data)
+            json_response = json.loads(bytes(data).decode())
         except:
-            log("Response\nerror response JSON parse\n%s" % data)
+            log("Response\nerror response JSON parse\n%s" % rep_str)
             raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url().toString())
 
         rep.deleteLater()
