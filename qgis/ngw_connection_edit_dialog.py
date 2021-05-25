@@ -126,6 +126,9 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.mutexPing = QMutex()
         self.needNextPing = False
 
+        self.force_http = False
+        self.need_check_http = False
+
     def __url_changed(self, text):
         curent_cursor_position = self.leUrl.cursorPosition()
         lower_test = text.lower()
@@ -156,16 +159,16 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.__validate_fields()
 
     def __make_valid_url(self, url):
-        # Always remove trailing slashes.
-        # TODO: is it ok? Or we should leave trailing slash in some cases?
+        # Always remove trailing slashes (this is only a base url which will not be
+        # used standalone anywhere).
         while url.endswith('/'):
             url = url[:-1]
 
         o = urlparse(url)
         hostname = o.hostname
         if hostname is None:
-            hostname = "http://"
-            #hostname = "https://"
+            #hostname = "http://"
+            hostname = 'http://' if self.force_http else 'https://'
             return hostname + url
         return url
 
@@ -231,7 +234,9 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             return
         self.__check_connection()
 
-    def __check_connection(self):
+    def __check_connection(self, force_http=False):
+        self.force_http = force_http # always check https connections if force_http is not set explicitly
+
         name = "temp"
         url = self.leUrl.text()
         url = self.__make_valid_url(url)
@@ -264,12 +269,23 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
             self.lbConnectionTesting.setText(self.tr("Connection successful!"))
             self.lbConnectionTesting.setStyleSheet("color: green")
+
         else:
+            # Force checking http each time we fail to check some connection (often https).
+            if not self.force_http:
+                self.need_check_http = True
+                return
+
             # self.lbConnectionTesting.setText(self.tr("Connection failed! Please check the URL."))
-            self.lbConnectionTesting.setText(self.tr('Specified URL webgis not found! Or your webgis version is below 3. Also try "https://" connection'))
+            self.lbConnectionTesting.setText(self.tr('Specified URL webgis not found! Or your webgis version is below 3'))
             self.lbConnectionTesting.setStyleSheet("color: red")
 
     def __process_ping_finish(self):
+        if self.need_check_http:
+            self.need_check_http = False
+            self.__check_connection(force_http=True)
+            return
+
         if self.needNextPing:
             self.needNextPing = False
             self.__check_connection()
