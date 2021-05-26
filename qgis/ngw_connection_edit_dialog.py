@@ -166,10 +166,14 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         o = urlparse(url)
         hostname = o.hostname
+
         if hostname is None:
-            #hostname = "http://"
             hostname = 'http://' if self.force_http else 'https://'
             return hostname + url
+
+        if url.startswith('http://') and not self.force_http: # can compare this way because we have our url always lowered
+            return url.replace('http://', 'https://')
+
         return url
 
     def __fill_conneection_name(self, url):
