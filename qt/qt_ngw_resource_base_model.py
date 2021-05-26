@@ -122,7 +122,7 @@ class NGWResourcesModelJob(QObject):
 
         self.__thread.quit()
         self.__thread.wait()
-        
+
         self.finished.emit()
 
 def modelRequest():
@@ -170,8 +170,15 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
     def connectionSettings(self):
         return self.__ngw_connection_settings
 
-    def isCurrentConnectionSame(self, connection_settings):
-        return self.__ngw_connection_settings == connection_settings
+    def isCurrentConnectionSame(self, other):
+        return self.__ngw_connection_settings == other
+
+    def isCurruntConnectionSameWoProtocol(self, other):
+        if self.__ngw_connection_settings is None:
+            if other is None:
+                return True
+            return False
+        return self.__ngw_connection_settings.equalWoProtocol(other)
 
     def resetModel(self, ngw_connection_settings):
         self.__indexes_blocked_by_jobs = {}
@@ -313,7 +320,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
         if index is not None:
             self._blockIndexesByJob([index], job)
-        
+
         job.start()
 
         return job
@@ -375,7 +382,7 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
         for index in indexes:
             item = self.item(index)
-            
+
             self.beginRemoveRows(index, item.childCount(), item.childCount())
             item.release()
             self.endRemoveRows()

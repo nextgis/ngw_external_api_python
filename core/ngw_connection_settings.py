@@ -36,17 +36,26 @@ class NGWConnectionSettings():
         self.proxy_user = user
         self.proxy_password = password
 
-    def __eq__(self, connection_settings):
-        if connection_settings is None:
+    def __eq__(self, other):
+        if other is None:
             return False
-
-        if self.server_url != connection_settings.server_url:
+        if self.server_url != other.server_url:
             return False
-
-        if self.username != connection_settings.username:
+        if self.username != other.username:
             return False
-
-        if self.password != connection_settings.password:
+        if self.password != other.password:
             return False
+        return True
 
+    def equalWoProtocol(self, other):
+        if other is None:
+            return False
+        url1 = self.server_url.replace('https://', '').replace('http://', '')
+        url2 = other.server_url.replace('https://', '').replace('http://', '')
+        if url1 != url2:
+            return False
+        if self.username != other.username:
+            return False
+        if self.password != other.password:
+            return False
         return True
