@@ -173,6 +173,15 @@ class CompatQgis:
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
 
+    @classmethod
+    def is_geom_empty(cls, geometry):
+        if COMPAT_QGIS_VERSION == 2:
+            return True if geometry is None else False
+        elif COMPAT_QGIS_VERSION == 3:
+            return True if geometry.isNull() else False
+        else:
+            raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
 
 class CompatQt:
 
@@ -202,4 +211,23 @@ class CompatQt:
             return False
         except:
             return False
+
+    @classmethod
+    def get_clean_python_value(cls, v):
+        if int(COMPAT_PYQT_VERSION[0]) == 4:
+            if isinstance(v, QtCore.QPyNullVariant):
+                return None
+            if isinstance(v, QtCore.QDateTime):
+                return v.toPyDateTime()
+            elif isinstance(v, QtCore.QDate):
+                return v.toPyDate()
+            elif isinstance(v, QtCore.QTime):
+                return v.toPyTime()
+            return v
+        elif int(COMPAT_PYQT_VERSION[0]) == 5:
+            return v # TODO: assume that in PyQt5/PyQGIS3 a QVariant value is already of the python type?
+        else:
+            raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
+
 

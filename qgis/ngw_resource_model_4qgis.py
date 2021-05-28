@@ -55,6 +55,7 @@ from .qgis_ngw_connection import QgsNgwConnection
 from ..compat_py import unquote_plus
 from .compat_qgis import QgsWkbTypes
 from .compat_qgis import CompatQgis
+from .compat_qgis import CompatQt
 from .compat_qgis import CompatQgisMsgLogLevel, CompatQgisMsgBarLevel
 from .compat_qgis import CompatQgisGeometryType, CompatQgisWkbType
 
@@ -68,23 +69,6 @@ def getQgsMapLayerEPSG(qgs_map_layer):
 
 def yOriginTopFromQgisTmsUrl(qgs_tms_url):
     return qgs_tms_url.find("{-y}")
-
-
-def get_clean_python_value(qvariant_value):
-    clean_value = None
-
-    if isinstance(qvariant_value, QPyNullVariant):
-        clean_value = None
-    elif isinstance(qvariant_value, QDateTime):
-        clean_value = qvariant_value.toPyDateTime()
-    elif isinstance(qvariant_value, QDate):
-        clean_value = qvariant_value.toPyDate()
-    elif isinstance(qvariant_value, QTime):
-        clean_value = qvariant_value.toPyTime()
-    else:
-        clean_value = qvariant_value
-
-    return clean_value
 
 
 def get_wkt(qgis_geometry):
@@ -644,7 +628,10 @@ class QGISResourceJob(NGWResourceModelJob):
             geometry_type = "multi" + geometry_type
         else:
             for feature in qgs_vector_layer.getFeatures():
-                if feature.geometry().isMultipart():
+                g = feature.geometry()
+                if CompatQgis.is_geom_empty(g):
+                    continue # cannot detect geom type because of empty geom
+                if g.isMultipart():
                     geometry_type = "multi" + geometry_type
                 break
 
@@ -866,7 +853,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         # id need only for update not for create
         # feature_dict["id"] = qgs_feature.id() + 1 # Fix NGW behavior
-        g = qgs_feature.constGeometry()
+        g = qgs_feature.geometry()
         g.transform(
             CompatQgis.coordinate_transform_obj(
                 qgs_map_layer.crs(),
@@ -881,7 +868,7 @@ class QGISResourceJob(NGWResourceModelJob):
         attributes = {}
         for qgsField in qgs_feature.fields().toList():
             value = qgs_feature.attribute(qgsField.name())
-            attributes[qgsField.name()] = get_clean_python_value(value)
+            attributes[qgsField.name()] = CompatQt.get_clean_python_value(value)
 
         feature_dict["fields"] = self.ngw_layer.construct_ngw_feature_as_json(attributes)
 
@@ -1267,7 +1254,9 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         # feature_dict["id"] = qgs_feature.id() + 1 # Fix NGW behavior
         import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
 
-        g = qgs_feature.constGeometry()
+        g = qgs_feature.geometry()
+        if CompatQgis.is_geom_empty(g):
+            return None
         g.transform(CompatQgis.coordinate_transform_obj(self.qgis_layer.crs(), import_crs, QgsProject.instance()))
         if self.ngw_layer.is_geom_multy():
             g.convertToMultiType()
@@ -1277,7 +1266,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         attributes = {}
         for qgsField in qgs_feature.fields().toList():
             value = qgs_feature.attribute(qgsField.name())
-            attributes[qgsField.name()] = get_clean_python_value(value)
+            attributes[qgsField.name()] = CompatQt.get_clean_python_value(value)
 
         feature_dict["fields"] = self.ngw_layer.construct_ngw_feature_as_json(attributes)
 
@@ -1286,9 +1275,12 @@ class NGWUpdateVectorLayer(QGISResourceJob):
     def getFeaturesPart(self, pack_size):
         ngw_features=[]
         for qgsFeature in self.qgis_layer.getFeatures():
-            ngw_features.append(
-                NGWFeature(self.createNGWFeatureDictFromQGSFeature(qgsFeature), self.ngw_layer)
-            )
+            ngw_feature_dict = self.createNGWFeatureDictFromQGSFeature(qgsFeature)
+            if ngw_feature_dict is None:
+                # TODO: somehow warn user about skipped features?
+                log('WARN: Feature skipped')
+                continue
+            ngw_features.append(NGWFeature(ngw_feature_dict, self.ngw_layer))
 
             if len(ngw_features) == pack_size:
                 yield ngw_features
