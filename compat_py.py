@@ -50,3 +50,12 @@ class CompatPy:
         else:
             raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)
 
+    @classmethod
+    def exception_msg(cls, e):
+        if COMPAT_PY_VERSION == 2:
+            return e.message or ''
+        elif COMPAT_PY_VERSION == 3:
+            return str(e)
+        else:
+            raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)
+
