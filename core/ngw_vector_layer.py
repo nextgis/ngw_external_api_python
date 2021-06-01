@@ -35,8 +35,8 @@ DEL_ALL_FEATURES_URL = "/api/resource/%s/feature/"
 class NGWVectorLayer(NGWResource):
     """ Define ngw vector layer resource
 
-        Geometry types: point, multipoint, linestring, multilinestring, polygon, multipolygon 
-        
+        Geometry types: point, multipoint, linestring, multilinestring, polygon, multipolygon
+
     """
 
     type_id = 'vector_layer'
@@ -73,7 +73,7 @@ class NGWVectorLayer(NGWResource):
     }
 
     icons = {
-        UNKNOWN: "vector_layer_point.svg", 
+        UNKNOWN: "vector_layer_point.svg",
         POINT: "vector_layer_point.svg",
         MULTIPOINT: "vector_layer_mpoint.svg",
         LINESTRING: "vector_layer_line.svg",
@@ -172,7 +172,8 @@ class NGWVectorLayer(NGWResource):
 
     def get_absolute_geojson_url(self):
         return '%s/%s' % (
-            self.get_absolute_api_url_with_auth(),
+            #self.get_absolute_api_url_with_auth(),
+            self.get_absolute_api_url(), # get url without credentials. Creds will be applied via options in qgis_ngw_connection.py
             'geojson'
         )
 
@@ -186,7 +187,7 @@ class NGWVectorLayer(NGWResource):
     def get_feature_deleting_url(self):
         return DEL_ALL_FEATURES_URL % self.common.id
 
-    # TODO Need refactoring 
+    # TODO Need refactoring
     def patch_features(self, ngw_feature_list):
         features_dict_list = []
         for ngw_feature in ngw_feature_list:

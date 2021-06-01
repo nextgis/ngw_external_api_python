@@ -21,6 +21,8 @@
 import json
 from base64 import b64encode
 
+from osgeo import gdal
+
 from qgis.PyQt.QtCore import *
 from qgis.PyQt.QtNetwork import *
 
@@ -103,11 +105,15 @@ class QgsNgwConnection(QObject):
 
         req = QNetworkRequest(QUrl(url))
 
+        gdal.SetConfigOption('GDAL_HTTP_USERPWD', '') # clear old creds
+
         if all(map(len, self.__auth)):
             authstr = ('%s:%s' % self.__auth).encode('utf-8')
             authstr = QByteArray(authstr).toBase64()
             authstr = QByteArray(('Basic ').encode('utf-8')).append(authstr)
             req.setRawHeader(("Authorization").encode('utf-8'), authstr)
+
+            gdal.SetConfigOption('GDAL_HTTP_USERPWD', '{}:{}'.format(self.__auth[0], self.__auth[1]))
 
         data = QBuffer(QByteArray())
         if file is not None:
