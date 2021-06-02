@@ -20,6 +20,7 @@
 """
 from os import path
 from .ngw_resource import NGWResource, API_LAYER_EXTENT
+from .ngw_qgis_style import NGWQGISRasterStyle
 
 from ..utils import ICONS_DIR
 
@@ -75,3 +76,42 @@ class NGWRasterLayer(NGWResource):
         )
 
         return ngw_resource
+
+    def create_qml_style(self, qml, callback):
+        """Create QML style for this layer
+
+        qml - full path to qml file
+        callback - upload file callback
+        """
+        connection = self._res_factory.connection
+        style_name = self.generate_unique_child_name(
+            self.common.display_name + ''
+        )
+
+        style_file_desc = connection.upload_file(qml, callback)
+
+        params = dict(
+            resource=dict(
+                cls=NGWQGISRasterStyle.type_id,
+                parent=dict(id=self.common.id),
+                display_name=style_name
+            ),
+        )
+        params[NGWQGISRasterStyle.type_id] = dict(
+            file_upload=style_file_desc
+        )
+
+        url = self.get_api_collection_url()
+        result = connection.post(url, params=params)
+        ngw_resource = NGWQGISRasterStyle(
+            self._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
+            )
+        )
+
+        return ngw_resource
+
+
+

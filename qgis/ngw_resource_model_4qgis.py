@@ -39,7 +39,7 @@ from ..qt.qt_ngw_resource_model_job_error import *
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_vector_layer import NGWVectorLayer
-from ..core.ngw_qgis_vector_style import NGWQGISVectorStyle
+from ..core.ngw_qgis_style import NGWQGISVectorStyle
 from ..core.ngw_feature import NGWFeature
 from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_wms_service import NGWWmsService
@@ -713,7 +713,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def addStyle(self, qgs_map_layer, ngw_layer_resource):
         layer_type = qgs_map_layer.type()
-        if layer_type == QgsMapLayer.VectorLayer:
+        if layer_type == QgsMapLayer.VectorLayer or layer_type == QgsMapLayer.RasterLayer:
             tmp = tempfile.mktemp('.qml')
             self.statusChanged.emit(
                 "Style for %s - Save as qml" % qgs_map_layer.name()
@@ -722,11 +722,11 @@ class QGISResourceJob(NGWResourceModelJob):
             ngw_resource = self.addQMLStyle(tmp, ngw_layer_resource)
             os.remove(tmp)
             return ngw_resource
-        elif layer_type == QgsMapLayer.RasterLayer:
-            layer_provider = qgs_map_layer.providerType()
-            if layer_provider == 'gdal':
-                ngw_resource = ngw_layer_resource.create_style()
-                return ngw_resource
+        # elif layer_type == QgsMapLayer.RasterLayer:
+        #     layer_provider = qgs_map_layer.providerType()
+        #     if layer_provider == 'gdal':
+        #         ngw_resource = ngw_layer_resource.create_style()
+        #         return ngw_resource
 
         return None
 

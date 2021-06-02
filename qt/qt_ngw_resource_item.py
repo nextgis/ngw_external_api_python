@@ -23,14 +23,15 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QTreeWidgetItem
 
 from ..core.ngw_group_resource import NGWGroupResource
-from ..core.ngw_qgis_vector_style import NGWQGISVectorStyle
+from ..core.ngw_qgis_style import NGWQGISVectorStyle
+from ..core.ngw_qgis_style import NGWQGISRasterStyle
 from ..core.ngw_mapserver_style import NGWMapServerStyle
 
 
 class QNGWItem(QTreeWidgetItem):
     def __init__(self):
         QTreeWidgetItem.__init__(self)
-        
+
         self.locked_item = QTreeWidgetItem(["loading..."])
         self.locked_item.setFlags(Qt.NoItemFlags)
         self.locked_item.setDisabled(True)
@@ -86,10 +87,12 @@ class QNGWResourceItem(QNGWItem):
         self.setData(0, self.NGWResourceRole, ngw_resource)
         self.setData(0, self.NGWResourceIdRole, ngw_resource.common.id)
 
-    def title(self, ngw_resource):       
+    def title(self, ngw_resource):
         title = ngw_resource.common.display_name
-        
+
         if ngw_resource.type_id == NGWQGISVectorStyle.type_id:
+            title = "(qgis) " + title
+        if ngw_resource.type_id == NGWQGISRasterStyle.type_id:
             title = "(qgis) " + title
         if ngw_resource.type_id == NGWMapServerStyle.type_id:
             title = "(ms) " + title

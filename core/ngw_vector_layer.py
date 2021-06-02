@@ -22,7 +22,7 @@ import datetime
 
 from os import path
 from .ngw_resource import NGWResource, API_LAYER_EXTENT
-from .ngw_qgis_vector_style import NGWQGISVectorStyle
+from .ngw_qgis_style import NGWQGISVectorStyle
 from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_feature import NGWFeature
 

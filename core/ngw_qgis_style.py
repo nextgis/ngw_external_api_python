@@ -24,11 +24,8 @@ from .ngw_resource import NGWResource
 from ..utils import ICONS_DIR
 
 
-class NGWQGISVectorStyle(NGWResource):
-
-    type_id = 'qgis_vector_style'
+class NGWQGISStyle(NGWResource):
     icon_path = path.join(ICONS_DIR, 'style.png')
-    type_title = 'NGW QGIS Vector Style'
 
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
@@ -37,11 +34,6 @@ class NGWQGISVectorStyle(NGWResource):
         return self.get_absolute_api_url() + "/qml"
 
     def update_qml(self, qml, callback):
-        """Create QML style for this layer
-
-        qml - full path to qml file
-        callback - upload file callback, pass to File2Upload (ngw_resource.py)
-        """
         connection = self._res_factory.connection
 
         style_file_desc = connection.upload_file(qml, callback)
@@ -59,3 +51,22 @@ class NGWQGISVectorStyle(NGWResource):
         url = self.get_relative_api_url()
         connection.put(url, params=params)
         self.update()
+
+
+class NGWQGISVectorStyle(NGWQGISStyle):
+    type_id = 'qgis_vector_style'
+    type_title = 'NGW QGIS Vector Style'
+
+    def __init__(self, resource_factory, resource_json):
+        NGWQGISStyle.__init__(self, resource_factory, resource_json)
+
+
+class NGWQGISRasterStyle(NGWQGISStyle):
+    type_id = 'qgis_raster_style'
+    type_title = 'NGW QGIS Raster Style'
+
+    def __init__(self, resource_factory, resource_json):
+        NGWQGISStyle.__init__(self, resource_factory, resource_json)
+
+
+

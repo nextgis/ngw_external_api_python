@@ -20,7 +20,8 @@
 """
 from .ngw_webmap import NGWWebMap
 from .ngw_mapserver_style import NGWMapServerStyle
-from .ngw_qgis_vector_style import NGWQGISVectorStyle
+from .ngw_qgis_style import NGWQGISVectorStyle
+from .ngw_qgis_style import NGWQGISRasterStyle
 from .ngw_wms_service import NGWWmsService
 from .ngw_wms_connection import NGWWmsConnection
 from .ngw_wms_layer import NGWWmsLayer
@@ -46,6 +47,7 @@ class NGWResourceFactory():
             NGWVectorLayer.type_id: NGWVectorLayer,
             NGWMapServerStyle.type_id: NGWMapServerStyle,
             NGWQGISVectorStyle.type_id: NGWQGISVectorStyle,
+            NGWQGISRasterStyle.type_id: NGWQGISRasterStyle,
             NGWRasterLayer.type_id: NGWRasterLayer,
             NGWWebMap.type_id: NGWWebMap,
             NGWRasterStyle.type_id: NGWRasterStyle,
