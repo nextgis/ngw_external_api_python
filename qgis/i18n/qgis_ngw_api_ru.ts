@@ -132,4 +132,12 @@
         <translation>Объекты с id {0} слоя &apos;{1}&apos; были исключены. Причина: неправильная геометрия.</translation>
     </message>
 </context>
+<context>
+    <name>QgsNgwConnection</name>
+    <message>
+        <location filename="qgis_ngw_connection.py" line=""/>
+        <source>Сonnection closed by QGIS. Increase timeout (Settings -> Options -> Network) to 300000 and retry uploading</source>
+        <translation>Соединение было сброшено QGIS. Увеличьте таймаут для сетевых запросов (Установки -> Параметры -> Сеть) до 300000 и попробуйте загрузить заново</translation>
+    </message>
+</context>
 </TS>
