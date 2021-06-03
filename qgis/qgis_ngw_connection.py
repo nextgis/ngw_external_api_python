@@ -173,6 +173,14 @@ class QgsNgwConnection(QObject):
         # except:
         #     log("Response\nerror response JSON parse")
         #     raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url)
+
+        # Indicate that request has been timed out by QGIS.
+        # TODO: maybe use QgsNetworkAccessManager::requestTimedOut()?
+        if rep.error() == 5:
+            log('Connection error qt code: 5 (QNetworkReply::OperationCanceledError)')
+            raise NGWError(NGWError.TypeRequestError, 'Connection has been aborted or closed', req.url().toString(),
+                self.tr('Сonnection closed by QGIS. Increase timeout (Settings -> Options -> Network) to 300000 and retry uploading'))
+
         if rep.error() > 0 and rep.error() < 10:
             log( "Connection error qt code: {}".format(rep.error()) )
             raise NGWError(NGWError.TypeRequestError, "Connection error qt code: {}".format(rep.error()), req.url().toString())

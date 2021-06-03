@@ -24,6 +24,7 @@ class NGWResourceModelJobError(Exception):
     def __init__(self, msg):
         super(NGWResourceModelJobError, self).__init__()
         self.msg = msg
+        self.user_msg = None
 
     def __str__(self):
         return self.msg
@@ -47,9 +48,10 @@ class JobInternalError(NGWResourceModelJobError):
 
 class JobServerRequestError(NGWResourceModelJobError):
 	"""Something wrong with request to NGW like  no connection, 502, ngw error """
-	def __init__(self, msg, url):
+	def __init__(self, msg, url, user_msg=None):
 		super(JobServerRequestError, self).__init__(msg)
 		self.url = url
+		self.user_msg = user_msg
 
 class JobNGWError(JobServerRequestError):
 	"""NGW answer is received, but NGW cann't execute request for perform the job"""
