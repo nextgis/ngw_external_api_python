@@ -28,7 +28,7 @@ from ..core.ngw_error import NGWError
 from ..core.ngw_resource import NGWResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
-from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapRoot
+from ..core.ngw_webmap import NGWWebMap, NGWWebMapLayer, NGWWebMapRoot
 
 from ..utils import log
 
@@ -244,13 +244,14 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
             NGWWebMapLayer(
                 self.ngw_style.common.id,
                 ngw_layer.common.display_name,
-                True
+                True,
+                None
             )
         )
 
         ngw_resource = NGWWebMap.create_in_group(
-            ngw_group,
             ngw_map_name,
+            ngw_group,
             [item.toDict() for item in ngw_webmap_root_group.children],
             bbox=ngw_layer.extent()
         )
