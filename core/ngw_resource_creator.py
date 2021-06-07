@@ -53,7 +53,8 @@ class ResourceCreator():
         return ngw_resource
 
     @staticmethod
-    def create_vector_layer(parent_ngw_resource, filename, layer_name, callback):
+    def create_vector_layer(parent_ngw_resource, filename, layer_name, callback,
+        geom_type=None, geom_is_multi=None, geom_haz_z=None):
         connection = parent_ngw_resource._res_factory.connection
 
         shape_file_desc = connection.upload_file(filename, callback)
@@ -67,7 +68,15 @@ class ResourceCreator():
             ),
             vector_layer=dict(
                 srs=dict(id=3857),
-                source=shape_file_desc
+                source=shape_file_desc,
+
+                # Should force geometry type in case of 0 features: NGW defines geom type by first feature.
+                # TODO: check that for NGW < 3.8.0 it is ok to pass these parameters.
+                cast_geometry_type=geom_type,
+                cast_is_multi=geom_is_multi,
+                cast_haz_z=geom_haz_z,
+                #fix_errors
+                #skip_errors
             )
         )
 

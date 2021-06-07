@@ -73,19 +73,20 @@ def yOriginTopFromQgisTmsUrl(qgs_tms_url):
 
 def get_wkt(qgis_geometry):
     wkt = CompatQgis.wkt_geometry(qgis_geometry)
-    if qgis_geometry.wkbType() < 0:
-        wkb_type = qgis_geometry.wkbType()
-        wkt_fixes = {
-            CompatQgisWkbType.WKBPoint25D: ('PointZ', 'Point Z'),
-            CompatQgisWkbType.WKBLineString25D: ('LineStringZ', 'LineString Z'),
-            CompatQgisWkbType.WKBPolygon25D: ('PolygonZ', 'Polygon Z'),
-            CompatQgisWkbType.WKBMultiPoint25D: ('MultiPointZ', 'MultiPoint Z'),
-            CompatQgisWkbType.WKBMultiLineString25D: ('MultiLineStringZ', 'MultiLineString Z'),
-            CompatQgisWkbType.WKBMultiPolygon25D: ('MultiPolygonZ', 'MultiPolygon Z'),
-        }
 
-        if wkb_type in wkt_fixes:
-            wkt = wkt.replace(*wkt_fixes[wkb_type])
+    #if qgis_geometry.wkbType() < 0: # TODO: why this check was made?
+    wkb_type = CompatQgis.get_wkb_type(qgis_geometry.wkbType())
+    wkt_fixes = {
+        CompatQgisWkbType.WKBPoint25D: ('PointZ', 'Point Z'),
+        CompatQgisWkbType.WKBLineString25D: ('LineStringZ', 'LineString Z'),
+        CompatQgisWkbType.WKBPolygon25D: ('PolygonZ', 'Polygon Z'),
+        CompatQgisWkbType.WKBMultiPoint25D: ('MultiPointZ', 'MultiPoint Z'),
+        CompatQgisWkbType.WKBMultiLineString25D: ('MultiLineStringZ', 'MultiLineString Z'),
+        CompatQgisWkbType.WKBMultiPolygon25D: ('MultiPolygonZ', 'MultiPolygon Z'),
+    }
+
+    if wkb_type in wkt_fixes:
+        wkt = wkt.replace(*wkt_fixes[wkb_type])
 
     return wkt
 
@@ -360,8 +361,7 @@ class QGISResourceJob(NGWResourceModelJob):
             )
             return None
 
-        filepath, rename_fields_map = self.prepareImportFile(qgs_vector_layer)
-
+        filepath, tgt_qgs_layer, rename_fields_map = self.prepareImportFile(qgs_vector_layer)
         if filepath is None:
             self.errorOccurred.emit(
                 JobError(
@@ -370,11 +370,15 @@ class QGISResourceJob(NGWResourceModelJob):
             )
             return None
 
+        ngw_geom_info = self._get_ngw_geom_info(tgt_qgs_layer)
         ngw_vector_layer = ResourceCreator.create_vector_layer(
             ngw_parent_resource,
             filepath,
             new_layer_name,
-            uploadFileCallback
+            uploadFileCallback,
+            ngw_geom_info[0],
+            ngw_geom_info[1],
+            ngw_geom_info[2]
         )
 
         aliases = {}
@@ -406,6 +410,7 @@ class QGISResourceJob(NGWResourceModelJob):
         os.remove(filepath)
         return ngw_vector_layer
 
+
     def prepareImportFile(self, qgs_vector_layer):
         self.statusChanged.emit(
             "%s - Prepare" % qgs_vector_layer.name()
@@ -427,7 +432,10 @@ class QGISResourceJob(NGWResourceModelJob):
             layer = qgs_vector_layer
 
         import_format = 'ESRI Shapefile'
-        if layer.featureCount() > 0:
+        if layer.featureCount() == 0:
+            log('Layer "{}" has 0 features after checking & fixing (actually skipping) geometries'.format(layer.name()))
+
+        else:
             layer_provider = layer.dataProvider()
             if layer_provider.storageType() in ['ESRI Shapefile']:
                 import_format = layer_provider.storageType()
@@ -435,9 +443,10 @@ class QGISResourceJob(NGWResourceModelJob):
                 import_format = "GeoJSON"
 
         if import_format == 'ESRI Shapefile':
-            return self.prepareAsShape(layer), rename_fields_map
+            return self.prepareAsShape(layer), layer, rename_fields_map
         else:
-            return self.prepareAsJSON(layer), rename_fields_map
+            return self.prepareAsJSON(layer), layer, rename_fields_map
+
 
     def checkGeometry(self, qgs_vector_layer):
         has_simple_geometries = False
@@ -571,7 +580,7 @@ class QGISResourceJob(NGWResourceModelJob):
             new_geometry = feature.geometry()
             CompatQgis.get_inner_geometry(new_geometry).convertTo(
                 QgsWkbTypes.dropZ(
-                    CompatQgis.get_inner_geometry(new_geometry).wkbType()
+                    CompatQgis.get_inner_geometry(new_geometry).wkbType() # for QGIS 2 new QgsWKBTypes::Type is returned here
                 )
             )
             new_geometry.transform(
@@ -873,6 +882,50 @@ class QGISResourceJob(NGWResourceModelJob):
         feature_dict["fields"] = self.ngw_layer.construct_ngw_feature_as_json(attributes)
 
         return feature_dict
+
+
+    def _get_ngw_geom_info(self, qgs_vector_layer):
+        wkb_type = CompatQgis.get_wkb_type(qgs_vector_layer.wkbType())
+
+        if (wkb_type == CompatQgisWkbType.WKBPoint or
+            wkb_type == CompatQgisWkbType.WKBMultiPoint or
+            wkb_type == CompatQgisWkbType.WKBPointZ or
+            wkb_type == CompatQgisWkbType.WKBMultiPointZ):
+            geom_type = 'POINT'
+        elif (wkb_type == CompatQgisWkbType.WKBLineString or
+            wkb_type == CompatQgisWkbType.WKBMultiLineString or
+            wkb_type == CompatQgisWkbType.WKBLineStringZ or
+            wkb_type == CompatQgisWkbType.WKBMultiLineStringZ):
+            geom_type = 'LINESTRING'
+        elif (wkb_type == CompatQgisWkbType.WKBPolygon or
+            wkb_type == CompatQgisWkbType.WKBMultiPolygon or
+            wkb_type == CompatQgisWkbType.WKBPolygonZ or
+            wkb_type == CompatQgisWkbType.WKBMultiPolygonZ):
+            geom_type = 'POLYGON'
+        else:
+            geom_type = 'AUTO' # default for NGW >= 3.8.0
+
+        if (wkb_type in [CompatQgisWkbType.WKBMultiPoint,
+            CompatQgisWkbType.WKBMultiLineString,
+            CompatQgisWkbType.WKBMultiPolygon,
+            CompatQgisWkbType.WKBMultiPointZ,
+            CompatQgisWkbType.WKBMultiLineStringZ,
+            CompatQgisWkbType.WKBMultiPolygonZ]):
+            geom_is_multi = True
+        else:
+            geom_is_multi = False
+
+        if (wkb_type in [CompatQgisWkbType.WKBPointZ,
+            CompatQgisWkbType.WKBLineStringZ,
+            CompatQgisWkbType.WKBPolygonZ,
+            CompatQgisWkbType.WKBMultiPointZ,
+            CompatQgisWkbType.WKBMultiLineStringZ,
+            CompatQgisWkbType.WKBMultiPolygonZ]):
+            geom_has_z = True
+        else:
+            geom_has_z = False
+
+        return geom_type, geom_is_multi, geom_has_z
 
 
 class QGISResourcesImporter(QGISResourceJob):

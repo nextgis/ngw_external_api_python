@@ -52,13 +52,34 @@ if COMPAT_QGIS_VERSION == 2:
         'UnknownGeometry': QGis.UnknownGeometry
     }
 
+    # compat_qgis_wkb_types = {
+    #     'WKBPoint25D': QGis.WKBPoint25D,
+    #     'WKBLineString25D': QGis.WKBLineString25D,
+    #     'WKBPolygon25D': QGis.WKBPolygon25D,
+    #     'WKBMultiPoint25D': QGis.WKBMultiPoint25D,
+    #     'WKBMultiLineString25D': QGis.WKBMultiLineString25D,
+    #     'WKBMultiPolygon25D': QGis.WKBMultiPolygon25D
+    # }
     compat_qgis_wkb_types = {
-        'WKBPoint25D': QGis.WKBPoint25D,
-        'WKBLineString25D': QGis.WKBLineString25D,
-        'WKBPolygon25D': QGis.WKBPolygon25D,
-        'WKBMultiPoint25D': QGis.WKBMultiPoint25D,
-        'WKBMultiLineString25D': QGis.WKBMultiLineString25D,
-        'WKBMultiPolygon25D': QGis.WKBMultiPolygon25D
+        'WKBPoint': core.QgsWKBTypes.Point,
+        'WKBLineString': core.QgsWKBTypes.LineString,
+        'WKBPolygon': core.QgsWKBTypes.Polygon,
+        'WKBMultiPoint': core.QgsWKBTypes.MultiPoint,
+        'WKBMultiLineString': core.QgsWKBTypes.MultiLineString,
+        'WKBMultiPolygon': core.QgsWKBTypes.MultiPolygon,
+        'WKBPointZ': core.QgsWKBTypes.PointZ,
+        'WKBLineStringZ': core.QgsWKBTypes.LineStringZ,
+        'WKBPolygonZ': core.QgsWKBTypes.PolygonZ,
+        'WKBMultiPointZ': core.QgsWKBTypes.MultiPointZ,
+        'WKBMultiLineStringZ': core.QgsWKBTypes.MultiLineStringZ,
+        'WKBMultiPolygonZ': core.QgsWKBTypes.MultiPolygonZ,
+
+        'WKBPoint25D': core.QgsWKBTypes.Point25D,
+        'WKBLineString25D': core.QgsWKBTypes.LineString25D,
+        'WKBPolygon25D': core.QgsWKBTypes.Polygon25D,
+        'WKBMultiPoint25D': core.QgsWKBTypes.MultiPoint25D,
+        'WKBMultiLineString25D': core.QgsWKBTypes.MultiLineString25D,
+        'WKBMultiPolygon25D': core.QgsWKBTypes.MultiPolygon25D
     }
 
 elif COMPAT_QGIS_VERSION == 3:
@@ -81,6 +102,19 @@ elif COMPAT_QGIS_VERSION == 3:
     }
 
     compat_qgis_wkb_types = {
+        'WKBPoint': core.QgsWkbTypes.Point,
+        'WKBLineString': core.QgsWkbTypes.LineString,
+        'WKBPolygon': core.QgsWkbTypes.Polygon,
+        'WKBMultiPoint': core.QgsWkbTypes.MultiPoint,
+        'WKBMultiLineString': core.QgsWkbTypes.MultiLineString,
+        'WKBMultiPolygon': core.QgsWkbTypes.MultiPolygon,
+        'WKBPointZ': core.QgsWkbTypes.PointZ,
+        'WKBLineStringZ': core.QgsWkbTypes.LineStringZ,
+        'WKBPolygonZ': core.QgsWkbTypes.PolygonZ,
+        'WKBMultiPointZ': core.QgsWkbTypes.MultiPointZ,
+        'WKBMultiLineStringZ': core.QgsWkbTypes.MultiLineStringZ,
+        'WKBMultiPolygonZ': core.QgsWkbTypes.MultiPolygonZ,
+
         'WKBPoint25D': core.QgsWkbTypes.Point25D,
         'WKBLineString25D': core.QgsWkbTypes.LineString25D,
         'WKBPolygon25D': core.QgsWkbTypes.Polygon25D,
@@ -179,6 +213,15 @@ class CompatQgis:
             return True if geometry is None else False
         elif COMPAT_QGIS_VERSION == 3:
             return True if geometry.isNull() else False
+        else:
+            raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
+    @classmethod
+    def get_wkb_type(cls, wkb_type):
+        if COMPAT_QGIS_VERSION == 2:
+            return QGis.fromOldWkbType(wkb_type) # get new (not deprecated) WKB type for e.g. QgsVectorLayer::wkbType(), QgsGeometry::wkbType(), etc
+        elif COMPAT_QGIS_VERSION == 3:
+            return wkb_type
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
 
