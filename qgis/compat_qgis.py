@@ -262,13 +262,21 @@ class CompatQt:
                 return None
             if isinstance(v, QtCore.QDateTime):
                 return v.toPyDateTime()
-            elif isinstance(v, QtCore.QDate):
+            if isinstance(v, QtCore.QDate):
                 return v.toPyDate()
-            elif isinstance(v, QtCore.QTime):
+            if isinstance(v, QtCore.QTime):
                 return v.toPyTime()
             return v
         elif int(COMPAT_PYQT_VERSION[0]) == 5:
-            return v # TODO: assume that in PyQt5/PyQGIS3 a QVariant value is already of the python type?
+            if v == core.NULL:
+                return None
+            if isinstance(v, QtCore.QDateTime):
+                return v.toPyDateTime()
+            if isinstance(v, QtCore.QDate):
+                return v.toPyDate()
+            if isinstance(v, QtCore.QTime):
+                return v.toPyTime()
+            return v
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
 
