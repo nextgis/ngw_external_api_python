@@ -26,6 +26,8 @@ from .ngw_raster_layer import NGWRasterLayer
 from .ngw_wfs_service import NGWWfsService
 from .ngw_webmap import NGWWebMap
 
+from ..qgis.compat_qgis import CompatQgis
+
 
 class ResourceCreator():
 
@@ -71,12 +73,13 @@ class ResourceCreator():
                 source=shape_file_desc,
 
                 # Should force geometry type in case of 0 features: NGW defines geom type by first feature.
+                # Force only for QGIS >= 3 because QGIS 2 defines geometry type of Shapefile incorrectly.
                 # TODO: check that for NGW < 3.8.0 it is ok to pass these parameters.
-                cast_geometry_type=geom_type,
-                cast_is_multi=geom_is_multi,
-                cast_haz_z=geom_haz_z,
-                #fix_errors
-                #skip_errors
+                cast_geometry_type=geom_type if not CompatQgis.is_qgis_2() else None,
+                cast_is_multi=geom_is_multi if not CompatQgis.is_qgis_2() else None,
+                cast_haz_z=geom_haz_z if not CompatQgis.is_qgis_2() else None,
+                #fix_errors=
+                #skip_errors=
             )
         )
 

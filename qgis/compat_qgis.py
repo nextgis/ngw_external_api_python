@@ -136,6 +136,10 @@ CompatQgisWkbType = type('CompatQgisWkbType', (), (compat_qgis_wkb_types))
 class CompatQgis:
 
     @classmethod
+    def is_qgis_2(cls):
+        return True if COMPAT_QGIS_VERSION == 2 else False
+
+    @classmethod
     def layers_registry(cls):
         if COMPAT_QGIS_VERSION == 2:
             return core.QgsMapLayerRegistry.instance()
