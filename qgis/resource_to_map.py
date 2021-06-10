@@ -24,6 +24,7 @@ from qgis.PyQt.QtNetwork import *
 from qgis.core import QgsVectorLayer, QgsMapLayer, QgsProject, QgsRectangle
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_wfs_service import NGWWfsService
+from ..core.ngw_qgis_style import NGWQGISStyle
 
 from .compat_qgis import CompatQgis, CompatQgisMsgLogLevel, CompatQgisMsgBarLevel, CompatQgisGeometryType, CompatQgisWkbType
 
@@ -111,6 +112,26 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
         qgs_wfs_layer = QgsVectorLayer(url, wfs_layer.display_name, 'WFS')
 
         ngw_vector_layer = wfs_resource.get_source_layer(wfs_layer.resource_id)
+
+        # Add vector style. Select the first QGIS style if several.
+        ngw_style_res = None
+        vec_layer_children = ngw_vector_layer.get_children()
+        for child in vec_layer_children:
+            if isinstance(child, NGWQGISStyle):
+                ngw_style_res = child
+                break
+        if not ngw_style_res is None:
+            loop = QEventLoop()
+            nam = QNetworkAccessManager()
+            nam.finished.connect(loop.quit)
+            reply = nam.get(QNetworkRequest(QUrl(ngw_style_res.download_qml_url())))
+            loop.exec_()
+            tmpfile = QTemporaryFile()
+            if tmpfile.open(QIODevice.WriteOnly):
+                tmpfile.write(reply.readAll())
+                tmpfile.close()
+                qgs_wfs_layer.loadNamedStyle(tmpfile.fileName())
+
         _add_aliases(qgs_wfs_layer, ngw_vector_layer)
 
         #summarize extent
