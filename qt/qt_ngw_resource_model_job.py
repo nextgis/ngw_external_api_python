@@ -114,6 +114,8 @@ class NGWResourceModelJob(QObject):
                 ngw_exeption_dict = json.loads(e.message)
                 if ngw_exeption_dict.get("status_code") == 403:
                     self.errorOccurred.emit(JobAuthorizationError(e.url))
+                elif ngw_exeption_dict.get("status_code") == 401:
+                    self.errorOccurred.emit(JobAuthorizationError(e.url))
                 else:
                     self.errorOccurred.emit(
                         JobNGWError(
