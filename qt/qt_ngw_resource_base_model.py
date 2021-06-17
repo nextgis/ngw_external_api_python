@@ -153,6 +153,8 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
     errorOccurred = pyqtSignal(str, object)
     warningOccurred = pyqtSignal(str, object)
     jobFinished = pyqtSignal(str)
+    indexesBlocked = pyqtSignal()
+    indexesReleased = pyqtSignal()
 
     def __init__(self, parent):
         QAbstractItemModel.__init__(self, parent)
@@ -376,6 +378,8 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
         QCoreApplication.processEvents()
 
+        self.indexesBlocked.emit()
+
     def _releaseIndexesByJob(self, job):
         indexes = self.__indexes_blocked_by_jobs.get(job, [])
         self.__indexes_blocked_by_jobs[job] = []
@@ -390,8 +394,9 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             if job.error() is not None:
                 self.__indexes_blocked_by_job_errors[index] = job.error()
 
-
         QCoreApplication.processEvents()
+
+        self.indexesReleased.emit()
 
     def _isIndexBlockedByJob(self, index):
         for job, blocked_indexes in list(self.__indexes_blocked_by_jobs.items()):
