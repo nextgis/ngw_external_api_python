@@ -229,6 +229,15 @@ class CompatQgis:
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
 
+    @classmethod
+    def is_layer_checked(cls, qgs_layer):
+        if COMPAT_QGIS_VERSION == 2:
+            return qgs_layer.isVisible() == QtCore.Qt.Checked
+        elif COMPAT_QGIS_VERSION == 3:
+            return qgs_layer.itemVisibilityChecked() == True
+        else:
+            raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
 
 class CompatQt:
 

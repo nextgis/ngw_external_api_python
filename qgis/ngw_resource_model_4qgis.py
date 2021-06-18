@@ -1075,7 +1075,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                     NGWWebMapLayer(
                         ngw_style.common.id,
                         qgsLayerTreeItem.layer().name(),
-                        qgsLayerTreeItem.isVisible() == Qt.Checked,
+                        CompatQgis.is_layer_checked(qgsLayerTreeItem),
                         0
                     )
                 )
@@ -1092,7 +1092,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                     NGWWebMapLayer(
                         ngw_layer_resource.common.id,
                         ngw_layer_resource.common.display_name,
-                        qgsLayerTreeItem.isVisible() == Qt.Checked,
+                        CompatQgis.is_layer_checked(qgsLayerTreeItem),
                         transparency
                     )
                 )
