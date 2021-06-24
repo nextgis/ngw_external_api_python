@@ -21,6 +21,8 @@
 import os
 from os import path
 
+import urllib.parse
+
 from ..utils import ICONS_DIR, log
 
 API_RESOURCE_URL = lambda res_id: '/api/resource/%d' % res_id
@@ -121,7 +123,10 @@ class NGWResource():
 
     def get_absolute_api_url_with_auth(self):
         creds = self._res_factory.connection.get_auth()
-        return self._res_factory.connection.server_url.replace('://', '://%s:%s@' % creds) + API_RESOURCE_URL(self.common.id)
+        #url = self._res_factory.connection.server_url.replace('://', '://%s:%s@' % creds) + API_RESOURCE_URL(self.common.id)
+        url = self._res_factory.connection.server_url.replace('://', '://{login}:{password}@') + API_RESOURCE_URL(self.common.id)
+        url = url.format(login=creds[0], password=urllib.parse.quote_plus(creds[1]))
+        return url
 
     def get_relative_url(self):
         return RESOURCE_URL(self.common.id)

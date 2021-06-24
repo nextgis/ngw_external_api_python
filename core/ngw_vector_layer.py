@@ -172,8 +172,7 @@ class NGWVectorLayer(NGWResource):
 
     def get_absolute_geojson_url(self):
         return '%s/%s' % (
-            #self.get_absolute_api_url_with_auth(),
-            self.get_absolute_api_url(), # get url without credentials. Creds will be applied via options in qgis_ngw_connection.py
+            self.get_absolute_api_url_with_auth(),
             'geojson'
         )
 
