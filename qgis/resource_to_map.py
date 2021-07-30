@@ -26,6 +26,8 @@ from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_wfs_service import NGWWfsService
 from ..core.ngw_qgis_style import NGWQGISStyle
 
+from ..utils import log
+
 from .compat_qgis import CompatQgis, CompatQgisMsgLogLevel, CompatQgisMsgBarLevel, CompatQgisGeometryType, CompatQgisWkbType
 
 
@@ -69,10 +71,22 @@ def add_resource_as_geojson_with_style(ngw_layer, ngw_style, return_extent=False
     qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
 
     ev_loop = QEventLoop()
+    qml_url = ngw_style.download_qml_url()
+    qml_req = QNetworkRequest(QUrl(qml_url))
+    creds = ngw_style.get_creds()
+    if creds is not None:
+        creds_str = creds[0] + ':' + creds[1]
+        authstr = creds_str.encode('utf-8')
+        authstr = QByteArray(authstr).toBase64()
+        authstr = QByteArray(('Basic ').encode('utf-8')).append(authstr)
+        qml_req.setRawHeader(("Authorization").encode('utf-8'), authstr)
     dwn_qml_manager = QNetworkAccessManager()
     dwn_qml_manager.finished.connect(ev_loop.quit)
-    reply = dwn_qml_manager.get(QNetworkRequest(QUrl(ngw_style.download_qml_url())))
+    reply = dwn_qml_manager.get(qml_req)
     ev_loop.exec_()
+
+    if reply.error():
+        log('Failed to download QML: {}'.format(reply.errorString()))
 
     file = QTemporaryFile()
     if file.open(QIODevice.WriteOnly):
