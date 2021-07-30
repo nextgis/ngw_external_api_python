@@ -21,13 +21,16 @@
 
 
 class NGWConnectionSettings():
-    def __init__(self, connection_name=None, server_url=None, username=None, password=None):
+    def __init__(self, connection_name=None, server_url=None, username=None, password=None, force_http=False):
         self.connection_name = connection_name
         self.server_url = server_url
         self.username = username
         self.password = password
 
         self.proxy_enable = False
+
+        if force_http:
+            self.server_url = str(self.server_url).replace('https://', 'http://')
 
     def set_proxy(self, host, port, user, password):
         self.proxy_enable = True
