@@ -128,6 +128,14 @@ class NGWResource():
         url = url.format(login=creds[0], password=urllib.parse.quote_plus(creds[1]))
         return url
 
+    def get_creds(self):
+        creds = self._res_factory.connection.get_auth()
+        if creds is None or len(creds) != 2:
+            return None
+        if creds[0] is None or creds[0] == '':
+            return None
+        return creds[0], urllib.parse.quote_plus(creds[1])
+
     def get_relative_url(self):
         return RESOURCE_URL(self.common.id)
 
