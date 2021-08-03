@@ -43,18 +43,11 @@ class NgwPluginSettings(PluginSettings):
         settings = cls.get_settings()
         key = '/connections/' + connection_name
 
-        force_http = settings.value(key + '/force_http', 0, type=int)
-        if force_http == 1:
-            force_http = True
-        else:
-            force_http = False
-
         return NGWConnectionSettings(
             connection_name,
             settings.value(key + '/server_url', '', type=str),
             settings.value(key + '/username', '', type=str),
-            settings.value(key + '/password', '', type=str),
-            force_http
+            settings.value(key + '/password', '', type=str)
         )
 
     @classmethod
