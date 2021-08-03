@@ -78,8 +78,8 @@ class ResourceCreator():
                 cast_geometry_type=geom_type if not CompatQgis.is_qgis_2() else None,
                 cast_is_multi=geom_is_multi if not CompatQgis.is_qgis_2() else None,
                 cast_haz_z=geom_haz_z if not CompatQgis.is_qgis_2() else None,
-                #fix_errors=
-                #skip_errors=
+                fix_errors='LOSSY',
+                skip_errors=True
             )
         )
 
