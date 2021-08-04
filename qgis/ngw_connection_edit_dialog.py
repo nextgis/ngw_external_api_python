@@ -71,7 +71,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.setupUi(self)
 
         self.lbConnectionTesting.setVisible(False)
-        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        #self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
 
         if self.__only_password_change:
             self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
@@ -89,11 +89,11 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.leUrl.textEdited.connect(self.__url_changed)
         self.leUrl.textEdited.connect(self.__fill_conneection_name)
 
-        self.timerUrlChange = QTimer()
-        self.timerUrlChange.setSingleShot(True)
-        self.timerUrlChange.setInterval(500)
-        self.timerUrlChange.timeout.connect(self.__try_check_connection)
-        self.leUrl.textChanged.connect(self.timerUrlChange.start)
+        # self.timerUrlChange = QTimer()
+        # self.timerUrlChange.setSingleShot(True)
+        # self.timerUrlChange.setInterval(500)
+        # self.timerUrlChange.timeout.connect(self.__try_check_connection)
+        # self.leUrl.textChanged.connect(self.timerUrlChange.start)
 
         self.leName.textChanged.connect(self.__name_changed_process)
         self.__user_change_connection_name = False
@@ -137,8 +137,8 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.__autocomplete_url(lower_test)
 
     def __autocomplete_url(self, text):
-        if not self.__only_password_change:
-            self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        #if not self.__only_password_change:
+        #    self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
 
         text_complete = self._default_server_suffix
 
@@ -167,11 +167,13 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         o = urlparse(url)
         hostname = o.hostname
 
+        # Select https if protocol has not been defined by user.
         if hostname is None:
             hostname = 'http://' if self.force_http else 'https://'
             return hostname + url
 
-        if url.startswith('http://') and not self.force_http: # can compare this way because we have our url always lowered
+        # Force https regardless of what user has selected, but only for cloud connections.
+        if url.startswith('http://') and url.endswith('.nextgis.com') and not self.force_http:
             return url.replace('http://', 'https://')
 
         return url
