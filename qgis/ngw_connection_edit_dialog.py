@@ -129,6 +129,11 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.force_http = False
         self.need_check_http = False
 
+    def set_alert_msg(self, msg):
+        self.lbConnectionTesting.setVisible(True)
+        self.lbConnectionTesting.setText(msg)
+        self.lbConnectionTesting.setStyleSheet("color: red")
+
     def __url_changed(self, text):
         curent_cursor_position = self.leUrl.cursorPosition()
         lower_test = text.lower()
