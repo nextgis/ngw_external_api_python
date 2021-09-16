@@ -514,10 +514,11 @@ class QGISResourceJob(NGWResourceModelJob):
             else:
                 has_simple_geometries = True
 
-            errors = feature.geometry().validateGeometry()
-            if len(errors) != 0:
-                log("Feature %s has invalid geometry: %s" % (str(feature.id()), ', '.join(err.what() for err in errors)))
-                fids_with_not_valid_geom.append(feature.id())
+            # Do not validate geometries (rely on NGW):
+            # errors = feature.geometry().validateGeometry()
+            # if len(errors) != 0:
+            #     log("Feature %s has invalid geometry: %s" % (str(feature.id()), ', '.join(err.what() for err in errors)))
+            #     fids_with_not_valid_geom.append(feature.id())
 
         self.statusChanged.emit(
             "%s - Check geometry (%d%%)" % (
@@ -579,6 +580,12 @@ class QGISResourceJob(NGWResourceModelJob):
         progress = 0
         for feature in qgs_vector_layer_src.getFeatures():
             if feature.id() in fids_with_notvalid_geom:
+                continue
+
+            # Additional checks for geom correctness.
+            # TODO: this was done in self.checkGeometry() but we've remove using of this method. Maybe return using this method back.
+            if CompatQgis.is_geom_empty(feature.geometry()):
+                log('Skip feature {}: empty geometry'.format(feature.id()))
                 continue
 
             new_geometry = feature.geometry()
