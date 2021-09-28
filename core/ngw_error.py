@@ -23,7 +23,7 @@
 class NGWError(Exception):
     TypeUnknownError, TypeRequestError, TypeNGWError, TypeNGWUnexpectedAnswer = list(range(4))
 
-    def __init__(self, type, message, url=None, user_msg=None):
+    def __init__(self, type, message, url=None, user_msg=None, need_reconnect=True):
         if not isinstance(message, str):
             self.message = str(message)#, 'utf-8')
         else:
@@ -32,6 +32,7 @@ class NGWError(Exception):
         self.type = type
         self.url = url
         self.user_msg = user_msg
+        self.need_reconnect = need_reconnect
 
     def __str__(self):
         return self.message

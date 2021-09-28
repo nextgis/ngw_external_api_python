@@ -125,7 +125,7 @@ class NGWResourceModelJob(QObject):
                     )
 
             elif e.type == NGWError.TypeRequestError:
-                self.errorOccurred.emit(JobServerRequestError(self.tr("Bad http comunication.") + "%s"%e, e.url, e.user_msg))
+                self.errorOccurred.emit(JobServerRequestError(self.tr("Bad http comunication.") + "%s"%e, e.url, e.user_msg, e.need_reconnect))
 
             elif e.type == NGWError.TypeNGWUnexpectedAnswer:
                 self.errorOccurred.emit(JobNGWError(self.tr("Cann't parse server answer"), e.url))

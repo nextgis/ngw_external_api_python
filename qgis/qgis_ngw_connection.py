@@ -173,7 +173,8 @@ class QgsNgwConnection(QObject):
         if rep.error() == 5:
             log('Connection error qt code: 5 (QNetworkReply::OperationCanceledError)')
             raise NGWError(NGWError.TypeRequestError, 'Connection has been aborted or closed', req.url().toString(),
-                self.tr('Сonnection closed by QGIS. Increase timeout (Settings -> Options -> Network) to 300000 and retry uploading'))
+                self.tr('Сonnection closed by QGIS. Increase timeout (Settings -> Options -> Network) to 300000 and retry uploading'),
+                need_reconnect=False)
 
         if rep.error() > 0 and rep.error() < 10:
             log( "Connection error qt code: {}".format(rep.error()) )
