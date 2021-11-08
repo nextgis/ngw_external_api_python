@@ -185,7 +185,7 @@ class QgsNgwConnection(QObject):
         rep_str = CompatPy.decode_reply_escape(data)
 
         #if  status_code / 100 != 2:
-        if int(str(status_code)[:1]) != 2:
+        if status_code is not None and int(str(status_code)[:1]) != 2:
             log("Response\nerror status_code {}\nmsg: {}".format(status_code, rep_str))
 
             ngw_message_present = False
