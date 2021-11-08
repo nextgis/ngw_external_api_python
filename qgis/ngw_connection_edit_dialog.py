@@ -164,6 +164,8 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.__validate_fields()
 
     def __make_valid_url(self, url):
+        url = url.strip()
+
         # Always remove trailing slashes (this is only a base url which will not be
         # used standalone anywhere).
         while url.endswith('/'):
