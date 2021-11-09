@@ -19,6 +19,8 @@
  ***************************************************************************/
 """
 from os import path
+import urllib.parse
+
 from .ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 
 from ..utils import ICONS_DIR, log
@@ -41,14 +43,16 @@ class NGWWfsService(NGWResource):
             self.wfs.layers = LIST_DICT_TO_LIST_OBJ(self.wfs.layers)
 
     def get_wfs_url(self, layer_keyname):
+        creds = self._res_factory.connection.get_auth()
         return '%s%s%s' % (
             self.get_absolute_api_url(),
             '/wfs?SERVICE=WFS&TYPENAME=%s' % layer_keyname,
-            '&username=%s&password=%s' % self._res_factory.connection.get_auth()
+            #'&username=%s&password=%s' % (creds[0], creds[1])
+            '&username=%s&password=%s' % (creds[0], urllib.parse.quote_plus(creds[1]))
         )
-    
+
     def get_layers(self):
         return self._json["wfsserver_service"]["layers"]
 
     def get_source_layer(self, layer_id):
-        return self._res_factory.get_resource(layer_id) 
+        return self._res_factory.get_resource(layer_id)
