@@ -97,7 +97,7 @@ class QgsNgwConnection(QObject):
                 url,
                 type(json_data),
                 json_data,
-                file
+                file.encode('utf-8') if file else '-'
             )
         )
 
