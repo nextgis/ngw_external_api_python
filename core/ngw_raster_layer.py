@@ -31,8 +31,14 @@ class NGWRasterLayer(NGWResource):
     icon_path = path.join(ICONS_DIR, 'raster_layer.svg')
     type_title = 'NGW Raster Layer'
 
+    is_cog = False
+
     def __init__(self, resource_factory, resource_json):
         NGWResource.__init__(self, resource_factory, resource_json)
+        try:
+            self.is_cog = resource_json['raster_layer']['cog']
+        except:
+            pass
 
     def extent(self):
         result = self._res_factory.connection.get(
