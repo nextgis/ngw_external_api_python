@@ -407,7 +407,7 @@ class QGISResourceJob(NGWResourceModelJob):
             "%s - Finishing" % qgs_vector_layer.name()
         )
 
-        os.remove(filepath)
+        #os.remove(filepath)
         return ngw_vector_layer
 
 
@@ -435,17 +435,18 @@ class QGISResourceJob(NGWResourceModelJob):
         else:
             layer = qgs_vector_layer
 
-        import_format = 'ESRI Shapefile'
         if layer.featureCount() == 0:
             log('Layer "{}" has 0 features after checking & fixing (actually skipping) geometries'.format(layer.name()))
-
+            import_format = 'ESRI Shapefile'
         else:
             layer_provider = layer.dataProvider()
-            if layer_provider.storageType() in ['ESRI Shapefile']:
-                import_format = layer_provider.storageType()
+            log('Source layer\'s data provider: "{}"'.format(layer_provider.storageType()))
+            if layer_provider.storageType() in ['ESRI Shapefile', 'Delimited text file']: # CSV is here due to incorrect column types defining in GeoJSON
+                import_format = 'ESRI Shapefile'
             else:
-                import_format = "GeoJSON"
+                import_format = 'GeoJSON'
 
+        log('Use "{}" format to upload to NGW'.format(import_format))
         if import_format == 'ESRI Shapefile':
             return self.prepareAsShape(layer), layer, rename_fields_map
         else:
