@@ -132,6 +132,7 @@ def create_raster(name, file, parent_ngw_resource):
         parent_ngw_resource,
         file,
         name,
+        False,
         uploadFileCallback
     )
 

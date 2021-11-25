@@ -337,6 +337,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 ngw_parent_resource,
                 filepath,
                 new_layer_name,
+                NgwPluginSettings.get_upload_cog_rasters(),
                 uploadFileCallback
             )
 

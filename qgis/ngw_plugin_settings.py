@@ -108,3 +108,15 @@ class NgwPluginSettings(PluginSettings):
         settings = cls.get_settings()
         option = settings.value('/force_qgis_project_import', 1, type=int)
         return bool(option)
+
+    @classmethod
+    def set_upload_cog_rasters(cls, val):
+        settings = cls.get_settings()
+        settings.setValue('/upload_cog_rasters', val)
+
+    @classmethod
+    def get_upload_cog_rasters(cls):
+        settings = cls.get_settings()
+        return settings.value('/upload_cog_rasters', True, type=bool)
+
+

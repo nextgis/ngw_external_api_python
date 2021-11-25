@@ -92,7 +92,7 @@ class ResourceCreator():
         return NGWVectorLayer(parent_ngw_resource._res_factory, ngw_resource)
 
     @staticmethod
-    def create_raster_layer(parent_ngw_resource, filename, layer_name, callback):
+    def create_raster_layer(parent_ngw_resource, filename, layer_name, upload_as_cog, callback):
         connection = parent_ngw_resource._res_factory.connection
 
         raster_file_desc = connection.upload_file(filename, callback)
@@ -106,7 +106,8 @@ class ResourceCreator():
             ),
             raster_layer=dict(
                 srs=dict(id=3857),
-                source=raster_file_desc
+                source=raster_file_desc,
+                cog=upload_as_cog
             )
         )
 
