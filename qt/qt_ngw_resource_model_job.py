@@ -270,4 +270,5 @@ class NGWRenameResource(NGWResourceModelJob):
     def _do(self):
         self.ngw_resource.change_name(self.new_name)
 
-        self.putAddedResourceToResult(self.ngw_resource, is_main=True)
+        #self.putAddedResourceToResult(self.ngw_resource, is_main=True)
+        self.putEditedResourceToResult(self.ngw_resource, is_main=True)
