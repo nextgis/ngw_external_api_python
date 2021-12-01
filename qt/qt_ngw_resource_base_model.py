@@ -465,22 +465,26 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
                     job.model_response.done.emit(new_index)
 
         for ngw_resource in job_result.edited_resources:
-            index = self.getIndexByNGWResourceId(
-                ngw_resource.common.parent.id,
-                self.index(0, 0, QModelIndex())
-            )
-            item = index.internalPointer()
-
-            for i in range(0, item.childCount()):
-                if item.child(i).ngw_resource_id() == ngw_resource.common.id:
-                    self.beginRemoveRows(index, i, i)
-                    item.removeChild(item.child(i))
-                    self.endRemoveRows()
-                    break
+            if ngw_resource.common.parent is None:
+                self.cleanModel() # remove root item
+                index = QModelIndex()
             else:
-                # TODO exception: not find deleted resource in corrent tree
-                self._releaseIndexesByJob(job)
-                return
+                index = self.getIndexByNGWResourceId(
+                    ngw_resource.common.parent.id,
+                    self.index(0, 0, QModelIndex())
+                )
+                item = index.internalPointer()
+
+                for i in range(0, item.childCount()):
+                    if item.child(i).ngw_resource_id() == ngw_resource.common.id:
+                        self.beginRemoveRows(index, i, i)
+                        item.removeChild(item.child(i))
+                        self.endRemoveRows()
+                        break
+                else:
+                    # TODO exception: not find deleted resource in corrent tree
+                    self._releaseIndexesByJob(job)
+                    return
 
             new_index = self.addNGWResourceToTree(index, ngw_resource)
 
