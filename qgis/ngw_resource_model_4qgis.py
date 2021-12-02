@@ -1154,6 +1154,8 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             ngw_webmap_basemaps
         )
 
+        ngw_resource_child_group.update() # in order to update group items: if they have children items they should become expandable
+
     def create_webmap(self, ngw_resource, ngw_webmap_name, ngw_webmap_items, ngw_webmap_basemaps):
         rectangle = self.iface.mapCanvas().extent()
         ct = CompatQgis.coordinate_transform_obj(
