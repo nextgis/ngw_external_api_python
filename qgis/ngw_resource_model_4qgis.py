@@ -112,8 +112,9 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
             QGISResourcesImporter(qgs_map_layers, ngw_group),
         )
 
+
     @modelRequest()
-    def createOrUpdateQGISStyle(self, qgs_map_layer, index):
+    def updateQGISStyle(self, qgs_map_layer, index):
         if not index.isValid():
             index = self.index(0, 0, index)
 
@@ -121,8 +122,21 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         ngw_resource = item.data(0, Qt.UserRole)
 
         return self._startJob(
-            QGISStyleImporter(qgs_map_layer, ngw_resource),
+            QGISStyleUpdater(qgs_map_layer, ngw_resource)
         )
+
+    @modelRequest()
+    def addQGISStyle(self, qgs_map_layer, index):
+        if not index.isValid():
+            index = self.index(0, 0, index)
+
+        item = index.internalPointer()
+        ngw_resource = item.data(0, Qt.UserRole)
+
+        return self._startJob(
+            QGISStyleAdder(qgs_map_layer, ngw_resource)
+        )
+
 
     @modelRequest()
     def tryImportCurentQGISProject(self, ngw_group_name, index, iface):
@@ -752,30 +766,30 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return None
 
-    def updateQMLStyle(self, qml, ngw_qgis_vector_resource):
-        def uploadFileCallback(total_size, readed_size):
-            self.statusChanged.emit(
-                "Style for %s - Upload (%d%%)" % (
-                    ngw_qgis_vector_resource.common.display_name,
-                    readed_size * 100 / total_size
-                )
-            )
-
-        ngw_qgis_vector_resource.update_qml(
-            qml,
-            uploadFileCallback
-        )
-
-    def updateStyle(self, qgs_map_layer, ngw_qgis_vector_resource):
+    def updateStyle(self, qgs_map_layer, ngw_layer_resource):
         layer_type = qgs_map_layer.type()
-        if layer_type == QgsMapLayer.VectorLayer:
+        if layer_type == QgsMapLayer.VectorLayer or layer_type == QgsMapLayer.RasterLayer:
             tmp = tempfile.mktemp('.qml')
             self.statusChanged.emit(
                 "Style for %s - Save as qml" % qgs_map_layer.name()
             )
             msg, saved = qgs_map_layer.saveNamedStyle(tmp)
-            self.updateQMLStyle(tmp, ngw_qgis_vector_resource)
+            self.updateQMLStyle(tmp, ngw_layer_resource)
             os.remove(tmp)
+
+    def updateQMLStyle(self, qml, ngw_layer_resource):
+        def uploadFileCallback(total_size, readed_size):
+            self.statusChanged.emit(
+                "Style for %s - Upload (%d%%)" % (
+                    ngw_layer_resource.common.display_name,
+                    readed_size * 100 / total_size
+                )
+            )
+
+        ngw_layer_resource.update_qml(
+            qml,
+            uploadFileCallback
+        )
 
     def getQMLDefaultStyle(self):
         gtype = self.ngw_layer._json[self.ngw_layer.type_id]["geometry_type"]
@@ -1262,19 +1276,26 @@ class MapForLayerCreater(QGISResourceJob):
         self.putAddedResourceToResult(ngw_resource, is_main=True)
 
 
-class QGISStyleImporter(QGISResourceJob):
+class QGISStyleUpdater(QGISResourceJob):
     def __init__(self, qgs_map_layer, ngw_resource):
         QGISResourceJob.__init__(self)
         self.qgs_map_layer = qgs_map_layer
         self.ngw_resource = ngw_resource
 
     def _do(self):
-        if self.ngw_resource.type_id == NGWVectorLayer.type_id:
-            ngw_style = self.addStyle(self.qgs_map_layer, self.ngw_resource)
-            self.putAddedResourceToResult(ngw_style)
-        elif self.ngw_resource.type_id == NGWQGISVectorStyle.type_id:
-            self.updateStyle(self.qgs_map_layer, self.ngw_resource)
-            self.putEditedResourceToResult(self.ngw_resource)
+        #if self.ngw_resource.type_id == NGWVectorLayer.type_id:
+        self.updateStyle(self.qgs_map_layer, self.ngw_resource)
+        self.putEditedResourceToResult(self.ngw_resource)
+
+class QGISStyleAdder(QGISResourceJob):
+    def __init__(self, qgs_map_layer, ngw_resource):
+        QGISResourceJob.__init__(self)
+        self.qgs_map_layer = qgs_map_layer
+        self.ngw_resource = ngw_resource
+
+    def _do(self):
+        ngw_style = self.addStyle(self.qgs_map_layer, self.ngw_resource)
+        self.putAddedResourceToResult(ngw_style)
 
 
 class NGWCreateWMSForVector(QGISResourceJob):
