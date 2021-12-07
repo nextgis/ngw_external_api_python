@@ -119,7 +119,8 @@ class QgsNgwConnection(QObject):
 
         data.open(QIODevice.ReadOnly)
 
-        loop = QEventLoop(self)
+        #loop = QEventLoop(self)
+        loop = QEventLoop()
         nam = QgsNetworkAccessManager.instance()
 
         has_redirect_policy = False
