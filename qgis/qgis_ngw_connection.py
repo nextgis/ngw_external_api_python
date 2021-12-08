@@ -141,7 +141,14 @@ class QgsNgwConnection(QObject):
         if file is not None:
             rep.uploadProgress.connect(self.sendUploadProgress)
 
-        loop.exec_()
+        if not rep.isFinished():
+            timer = QTimer()
+            timer.setSingleShot(True)
+            timer.timeout.connect(loop.quit) # in case finished signal will not be fired at all or fired right after isFinished() but before loop.exec_()
+            timer.start(100000)
+
+            loop.exec_()
+
         rep.finished.disconnect(loop.quit)
 
         data.close()
