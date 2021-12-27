@@ -26,6 +26,8 @@ elif COMPAT_PY_VERSION == 3:
     from urllib.parse import urlparse
     from urllib.parse import parse_qs
 
+    from pkg_resources import packaging
+
 else:
     raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)
 
@@ -58,4 +60,15 @@ class CompatPy:
             return str(e)
         else:
             raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)
+
+
+    @classmethod
+    def pep440GreaterOrEqual(cls, vers_left, vers_right):
+        if COMPAT_PY_VERSION == 2:
+            return None
+        elif COMPAT_PY_VERSION == 3:
+            return packaging.version.parse(vers_left) >= packaging.version.parse(vers_right)
+        else:
+            raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)
+
 

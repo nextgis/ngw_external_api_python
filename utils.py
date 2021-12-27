@@ -53,3 +53,35 @@ def log(msg):
 
     if ngw_api_logger is not None:
         ngw_api_logger(msg)
+
+
+def ngw_version_parts(version):
+    strs = version.split('.')
+    ints = [0, 0, 0, sys.maxsize] # sys.maxsize is present for python 2/3 both
+    for i in range(4):
+        if i >= len(strs):
+            continue
+        if strs[i].startswith('dev'):
+            ints[3] = int(strs[i].replace('dev', ''))
+            continue
+        ints[i] = int(strs[i])
+    return ints
+
+# Note: this method does not include all PEP 440 features. Supports either X.Y.Z or X.Y.Z.devN (all parts
+# are not obligatory).
+def ngw_version_compare(lversion, rversion):
+    try:
+        lints = ngw_version_parts(lversion)
+        rints = ngw_version_parts(rversion)
+
+        for i in range(4):
+            if lints[i] > rints[i]:
+                return 1
+            elif rints[i] > lints[i]:
+                return -1
+        return 0
+    except:
+        return None
+
+
+

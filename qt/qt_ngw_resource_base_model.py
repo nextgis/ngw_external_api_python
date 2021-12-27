@@ -156,6 +156,8 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
     indexesBlocked = pyqtSignal()
     indexesReleased = pyqtSignal()
 
+    ngw_version = None
+
     def __init__(self, parent):
         QAbstractItemModel.__init__(self, parent)
 
@@ -191,7 +193,12 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
 
         self.__cleanModel()
         self.beginResetModel()
+
         self.root_item = QNGWConnectionItem(self.__ngw_connection_settings)
+
+        # Get NGW version.
+        self._get_ngw_version()
+
         self.endResetModel()
         self.modelReset.emit()
 
@@ -537,3 +544,14 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
             )
 
         return job
+
+    def _get_ngw_version(self):
+        try:
+            self.ngw_version = self._ngw_connection.get_version()
+            log('NGW version: {}'.format(self.ngw_version))
+        except:
+            self.ngw_version = None
+            log('Failed to get NGW version')
+
+
+

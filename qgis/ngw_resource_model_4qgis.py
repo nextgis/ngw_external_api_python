@@ -49,15 +49,21 @@ from ..core.ngw_webmap import NGWWebMap
 from ..core.ngw_base_map import NGWBaseMap, NGWBaseMapExtSettings
 from ..utils import log
 
+from ..utils import ngw_version_compare
+
 from .ngw_plugin_settings import NgwPluginSettings
 from .qgis_ngw_connection import QgsNgwConnection
 
 from ..compat_py import unquote_plus
+from ..compat_py import CompatPy
 from .compat_qgis import QgsWkbTypes
 from .compat_qgis import CompatQgis
 from .compat_qgis import CompatQt
 from .compat_qgis import CompatQgisMsgLogLevel, CompatQgisMsgBarLevel
 from .compat_qgis import CompatQgisGeometryType, CompatQgisWkbType
+
+
+NGW_AUTORENAME_FIELDS_VERS = '4.1.0.dev5'
 
 
 def getQgsMapLayerEPSG(qgs_map_layer):
@@ -109,7 +115,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         ngw_group = parent_item.data(0, Qt.UserRole)
 
         return self._startJob(
-            QGISResourcesImporter(qgs_map_layers, ngw_group),
+            QGISResourcesImporter(qgs_map_layers, ngw_group, self.ngw_version),
         )
 
 
@@ -198,8 +204,10 @@ class QGISResourceJob(NGWResourceModelJob):
     SUITABLE_LAYER = 0
     SUITABLE_LAYER_BAD_GEOMETRY = 1
 
-    def __init__(self):
+    def __init__(self, ngw_version=None):
         NGWResourceModelJob.__init__(self)
+
+        self.ngw_version = ngw_version
 
         self.sanitize_fields_names = ["id", "geom"]
 
@@ -440,9 +448,11 @@ class QGISResourceJob(NGWResourceModelJob):
         #    layer_has_mixed_geoms, fids_with_notvalid_geom = self.checkGeometry(qgs_vector_layer)
 
         # Check specific fields.
-        if NgwPluginSettings.get_sanitize_rename_fields():
-            if self.hasBadFields(qgs_vector_layer):
-                layer_has_bad_fields = True
+        if (NgwPluginSettings.get_sanitize_rename_fields() and self.hasBadFields(qgs_vector_layer) and not self.ngwSupportsAutoRenameFields()):
+            log('Incorrect fields of layer will be renamed by NextGIS Connect')
+            layer_has_bad_fields = True
+        else:
+            log('Incorrect fields of layer will NOT be renamed by NextGIS Connect')
 
         rename_fields_map = {}
         if layer_has_mixed_geoms or layer_has_bad_fields or (len(fids_with_notvalid_geom) > 0):
@@ -554,6 +564,30 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return len(common_fields) > 0
 
+    def ngwSupportsAutoRenameFields(self):
+        if self.ngw_version is None:
+            return False
+
+        if CompatQgis.is_qgis_2():
+            # A simple comparing, does not include all PEP440 checks.
+            vers_ok = ngw_version_compare(self.ngw_version, NGW_AUTORENAME_FIELDS_VERS)
+            if vers_ok == 1 or vers_ok == 0:
+                vers_ok = True
+            elif vers_ok == -1:
+                vers_ok = False
+        else:
+            # A full PEP 440 comparing.
+            vers_ok = CompatPy.pep440GreaterOrEqual(self.ngw_version, NGW_AUTORENAME_FIELDS_VERS)
+
+        if vers_ok is None:
+            return False
+        if vers_ok:
+            log('Assume that NGW of version "{}" supports auto-renaming fields'.format(self.ngw_version))
+            return True
+        log('Assume that NGW of version "{}" does NOT support auto-renaming fields'.format(self.ngw_version))
+
+        return False
+
     def createLayer4Upload(self, qgs_vector_layer_src, fids_with_notvalid_geom, has_mixed_geoms, has_bad_fields):
         geometry_type = self.determineGeometry4MemoryLayer(qgs_vector_layer_src, has_mixed_geoms)
 
@@ -584,7 +618,7 @@ class QGISResourceJob(NGWResourceModelJob):
         qgs_vector_layer_dst.startEditing()
 
         for field in qgs_vector_layer_src.fields():
-            field.setName(
+            field.setName( # TODO: does it work? At least qgs_vector_layer_src is not in edit mode now. Also we obviously don't want to change source layer names here
                 field_name_map.get(field.name(), field.name())
             )
             qgs_vector_layer_dst.addAttribute(field)
@@ -616,11 +650,15 @@ class QGISResourceJob(NGWResourceModelJob):
             if has_mixed_geoms:
                 new_geometry.convertToMultiType()
 
-            feature.setGeometry(
-                new_geometry
-            )
-
-            qgs_vector_layer_dst.addFeature(feature)
+            # Add field values one by one. While in QGIS 2 we can just addFeature() regardless of field names, in QGIS 3 we must strictly
+            # define field names where the values are copied to.
+            new_feature = QgsFeature(qgs_vector_layer_dst.fields())
+            new_feature.setGeometry(new_geometry)
+            for field in qgs_vector_layer_src.fields():
+                fname = field_name_map.get(field.name(), field.name())
+                fval = feature[field.name()]
+                new_feature.setAttribute(fname, fval)
+            qgs_vector_layer_dst.addFeature(new_feature)
 
             tmp_progress = features_counter * 100 / features_count
             if tmp_progress > progress:
@@ -956,8 +994,8 @@ class QGISResourceJob(NGWResourceModelJob):
 
 
 class QGISResourcesImporter(QGISResourceJob):
-    def __init__(self, qgs_map_layers, ngw_group):
-        QGISResourceJob.__init__(self)
+    def __init__(self, qgs_map_layers, ngw_group, ngw_version=None):
+        QGISResourceJob.__init__(self, ngw_version)
         self.qgs_map_layers = qgs_map_layers
         self.ngw_group = ngw_group
 
