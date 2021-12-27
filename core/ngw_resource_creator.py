@@ -56,7 +56,7 @@ class ResourceCreator():
 
     @staticmethod
     def create_vector_layer(parent_ngw_resource, filename, layer_name, callback,
-        geom_type=None, geom_is_multi=None, geom_haz_z=None):
+        geom_type=None, geom_is_multi=None, geom_has_z=None):
         connection = parent_ngw_resource._res_factory.connection
 
         shape_file_desc = connection.upload_file(filename, callback)
@@ -77,7 +77,7 @@ class ResourceCreator():
                 # TODO: check that for NGW < 3.8.0 it is ok to pass these parameters.
                 cast_geometry_type=geom_type if not CompatQgis.is_qgis_2() else None,
                 cast_is_multi=geom_is_multi if not CompatQgis.is_qgis_2() else None,
-                cast_haz_z=geom_haz_z if not CompatQgis.is_qgis_2() else None,
+                cast_has_z=geom_has_z if not CompatQgis.is_qgis_2() else None,
                 fix_errors='LOSSY',
                 skip_errors=True
             )
