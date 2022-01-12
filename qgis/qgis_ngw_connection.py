@@ -206,11 +206,18 @@ class QgsNgwConnection(QObject):
         if file is not None:
             rep.uploadProgress.connect(self.sendUploadProgress)
 
-        if not rep.isFinished():
-            timer = QTimer()
-            timer.setSingleShot(True)
-            timer.timeout.connect(loop.quit) # in case finished signal will not be fired at all or fired right after isFinished() but before loop.exec_()
-            timer.start(100000)
+        # In our current approach we use QEventLoop to wait QNetworkReply finished() signal. This could lead to infinite loop
+        # in the case when finished() signal 1) is not fired at all or 2) fired right after isFinished() method but before loop.exec_().
+        # We need some kind of guard for that OR we need to use another approach to wait for network replies (e.g. fully asynchronous
+        # approach which is actually should be used when dealing with QNetworkAccessManager).
+        # TODO: think about it and fix it. For now we cannot make a timeout with a low value to break the infinite loop here, because
+        # currently we at least use this method to upload large files to NGW => we unable to predict such timeout (finally it turns out
+        # that this is our client timeout for any single request to NGW).
+        if not rep.isFinished(): # isFinished() checks that finished() is emmited before, but not after this method
+            # timer = QTimer()
+            # timer.setSingleShot(True)
+            # timer.timeout.connect(loop.quit)
+            # timer.start(3 * 60 * 1000)
 
             loop.exec_()
 
