@@ -111,8 +111,15 @@ class ResourceCreator():
             )
         )
 
-        result = connection.post(url, params=params)
-        # print "add vector_layer resource result: ", result
+        # TEMP: using of specific "lunkwill" layer creation request is enabled for all rasters by default.
+        # Note: this kind of requests is designed for long-running NGW API requests.
+        do_lunkwill = True
+        if do_lunkwill:
+            result = connection.post_lunkwill(url, params=params)
+        # An old, simple, way of uploading rasters with one request:
+        # else:
+        #     result = connection.post(url, params=params)
+
         ngw_resource = NGWResource.receive_resource_obj(
             connection,
             result['id']

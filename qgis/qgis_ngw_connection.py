@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 import json
+import time
 from base64 import b64encode
 
 from qgis.PyQt.QtCore import *
@@ -82,7 +83,64 @@ class QgsNgwConnection(QObject):
         return self.__request(sub_url, 'DELETE', params, **kwargs)
 
 
-    def __request(self, sub_url, method, params=None, **kwargs):
+    def post_lunkwill(self, sub_url, params=None, **kwargs):
+        """
+        Make a long POST request to NGW server which supports "Lunkwill".
+        """
+        # Add specific header to the first request.
+        headers = {'X-Lunkwill': 'suggest'}
+        rep, j = self.__request_rep(sub_url, 'POST', params, headers, **kwargs)
+
+        # Check that server supports lunkwill and return reply immideately if not (the request just has been processed
+        # as usual NGW API request).
+        hname = ('Content-Type').encode('utf-8')
+        if rep.hasRawHeader(hname):
+            hvalue = bytes(rep.rawHeader(hname)).decode()
+            hreqvalue = 'application/vnd.lunkwill.request-summary+json'
+            if hreqvalue in hvalue: # search for required substring, avoiding check for things like "; charset=utf-8"
+
+                # Send "summary" requests periodically to check long request's status.
+                # Make final "response" request with usual NGW json response after receiving "ready" status.
+                summary_failed_attempts = 3
+                summary_failed = 0
+                request_id = j['id']
+                while True:
+                    status = j['status']
+                    delay_ms = j['delay_ms']
+                    retry_ms = j['retry_ms']
+
+                    if summary_failed == 0:
+                        wait_ms = delay_ms / 1000
+                    elif summary_failed <= summary_failed_attempts:
+                        wait_ms = retry_ms / 1000
+                    else:
+                        raise Exception('Lunkwill request aborted: failed "summary" sub-requests count exceeds maximum')
+
+                    if status == 'processing':
+                        time.sleep(wait_ms)
+                        try:
+                            sub_url = '/api/lunkwill/{}/summary'.format(request_id)
+                            j = self.__request(sub_url, 'GET', **kwargs)
+                            summary_failed = 0
+                        except:
+                            log('Lunkwill "summary" sub-request failed. Try again')
+                            summary_failed += 1
+
+                    elif status == 'ready':
+                        sub_url = '/api/lunkwill/{}/response'.format(request_id)
+                        j = self.__request(sub_url, 'GET', **kwargs)
+                        break
+
+                    else:
+                        raise Exception('Lunkwill request failed on server')
+
+        rep.deleteLater()
+        del rep
+
+        return j
+
+
+    def __request_rep(self, sub_url, method, params=None, headers=None, **kwargs):
         json_data = None
         if params:
             json_data = json.dumps(params)
@@ -92,11 +150,12 @@ class QgsNgwConnection(QObject):
         url = self.server_url + sub_url
 
         log(
-            "Request\nmethod: {}\nurl: {}\njson({}): {}\nfile: {}".format(
+            "Request\nmethod: {}\nurl: {}\njson({}): {}\nheaders: {}\nfile: {}".format(
                 method,
                 url,
                 type(json_data),
                 json_data,
+                headers,
                 file.encode('utf-8') if file else '-'
             )
         )
@@ -108,6 +167,12 @@ class QgsNgwConnection(QObject):
             authstr = QByteArray(authstr).toBase64()
             authstr = QByteArray(('Basic ').encode('utf-8')).append(authstr)
             req.setRawHeader(("Authorization").encode('utf-8'), authstr)
+
+        if headers is not None: # add custom headers
+            for k, v in list(headers.items()):
+                hkey = k.encode('utf-8')
+                hval = v.encode('utf-8')
+                req.setRawHeader(hkey, hval)
 
         data = QBuffer(QByteArray())
         if file is not None:
@@ -150,6 +215,9 @@ class QgsNgwConnection(QObject):
             loop.exec_()
 
         rep.finished.disconnect(loop.quit)
+
+        loop.deleteLater()
+        del loop
 
         data.close()
         data = rep.readAll()
@@ -214,12 +282,15 @@ class QgsNgwConnection(QObject):
             log("Response\nerror response JSON parse\n%s" % rep_str)
             raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url().toString())
 
+        return rep, json_response
+
+    def __request(self, sub_url, method, params=None, **kwargs):
+        rep, j = self.__request_rep(sub_url, method, params, None, **kwargs)
+
         rep.deleteLater()
         del rep
-        loop.deleteLater()
-        del loop
 
-        return json_response
+        return j
 
 
     def get_upload_file_url(self):
