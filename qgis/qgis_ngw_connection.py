@@ -41,6 +41,7 @@ GET_VERSION_URL = '/api/component/pyramid/pkg_version'
 TUS_UPLOAD_FILE_URL = '/api/component/file_upload/'
 TUS_VERSION = '1.0.0'
 TUS_CHUNK_SIZE = 16777216
+CLIENT_TIMEOUT = 3 * 60 * 1000
 
 class QgsNgwConnection(QObject):
 
@@ -148,7 +149,7 @@ class QgsNgwConnection(QObject):
         if params:
             json_data = json.dumps(params)
 
-        file = kwargs.get("file")
+        filename = kwargs.get("file")
 
         url = self.server_url + sub_url
 
@@ -159,7 +160,7 @@ class QgsNgwConnection(QObject):
                 type(json_data),
                 json_data,
                 headers,
-                file.encode('utf-8') if file else '-',
+                filename.encode('utf-8') if filename else '-',
                 badata.size() if badata else '-'
             )
         )
@@ -178,18 +179,18 @@ class QgsNgwConnection(QObject):
                 hval = v.encode('utf-8')
                 req.setRawHeader(hkey, hval)
 
+        iodevice = None # default to None, not to "QBuffer(QByteArray())" - otherwise random crashes at post() in QGIS 3
         if badata is not None:
-            data = badata
-        else:
-            data = None # default to None, not to "QBuffer(QByteArray())" - otherwise random crashes at post() in QGIS 3
-            if file is not None:
-                data = QFile(file)
-            elif json_data is not None:
-                req.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
-                json_data = QByteArray(json_data.encode('utf-8'))
-                data = QBuffer(json_data)
-            if data is not None:
-                data.open(QIODevice.ReadOnly)
+            iodevice = QBuffer(badata)
+        elif filename is not None:
+            iodevice = QFile(filename)
+        elif json_data is not None:
+            req.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
+            json_data = QByteArray(json_data.encode('utf-8'))
+            iodevice = QBuffer(json_data)
+
+        if iodevice is not None:
+            iodevice.open(QIODevice.ReadOnly)
 
         loop = QEventLoop() #loop = QEventLoop(self)
         nam = QgsNetworkAccessManager.instance()
@@ -202,28 +203,27 @@ class QgsNgwConnection(QObject):
         if method == "GET":
             rep = nam.get(req)
         elif method == "POST":
-            rep = nam.post(req, data)
+            rep = nam.post(req, iodevice)
         elif method == "DELETE":
             rep = nam.deleteResource(req)
         else:
-            rep = nam.sendCustomRequest(req, method.encode('utf-8'), data)
+            rep = nam.sendCustomRequest(req, method.encode('utf-8'), iodevice)
 
         rep.finished.connect(loop.quit)
-        if file is not None:
+        if filename is not None:
             rep.uploadProgress.connect(self.sendUploadProgress)
 
         # In our current approach we use QEventLoop to wait QNetworkReply finished() signal. This could lead to infinite loop
         # in the case when finished() signal 1) is not fired at all or 2) fired right after isFinished() method but before loop.exec_().
         # We need some kind of guard for that OR we need to use another approach to wait for network replies (e.g. fully asynchronous
         # approach which is actually should be used when dealing with QNetworkAccessManager).
-        # TODO: think about it and fix it. For now we cannot make a timeout with a low value to break the infinite loop here, because
-        # currently we at least use this method to upload large files to NGW => we unable to predict such timeout (finally it turns out
-        # that this is our client timeout for any single request to NGW).
+        # NOTE: actualy this is also our client timeout for any single request to NGW. We are able to set it to some not-large value because
+        # we use tus uplod for large files => we do not warry that large files will not be uploaded this way.
         if not rep.isFinished(): # isFinished() checks that finished() is emmited before, but not after this method
-            # timer = QTimer()
-            # timer.setSingleShot(True)
-            # timer.timeout.connect(loop.quit)
-            # timer.start(1 * 60 * 1000)
+            timer = QTimer()
+            timer.setSingleShot(True)
+            timer.timeout.connect(loop.quit)
+            timer.start(CLIENT_TIMEOUT)
 
             loop.exec_()
 
@@ -232,9 +232,8 @@ class QgsNgwConnection(QObject):
         loop.deleteLater()
         del loop
 
-        if badata is None:
-            if data is not None:
-                data.close()
+        if iodevice is not None:
+            iodevice.close()
 
         # Indicate that request has been timed out by QGIS.
         # TODO: maybe use QgsNetworkAccessManager::requestTimedOut()?
@@ -333,7 +332,7 @@ class QgsNgwConnection(QObject):
 
         file_guid = location.split('/')[-1]
         file_upload_url = TUS_UPLOAD_FILE_URL + file_guid
-        max_retry_count = 5
+        max_retry_count = 3
         bytes_sent = 0
 
         # Upload file chunk-by-chunk.
@@ -351,10 +350,7 @@ class QgsNgwConnection(QObject):
             }
             retries = 0
             while retries < max_retry_count:
-                buffer = QBuffer(badata)
-                buffer.open(QIODevice.ReadOnly)
-                chunk_req, chunk_rep = self.__request_rep(file_upload_url, 'PATCH', buffer, None, chunk_hdrs)
-                buffer.close()
+                chunk_req, chunk_rep = self.__request_rep(file_upload_url, 'PATCH', badata, None, chunk_hdrs)
                 chunk_rep_code = chunk_rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
                 chunk_rep.deleteLater()
                 del chunk_rep
