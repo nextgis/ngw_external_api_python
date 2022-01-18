@@ -95,7 +95,9 @@ class ResourceCreator():
     def create_raster_layer(parent_ngw_resource, filename, layer_name, upload_as_cog, callback):
         connection = parent_ngw_resource._res_factory.connection
 
-        raster_file_desc = connection.upload_file(filename, callback)
+        # Use tus uploading for rasters by default.
+        #raster_file_desc = connection.upload_file(filename, callback)
+        raster_file_desc = connection.tus_upload_file(filename, callback)
 
         url = parent_ngw_resource.get_api_collection_url()
         params = dict(
@@ -111,14 +113,9 @@ class ResourceCreator():
             )
         )
 
-        # TEMP: using of specific "lunkwill" layer creation request is enabled for all rasters by default.
-        # Note: this kind of requests is designed for long-running NGW API requests.
-        do_lunkwill = True
-        if do_lunkwill:
-            result = connection.post_lunkwill(url, params=params)
-        # An old, simple, way of uploading rasters with one request:
-        # else:
-        #     result = connection.post(url, params=params)
+        # Use "lunkwill" layer creation request (specific type of long request) by default.
+        #result = connection.post(url, params=params)
+        result = connection.post_lunkwill(url, params=params)
 
         ngw_resource = NGWResource.receive_resource_obj(
             connection,

@@ -38,6 +38,9 @@ from .compat_qgis import CompatQt
 
 UPLOAD_FILE_URL = '/api/component/file_upload/upload'
 GET_VERSION_URL = '/api/component/pyramid/pkg_version'
+TUS_UPLOAD_FILE_URL = '/api/component/file_upload/'
+TUS_VERSION = '1.0.0'
+TUS_CHUNK_SIZE = 16777216
 
 class QgsNgwConnection(QObject):
 
@@ -68,19 +71,19 @@ class QgsNgwConnection(QObject):
 
 
     def get(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'GET', params, **kwargs)
+        return self.__request_json(sub_url, 'GET', params, **kwargs)
 
     def post(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'POST', params, **kwargs)
+        return self.__request_json(sub_url, 'POST', params, **kwargs)
 
     def put(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'PUT', params, **kwargs)
+        return self.__request_json(sub_url, 'PUT', params, **kwargs)
 
     def patch(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'PATCH', params, **kwargs)
+        return self.__request_json(sub_url, 'PATCH', params, **kwargs)
 
     def delete(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'DELETE', params, **kwargs)
+        return self.__request_json(sub_url, 'DELETE', params, **kwargs)
 
 
     def post_lunkwill(self, sub_url, params=None, **kwargs):
@@ -89,7 +92,7 @@ class QgsNgwConnection(QObject):
         """
         # Add specific header to the first request.
         headers = {'X-Lunkwill': 'suggest'}
-        rep, j = self.__request_rep(sub_url, 'POST', params, headers, **kwargs)
+        rep, j = self.__request_rep_json(sub_url, 'POST', params, headers, **kwargs)
 
         # Check that server supports lunkwill and return reply immideately if not (the request just has been processed
         # as usual NGW API request).
@@ -120,7 +123,7 @@ class QgsNgwConnection(QObject):
                         time.sleep(wait_ms)
                         try:
                             sub_url = '/api/lunkwill/{}/summary'.format(request_id)
-                            j = self.__request(sub_url, 'GET', **kwargs)
+                            j = self.get(sub_url, **kwargs)
                             summary_failed = 0
                         except:
                             log('Lunkwill "summary" sub-request failed. Try again')
@@ -128,7 +131,7 @@ class QgsNgwConnection(QObject):
 
                     elif status == 'ready':
                         sub_url = '/api/lunkwill/{}/response'.format(request_id)
-                        j = self.__request(sub_url, 'GET', **kwargs)
+                        j = self.get(sub_url, **kwargs)
                         break
 
                     else:
@@ -140,7 +143,7 @@ class QgsNgwConnection(QObject):
         return j
 
 
-    def __request_rep(self, sub_url, method, params=None, headers=None, **kwargs):
+    def __request_rep(self, sub_url, method, badata=None, params=None, headers=None, **kwargs):
         json_data = None
         if params:
             json_data = json.dumps(params)
@@ -150,13 +153,14 @@ class QgsNgwConnection(QObject):
         url = self.server_url + sub_url
 
         log(
-            "Request\nmethod: {}\nurl: {}\njson({}): {}\nheaders: {}\nfile: {}".format(
+            "Request\nmethod: {}\nurl: {}\njson({}): {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
                 method,
                 url,
                 type(json_data),
                 json_data,
                 headers,
-                file.encode('utf-8') if file else '-'
+                file.encode('utf-8') if file else '-',
+                badata.size() if badata else '-'
             )
         )
 
@@ -174,18 +178,20 @@ class QgsNgwConnection(QObject):
                 hval = v.encode('utf-8')
                 req.setRawHeader(hkey, hval)
 
-        data = QBuffer(QByteArray())
-        if file is not None:
-            data = QFile(file)
-        elif json_data is not None:
-            req.setHeader(QNetworkRequest.ContentTypeHeader, "application/json");
-            json_data = QByteArray(json_data.encode('utf-8'))
-            data = QBuffer(json_data)
+        if badata is not None:
+            data = badata
+        else:
+            data = None # default to None, not to "QBuffer(QByteArray())" - otherwise random crashes at post() in QGIS 3
+            if file is not None:
+                data = QFile(file)
+            elif json_data is not None:
+                req.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
+                json_data = QByteArray(json_data.encode('utf-8'))
+                data = QBuffer(json_data)
+            if data is not None:
+                data.open(QIODevice.ReadOnly)
 
-        data.open(QIODevice.ReadOnly)
-
-        #loop = QEventLoop(self)
-        loop = QEventLoop()
+        loop = QEventLoop() #loop = QEventLoop(self)
         nam = QgsNetworkAccessManager.instance()
 
         has_redirect_policy = False
@@ -217,7 +223,7 @@ class QgsNgwConnection(QObject):
             # timer = QTimer()
             # timer.setSingleShot(True)
             # timer.timeout.connect(loop.quit)
-            # timer.start(3 * 60 * 1000)
+            # timer.start(1 * 60 * 1000)
 
             loop.exec_()
 
@@ -226,30 +232,9 @@ class QgsNgwConnection(QObject):
         loop.deleteLater()
         del loop
 
-        data.close()
-        data = rep.readAll()
-
-        # try:
-        #     resp = self.__session.send(prep, proxies=self.__proxy)
-        # except requests.exceptions.ConnectionError:
-        #     raise NGWError(NGWError.TypeRequestError, "Connection error", req.url)
-        # except requests.exceptions.RequestException as e:
-        #     log( "Response\nerror {}: {}".format(type(e), e) )
-        #     raise NGWError(NGWError.TypeRequestError, "%s" % type(e), req.url)
-
-        # if resp.status_code == 502:
-        #     log( "Response\nerror status_code 502" )
-        #     raise NGWError(NGWError.TypeRequestError, "Response status code is 502", req.url)
-
-        # if resp.status_code / 100 != 2:
-        #     log("Response\nerror status_code {}\nmsg: {}".format(resp.status_code, resp.content))
-        #     raise NGWError(NGWError.TypeNGWError, resp.content, req.url)
-
-        # try:
-        #     json_response = resp.json()
-        # except:
-        #     log("Response\nerror response JSON parse")
-        #     raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url)
+        if badata is None:
+            if data is not None:
+                data.close()
 
         # Indicate that request has been timed out by QGIS.
         # TODO: maybe use QgsNetworkAccessManager::requestTimedOut()?
@@ -263,8 +248,15 @@ class QgsNgwConnection(QObject):
             log( "Connection error qt code: {}".format(rep.error()) )
             raise NGWError(NGWError.TypeRequestError, "Connection error qt code: {}".format(rep.error()), req.url().toString())
 
-        status_code = rep.attribute( QNetworkRequest.HttpStatusCodeAttribute )
+        return req, rep
 
+
+    def __request_rep_json(self, sub_url, method, params=None, headers=None, **kwargs):
+        req, rep = self.__request_rep(sub_url, method, badata=None, params=params, headers=headers, **kwargs)
+
+        status_code = rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+
+        data = rep.readAll()
         rep_str = CompatPy.decode_reply_escape(data)
 
         #if  status_code / 100 != 2:
@@ -291,8 +283,9 @@ class QgsNgwConnection(QObject):
 
         return rep, json_response
 
-    def __request(self, sub_url, method, params=None, **kwargs):
-        rep, j = self.__request_rep(sub_url, method, params, None, **kwargs)
+
+    def __request_json(self, sub_url, method, params=None, **kwargs):
+        rep, j = self.__request_rep_json(sub_url, method, params=params, headers=None, **kwargs)
 
         rep.deleteLater()
         del rep
@@ -303,10 +296,86 @@ class QgsNgwConnection(QObject):
     def get_upload_file_url(self):
         return UPLOAD_FILE_URL
 
-
     def upload_file(self, filename, callback):
         self.uploadProgressCallback = callback
         return self.put(self.get_upload_file_url(), file=filename)
+
+
+    def tus_upload_file(self, filename, callback):
+        """
+        Implements tus protocol to upload a file to NGW.
+        Note: This method internally uses self methods to send synchronous HTTP requests (which internally use
+        QgsNetworkAccessManager) so we cannot put it to some separate class or module.
+        """
+        self.uploadProgressCallback = callback
+
+        file = QFile(filename)
+        if not file.open(QIODevice.ReadOnly):
+            raise Exception('Failed to open file for tus uplod')
+        file_size = file.size()
+
+        # Initiate upload process by sending specific "create" request with a void body.
+        create_hdrs = {
+            'Tus-Resumable': TUS_VERSION,
+            'Content-Length': '0',
+            #'Upload-Defer-Length': ,
+            'Upload-Length': str(file_size),
+            #'Upload-Metadata': 'name {}'.format(base64name)
+        }
+        create_req, create_rep = self.__request_rep(TUS_UPLOAD_FILE_URL, 'POST', None, None, create_hdrs)
+        create_rep_code = create_rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+        if create_rep_code != 201:
+            raise Exception('Failed to start tus uploading')
+        location_hdr = ('Location').encode('utf-8')
+        location = bytes(create_rep.rawHeader(location_hdr)).decode()
+        create_rep.deleteLater()
+        del create_rep
+
+        file_guid = location.split('/')[-1]
+        file_upload_url = TUS_UPLOAD_FILE_URL + file_guid
+        max_retry_count = 5
+        bytes_sent = 0
+
+        # Upload file chunk-by-chunk.
+        while True:
+            badata = QByteArray(file.read(TUS_CHUNK_SIZE))
+            if badata.isEmpty(): # end of data OR some error
+                break
+            bytes_read = badata.size()
+
+            chunk_hdrs = {
+                'Tus-Resumable': TUS_VERSION,
+                'Content-Type': 'application/offset+octet-stream',
+                'Content-Length': str(bytes_read),
+                'Upload-Offset': str(bytes_sent)
+            }
+            retries = 0
+            while retries < max_retry_count:
+                buffer = QBuffer(badata)
+                buffer.open(QIODevice.ReadOnly)
+                chunk_req, chunk_rep = self.__request_rep(file_upload_url, 'PATCH', buffer, None, chunk_hdrs)
+                buffer.close()
+                chunk_rep_code = chunk_rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+                chunk_rep.deleteLater()
+                del chunk_rep
+                if chunk_rep_code == 204:
+                    break
+                retries += 1
+                log('Retry chunk upload')
+
+            if retries == max_retry_count:
+                break
+
+            bytes_sent += bytes_read
+            log('Tus-uploaded chunk of {} bytes. Now {} of overall {} bytes are uploaded'.format(bytes_read, bytes_sent, file_size))
+
+        file.close()
+
+        if bytes_sent < file_size:
+            raise Exception('Failed to upload file via tus')
+
+        # Finally GET and return NGW result of uploaded file.
+        return self.get(file_upload_url)
 
 
     def sendUploadProgress(self, sent, total):
