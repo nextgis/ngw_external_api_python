@@ -342,6 +342,8 @@ class QgsNgwConnection(QObject):
                 break
             bytes_read = badata.size()
 
+            self.sendUploadProgress(bytes_sent, file_size)
+
             chunk_hdrs = {
                 'Tus-Resumable': TUS_VERSION,
                 'Content-Type': 'application/offset+octet-stream',
@@ -369,6 +371,8 @@ class QgsNgwConnection(QObject):
 
         if bytes_sent < file_size:
             raise Exception('Failed to upload file via tus')
+
+        self.sendUploadProgress(1, 1) # in order to show that 100% is loaded
 
         # Finally GET and return NGW result of uploaded file.
         return self.get(file_upload_url)
