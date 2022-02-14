@@ -430,7 +430,8 @@ class QGISResourceJob(NGWResourceModelJob):
             "%s - Finishing" % qgs_vector_layer.name()
         )
 
-        #os.remove(filepath)
+        os.remove(filepath)
+
         return ngw_vector_layer
 
 
