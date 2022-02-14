@@ -155,7 +155,7 @@ class QNGWResourcesModel4QGIS(QNGWResourcesModel):
         ngw_resource = item.data(0, item.NGWResourceRole)
 
         return self._startJob(
-            CurrentQGISProjectImporter(ngw_group_name, ngw_resource, iface),
+            CurrentQGISProjectImporter(ngw_group_name, ngw_resource, iface, self.ngw_version),
         )
 
     @modelRequest()
@@ -1034,8 +1034,8 @@ class CurrentQGISProjectImporter(QGISResourceJob):
         Calculate mapping of qgislayer to ngw resource
         Show map for user to edit anf cofirm it
     """
-    def __init__(self, new_group_name, ngw_resource, iface):
-        QGISResourceJob.__init__(self)
+    def __init__(self, new_group_name, ngw_resource, iface, ngw_version):
+        QGISResourceJob.__init__(self, ngw_version)
         self.new_group_name = new_group_name
         self.ngw_resource = ngw_resource
         self.iface = iface
