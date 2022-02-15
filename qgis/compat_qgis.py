@@ -238,6 +238,24 @@ class CompatQgis:
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
 
+    @classmethod
+    def decode_reply_escape(cls, ba):
+        if COMPAT_QGIS_VERSION == 2:
+            return ba.data().decode('string-escape')
+        elif COMPAT_QGIS_VERSION == 3:
+            return ba.data().decode('unicode_escape')
+        else:
+            raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
+    @classmethod
+    def decode_reply_escape_log(cls, msg):
+        if COMPAT_QGIS_VERSION == 2:
+            return msg.decode('unicode_escape')
+        elif COMPAT_QGIS_VERSION == 3:
+            return msg
+        else:
+            raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
+
 
 class CompatQt:
 

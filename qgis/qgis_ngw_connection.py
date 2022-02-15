@@ -33,6 +33,7 @@ from ..core.ngw_error import NGWError
 from ..utils import log
 
 from ..compat_py import CompatPy
+from .compat_qgis import CompatQgis
 from .compat_qgis import CompatQt
 
 
@@ -254,11 +255,12 @@ class QgsNgwConnection(QObject):
         status_code = rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
 
         data = rep.readAll()
-        rep_str = CompatPy.decode_reply_escape(data)
+        rep_str = CompatQgis.decode_reply_escape(data)
+        rep_str_log = CompatQgis.decode_reply_escape_log(rep_str)
 
         #if  status_code / 100 != 2:
         if status_code is not None and int(str(status_code)[:1]) != 2:
-            log("Response\nerror status_code {}\nmsg: {}".format(status_code, rep_str))
+            log(u"Response\nerror status_code {}\nmsg: {}".format(status_code, rep_str_log))
 
             ngw_message_present = False
             try:
@@ -275,7 +277,7 @@ class QgsNgwConnection(QObject):
         try:
             json_response = json.loads(bytes(data).decode())
         except:
-            log("Response\nerror response JSON parse\n%s" % rep_str)
+            log(u"Response\nerror response JSON parse\n%s" % rep_str_log)
             raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url().toString())
 
         return rep, json_response

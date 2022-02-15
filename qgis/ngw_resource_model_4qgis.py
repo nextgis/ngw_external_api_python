@@ -248,6 +248,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def importQgsPluginLayer(self, qgs_plugin_layer, ngw_group):
         # Look for QMS plugin layer
         if qgs_plugin_layer.pluginLayerType() == 'PyTiledLayer' and hasattr(qgs_plugin_layer, "layerDef") and hasattr(qgs_plugin_layer.layerDef, "serviceUrl"):
+            #log(u'>>> Uploading plugin layer "{}"'.format(qgs_plugin_layer.name()))
 
             if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
                 raise JobError(self.tr("Your web GIS cann't create base maps."))
@@ -271,6 +272,8 @@ class QGISResourceJob(NGWResourceModelJob):
             return [ngw_basemap]
 
     def importQgsWMSLayer(self, qgs_wms_layer, ngw_group):
+        #log(u'>>> Uploading WMS layer "{}"'.format(qgs_wms_layer.name()))
+
         self.statusChanged.emit(
             "\"%s\" - Import as WMS Connection " % (
                 qgs_wms_layer.name(),
@@ -344,6 +347,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def importQgsRasterLayer(self, qgs_raster_layer, ngw_parent_resource):
         new_layer_name = self.unique_resource_name(qgs_raster_layer.name(), ngw_parent_resource)
+        log(u'>>> Uploading raster layer "{}" (with the name "{}")'.format(qgs_raster_layer.name(), new_layer_name))
 
         def uploadFileCallback(total_size, readed_size, value=None):
             self.statusChanged.emit(
@@ -375,6 +379,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def importQgsVectorLayer(self, qgs_vector_layer, ngw_parent_resource):
         new_layer_name = self.unique_resource_name(qgs_vector_layer.name(), ngw_parent_resource)
+        log(u'>>> Uploading vector layer "{}" (with the name "{}")'.format(qgs_vector_layer.name(), new_layer_name))
 
         def uploadFileCallback(total_size, readed_size, value=None):
             self.statusChanged.emit(

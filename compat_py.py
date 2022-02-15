@@ -44,15 +44,6 @@ class CompatPy:
             raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)
 
     @classmethod
-    def decode_reply_escape(cls, ba):
-        if COMPAT_PY_VERSION == 2:
-            return ba.data().decode('string-escape') # TODO: fix here, still get \u sequences
-        elif COMPAT_PY_VERSION == 3:
-            return ba.data().decode('unicode_escape')
-        else:
-            raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)
-
-    @classmethod
     def exception_msg(cls, e):
         if COMPAT_PY_VERSION == 2:
             return e.message or ''
