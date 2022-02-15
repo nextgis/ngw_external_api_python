@@ -102,7 +102,6 @@ class QgsNgwConnection(QObject):
             hvalue = bytes(rep.rawHeader(hname)).decode()
             hreqvalue = 'application/vnd.lunkwill.request-summary+json'
             if hreqvalue in hvalue: # search for required substring, avoiding check for things like "; charset=utf-8"
-
                 # Send "summary" requests periodically to check long request's status.
                 # Make final "response" request with usual NGW json response after receiving "ready" status.
                 summary_failed_attempts = 3
@@ -153,8 +152,7 @@ class QgsNgwConnection(QObject):
 
         url = self.server_url + sub_url
 
-        log(
-            "Request\nmethod: {}\nurl: {}\njson({}): {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
+        log("Request\nmethod: {}\nurl: {}\njson({}): {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
                 method,
                 url,
                 type(json_data),
@@ -306,6 +304,7 @@ class QgsNgwConnection(QObject):
         Note: This method internally uses self methods to send synchronous HTTP requests (which internally use
         QgsNetworkAccessManager) so we cannot put it to some separate class or module.
         """
+        callback(0, 0, 0) # show in the progress bar that 0% is loaded currently
         self.uploadProgressCallback = callback
 
         file = QFile(filename)
@@ -372,7 +371,7 @@ class QgsNgwConnection(QObject):
         if bytes_sent < file_size:
             raise Exception('Failed to upload file via tus')
 
-        self.sendUploadProgress(1, 1) # in order to show that 100% is loaded
+        callback(1, 1, 100) # show in the progress bar that 100% is loaded
 
         # Finally GET and return NGW result of uploaded file.
         return self.get(file_upload_url)

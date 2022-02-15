@@ -55,13 +55,14 @@ class ResourceCreator():
         return ngw_resource
 
     @staticmethod
-    def create_vector_layer(parent_ngw_resource, filename, layer_name, callback,
+    def create_vector_layer(parent_ngw_resource, filename, layer_name,
+        upload_callback, create_callback,
         geom_type=None, geom_is_multi=None, geom_has_z=None):
         connection = parent_ngw_resource._res_factory.connection
 
         # Use tus uploading for files by default.
-        #vector_file_desc = connection.upload_file(filename, callback)
-        vector_file_desc = connection.tus_upload_file(filename, callback)
+        #vector_file_desc = connection.upload_file(filename, upload_callback)
+        vector_file_desc = connection.tus_upload_file(filename, upload_callback)
 
         url = parent_ngw_resource.get_api_collection_url()
         params = dict(
@@ -85,6 +86,8 @@ class ResourceCreator():
             )
         )
 
+        create_callback() # show "Create" status
+
         # Use "lunkwill" layer creation request (specific type of long request) by default.
         #result = connection.post(url, params=params)
         result = connection.post_lunkwill(url, params=params)
@@ -97,12 +100,13 @@ class ResourceCreator():
         return NGWVectorLayer(parent_ngw_resource._res_factory, ngw_resource)
 
     @staticmethod
-    def create_raster_layer(parent_ngw_resource, filename, layer_name, upload_as_cog, callback):
+    def create_raster_layer(parent_ngw_resource, filename, layer_name, upload_as_cog,
+        upload_callback, create_callback):
         connection = parent_ngw_resource._res_factory.connection
 
         # Use tus uploading for files by default.
-        #raster_file_desc = connection.upload_file(filename, callback)
-        raster_file_desc = connection.tus_upload_file(filename, callback)
+        #raster_file_desc = connection.upload_file(filename, upload_callback)
+        raster_file_desc = connection.tus_upload_file(filename, upload_callback)
 
         url = parent_ngw_resource.get_api_collection_url()
         params = dict(
@@ -117,6 +121,8 @@ class ResourceCreator():
                 cog=upload_as_cog
             )
         )
+
+        create_callback() # show "Create" status
 
         # Use "lunkwill" layer creation request (specific type of long request) by default.
         #result = connection.post(url, params=params)
