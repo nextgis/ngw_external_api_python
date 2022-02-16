@@ -7,6 +7,11 @@
         <source>Import &apos;%s&apos;</source>
         <translation>Импорт &apos;%s&apos;</translation>
     </message>
+    <message>
+        <location filename="ngw_resource_model_4qgis.py"/>
+        <source>Import layer "%s" failed. Skipped</source>
+        <translation>Ошибка при импорте слоя "%s". Слой пропущен</translation>
+    </message>
 </context>
 <context>
     <name>Dialog</name>

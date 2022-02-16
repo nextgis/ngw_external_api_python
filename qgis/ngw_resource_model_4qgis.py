@@ -407,7 +407,7 @@ class QGISResourceJob(NGWResourceModelJob):
         if filepath is None:
             self.errorOccurred.emit(
                 JobError(
-                    "Can't prepare layer'%s'. Skiped!" % qgs_vector_layer.name()
+                    "Can't prepare layer '%s'. Skipped!" % qgs_vector_layer.name()
                 )
             )
             return None
@@ -1133,10 +1133,11 @@ class CurrentQGISProjectImporter(QGISResourceJob):
                 ngw_resource_group
             )
         except Exception as e:
+            log('Exception during adding layer')
             if NgwPluginSettings.get_force_qgis_project_import():
                 self.warningOccurred.emit(
                     JobError(
-                        self.tr("Import \"%s\" failed.") % qgsLayerTreeItem.layer().name(),
+                        self.tr("Import layer \"%s\" failed. Skipped") % qgsLayerTreeItem.layer().name(),
                         e
                     )
                 )
