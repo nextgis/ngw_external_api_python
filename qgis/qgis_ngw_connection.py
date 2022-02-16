@@ -147,17 +147,17 @@ class QgsNgwConnection(QObject):
     def __request_rep(self, sub_url, method, badata=None, params=None, headers=None, **kwargs):
         json_data = None
         if params:
-            json_data = json.dumps(params)
+            json_data = json.dumps(params).encode('utf-8')
 
         filename = kwargs.get("file")
 
         url = self.server_url + sub_url
 
-        log("Request\nmethod: {}\nurl: {}\njson({}): {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
+        log(u"Request\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
                 method,
                 url,
-                type(json_data),
-                json_data,
+                #type(json_data),
+                json_data.decode('unicode_escape') if json_data is not None else None,
                 headers,
                 filename.encode('utf-8') if filename else '-',
                 badata.size() if badata else '-'
@@ -185,7 +185,7 @@ class QgsNgwConnection(QObject):
             iodevice = QFile(filename)
         elif json_data is not None:
             req.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
-            json_data = QByteArray(json_data.encode('utf-8'))
+            json_data = QByteArray(json_data)
             iodevice = QBuffer(json_data)
 
         if iodevice is not None:

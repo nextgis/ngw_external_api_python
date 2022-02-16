@@ -482,7 +482,7 @@ class QGISResourceJob(NGWResourceModelJob):
             layer = qgs_vector_layer
 
         if layer.featureCount() == 0:
-            log('Layer "{}" has 0 features after checking & fixing (actually skipping) geometries'.format(layer.name()))
+            log(u'Layer "{}" has 0 features after checking & fixing (actually skipping) geometries'.format(layer.name()))
             import_format = 'ESRI Shapefile'
         else:
             layer_provider = layer.dataProvider()
