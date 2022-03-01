@@ -144,5 +144,10 @@
         <source>Сonnection closed by QGIS. Increase timeout (Settings -> Options -> Network) to 300000 and retry uploading</source>
         <translation>Соединение было сброшено QGIS. Увеличьте таймаут для сетевых запросов (Установки -> Параметры -> Сеть) до 300000 и попробуйте загрузить заново</translation>
     </message>
+    <message>
+        <location filename="qgis_ngw_connection.py" line=""/>
+        <source>File is too large for uploading</source>
+        <translation>Загружаемый файл слишком большой</translation>
+    </message>
 </context>
 </TS>

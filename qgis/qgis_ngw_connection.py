@@ -324,6 +324,9 @@ class QgsNgwConnection(QObject):
         }
         create_req, create_rep = self.__request_rep(TUS_UPLOAD_FILE_URL, 'POST', None, None, create_hdrs)
         create_rep_code = create_rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+        if create_rep_code == 413:
+            raise NGWError(NGWError.TypeRequestError, 'HTTP 413: Payload is too large', TUS_UPLOAD_FILE_URL,
+                self.tr('File is too large for uploading'), need_reconnect=False)
         if create_rep_code != 201:
             raise Exception('Failed to start tus uploading')
         location_hdr = ('Location').encode('utf-8')
