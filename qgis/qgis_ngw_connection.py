@@ -264,7 +264,7 @@ class QgsNgwConnection(QObject):
 
             ngw_message_present = False
             try:
-                json.loads(bytes(data).decode())
+                json.loads(bytes(data).decode('utf-8'))
                 ngw_message_present = True
             except Exception as e:
                 pass
@@ -275,7 +275,7 @@ class QgsNgwConnection(QObject):
                 raise NGWError(NGWError.TypeRequestError, "Response status code is %s" % status_code, req.url().toString())
 
         try:
-            json_response = json.loads(bytes(data).decode())
+            json_response = json.loads(bytes(data).decode('utf-8'))
         except:
             log(u"Response\nerror response JSON parse\n%s" % rep_str_log)
             raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url().toString())
