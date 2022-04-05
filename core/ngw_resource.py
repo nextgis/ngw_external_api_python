@@ -126,6 +126,7 @@ class NGWResource():
         #url = self._res_factory.connection.server_url.replace('://', '://%s:%s@' % creds) + API_RESOURCE_URL(self.common.id)
         url = self._res_factory.connection.server_url.replace('://', '://{login}:{password}@') + API_RESOURCE_URL(self.common.id)
         url = url.format(login=creds[0], password=urllib.parse.quote_plus(creds[1]))
+        url = u'/vsicurl/' + url
         return url
 
     def get_creds(self):
