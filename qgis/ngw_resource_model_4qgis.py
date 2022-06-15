@@ -989,7 +989,7 @@ class QGISResourceJob(NGWResourceModelJob):
             wkb_type == CompatQgisWkbType.WKBMultiPolygonZ):
             geom_type = 'POLYGON'
         else:
-            geom_type = 'AUTO' # default for NGW >= 3.8.0
+            geom_type = None # default for NGW >= 3.8.0
 
         if (wkb_type in [CompatQgisWkbType.WKBMultiPoint,
             CompatQgisWkbType.WKBMultiLineString,
