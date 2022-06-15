@@ -243,7 +243,8 @@ class CompatQgis:
         if COMPAT_QGIS_VERSION == 2:
             return ba.data().decode('string-escape')
         elif COMPAT_QGIS_VERSION == 3:
-            return ba.data().decode('unicode_escape')
+            #return ba.data().decode('unicode_escape')
+            return ba.data().decode() # there is no need to decode 'unicode_escape' in NGW replies of new versions
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
 
