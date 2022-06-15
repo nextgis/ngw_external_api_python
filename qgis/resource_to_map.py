@@ -57,8 +57,8 @@ def _add_cog_raster_layer(resource):
         raise Exception('Resource type is not raster layer!')
     if not resource.is_cog:
         raise UnsupportedRasterTypeException()
-    url = resource.get_absolute_api_url_with_auth()
-    qgs_raster_layer = QgsRasterLayer('/vsicurl/{}/cog'.format(url), resource.common.display_name, 'gdal')
+    url = '{}/cog'.format(resource.get_absolute_api_url_with_auth())
+    qgs_raster_layer = QgsRasterLayer(url, resource.common.display_name, 'gdal')
     if not qgs_raster_layer.isValid():
         log('Failed to add raster layer to QGIS. URL: {}'.format(url))
         raise Exception('Layer "%s" can\'t be added to the map!' % resource.common.display_name)
