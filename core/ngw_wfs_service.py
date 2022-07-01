@@ -43,13 +43,25 @@ class NGWWfsService(NGWResource):
             self.wfs.layers = LIST_DICT_TO_LIST_OBJ(self.wfs.layers)
 
     def get_wfs_url(self, layer_keyname):
-        creds = self._res_factory.connection.get_auth()
+        creds = self.get_creds_for_url()
+        creds_str = ''
+        if creds is not None:
+            creds_str = '&username=%s&password=%s' % (creds[0], creds[1])
+            #creds_str = '&username=%s&password=%s' % (creds[0], urllib.parse.quote_plus(creds[1]))
+            #creds_str = '&username=%s&password=%s' % (urllib.parse.quote_plus(creds[0]), urllib.parse.quote_plus(creds[1]))
         return '%s%s%s' % (
             self.get_absolute_api_url(),
             '/wfs?SERVICE=WFS&TYPENAME=%s' % layer_keyname,
-            #'&username=%s&password=%s' % (creds[0], creds[1])
-            '&username=%s&password=%s' % (urllib.parse.quote_plus(creds[0]), urllib.parse.quote_plus(creds[1]))
+            creds_str
         )
+
+    def get_creds_for_url(self):
+        creds = self.get_creds()
+        if creds is None or creds[0] == '' or creds[1] == '':
+            return None
+
+        return creds[0], creds[1]
+
 
     def get_layers(self):
         return self._json["wfsserver_service"]["layers"]

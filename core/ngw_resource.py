@@ -117,12 +117,10 @@ class NGWResource():
     def get_absolute_api_url(self):
         return self._res_factory.connection.server_url + API_RESOURCE_URL(self.common.id)
 
-    # def get_absolute_url_with_auth(self):
-    #     creds = self._res_factory.connection.get_auth()
-    #     return self._res_factory.connection.server_url.replace('://', '://%s:%s@' % creds) + RESOURCE_URL(self.common.id)
-
     def get_absolute_api_url_with_auth(self):
-        creds = self._res_factory.connection.get_auth()
+        creds = self.get_creds()
+        if creds is None:
+            creds = ['', '']
         url = self._res_factory.connection.server_url.replace('://', '://{login}:{password}@') + API_RESOURCE_URL(self.common.id)
         url = url.format(login=urllib.parse.quote_plus(creds[0]), password=urllib.parse.quote_plus(creds[1]))
         url = u'/vsicurl/' + url
@@ -133,6 +131,14 @@ class NGWResource():
 
     def get_relative_api_url(self):
         return API_RESOURCE_URL(self.common.id)
+
+    def get_creds(self):
+        creds = self._res_factory.connection.get_auth()
+        if creds is None or len(creds) != 2:
+            return None
+        if creds[0] is None or creds[0] == '':
+            return None
+        return creds
 
     @classmethod
     def get_api_collection_url(cls):

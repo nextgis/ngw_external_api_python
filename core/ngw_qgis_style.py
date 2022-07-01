@@ -53,12 +53,7 @@ class NGWQGISStyle(NGWResource):
         self.update()
 
     def get_creds_for_qml(self):
-        creds = self._res_factory.connection.get_auth()
-        if creds is None or len(creds) != 2:
-            return None
-        if creds[0] is None or creds[0] == '':
-            return None
-        return creds[0], creds[1] # do not quot this because it is used as header when downloading qml style
+        return self.get_creds() # do not quot this because it is used as header when downloading qml style
 
 
 class NGWQGISVectorStyle(NGWQGISStyle):
