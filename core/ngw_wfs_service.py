@@ -47,8 +47,6 @@ class NGWWfsService(NGWResource):
         creds_str = ''
         if creds is not None:
             creds_str = '&username=%s&password=%s' % (creds[0], creds[1])
-            #creds_str = '&username=%s&password=%s' % (creds[0], urllib.parse.quote_plus(creds[1]))
-            #creds_str = '&username=%s&password=%s' % (urllib.parse.quote_plus(creds[0]), urllib.parse.quote_plus(creds[1]))
         return '%s%s%s' % (
             self.get_absolute_api_url(),
             '/wfs?SERVICE=WFS&TYPENAME=%s' % layer_keyname,
@@ -59,8 +57,13 @@ class NGWWfsService(NGWResource):
         creds = self.get_creds()
         if creds is None or creds[0] == '' or creds[1] == '':
             return None
-
-        return creds[0], creds[1]
+        # It seems we should escape only '&' character, but not other reserved ones in a password. The use of
+        # urllib.parse.quote_plus() on a password leads to WFS authentication errors when other symbols occur
+        # such as '.', '+', '@'. Understand why. What else and how should we correcyly replace here?
+        # Also this approach does not work in QGIS 2.
+        login = creds[0]
+        password = creds[1].replace('&', '%26')
+        return login, password
 
 
     def get_layers(self):
