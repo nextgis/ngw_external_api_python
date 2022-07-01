@@ -283,7 +283,7 @@ class QGISResourceJob(NGWResourceModelJob):
         layer_source = qgs_wms_layer.source()
         parameters = {}
         for parameter in layer_source.split('&'):
-            key, value = parameter.split("=")
+            key, value = parameter.split("=", 1) # take the first occured because sometimes e.g. "apikey=..." can be met
             value = unquote_plus(value)
 
             if key in parameters:
