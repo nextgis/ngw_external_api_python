@@ -125,7 +125,7 @@ class NGWResource():
         creds = self._res_factory.connection.get_auth()
         #url = self._res_factory.connection.server_url.replace('://', '://%s:%s@' % creds) + API_RESOURCE_URL(self.common.id)
         url = self._res_factory.connection.server_url.replace('://', '://{login}:{password}@') + API_RESOURCE_URL(self.common.id)
-        url = url.format(login=creds[0], password=urllib.parse.quote_plus(creds[1]))
+        url = url.format(login=urllib.parse.quote_plus(creds[0]), password=urllib.parse.quote_plus(creds[1]))
         url = u'/vsicurl/' + url
         return url
 
@@ -135,7 +135,7 @@ class NGWResource():
             return None
         if creds[0] is None or creds[0] == '':
             return None
-        return creds[0], urllib.parse.quote_plus(creds[1])
+        return urllib.parse.quote_plus(creds[0]), urllib.parse.quote_plus(creds[1])
 
     def get_relative_url(self):
         return RESOURCE_URL(self.common.id)

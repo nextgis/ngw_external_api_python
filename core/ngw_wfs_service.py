@@ -48,7 +48,7 @@ class NGWWfsService(NGWResource):
             self.get_absolute_api_url(),
             '/wfs?SERVICE=WFS&TYPENAME=%s' % layer_keyname,
             #'&username=%s&password=%s' % (creds[0], creds[1])
-            '&username=%s&password=%s' % (creds[0], urllib.parse.quote_plus(creds[1]))
+            '&username=%s&password=%s' % (urllib.parse.quote_plus(creds[0]), urllib.parse.quote_plus(creds[1]))
         )
 
     def get_layers(self):
