@@ -68,7 +68,7 @@ def _apply_style(style_resource, qgs_layer):
     ev_loop = QEventLoop()
     qml_url = style_resource.download_qml_url()
     qml_req = QNetworkRequest(QUrl(qml_url))
-    creds = style_resource.get_creds()
+    creds = style_resource.get_creds_for_qml()
     if creds is not None:
         creds_str = creds[0] + ':' + creds[1]
         authstr = creds_str.encode('utf-8')

@@ -123,19 +123,10 @@ class NGWResource():
 
     def get_absolute_api_url_with_auth(self):
         creds = self._res_factory.connection.get_auth()
-        #url = self._res_factory.connection.server_url.replace('://', '://%s:%s@' % creds) + API_RESOURCE_URL(self.common.id)
         url = self._res_factory.connection.server_url.replace('://', '://{login}:{password}@') + API_RESOURCE_URL(self.common.id)
         url = url.format(login=urllib.parse.quote_plus(creds[0]), password=urllib.parse.quote_plus(creds[1]))
         url = u'/vsicurl/' + url
         return url
-
-    def get_creds(self):
-        creds = self._res_factory.connection.get_auth()
-        if creds is None or len(creds) != 2:
-            return None
-        if creds[0] is None or creds[0] == '':
-            return None
-        return urllib.parse.quote_plus(creds[0]), urllib.parse.quote_plus(creds[1])
 
     def get_relative_url(self):
         return RESOURCE_URL(self.common.id)
