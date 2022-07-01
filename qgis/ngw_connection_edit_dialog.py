@@ -23,6 +23,7 @@
  ***************************************************************************/
 """
 import os
+import re
 
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import *
@@ -170,6 +171,9 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         # used standalone anywhere).
         while url.endswith('/'):
             url = url[:-1]
+
+        # Replace common ending when user copy-pastes from browser URL.
+        url = re.sub('/resource/[0-9]+', '', url)
 
         o = urlparse(url)
         hostname = o.hostname
