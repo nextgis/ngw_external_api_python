@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 import os
+from io import FileIO
 import json
 import requests
 from base64 import b64encode
@@ -32,9 +33,9 @@ UPLOAD_FILE_URL = '/api/component/file_upload/upload'
 GET_VERSION_URL = '/api/component/pyramid/pkg_version'
 
 
-class File2Upload(file):
+class File2Upload(FileIO):
     def __init__(self, path, callback):
-        file.__init__(self, path, "rb")
+        FileIO.__init__(self, path, "rb")
         self.seek(0, os.SEEK_END)
         self._total = self.tell()
         self._readed = 0
@@ -45,7 +46,7 @@ class File2Upload(file):
         return self._total
 
     def read(self, size):
-        data = file.read(self, size)
+        data = FileIO.read(self, size)
         self._readed += len(data)
         self._callback(self._total, self._readed)
         return data
@@ -105,7 +106,7 @@ class NGWConnection(object):
     @server_url.setter
     def server_url(self, value):
         if isinstance(value, str):
-            self.__server_url = value.strip().rstrip('\\\/')
+            self.__server_url = value.strip().rstrip(r'\\/')
         else:
             self.__server_url = value
 
@@ -157,8 +158,8 @@ class NGWConnection(object):
             log( "Response\nerror status_code 502" )
             raise NGWError(NGWError.TypeRequestError, "Response status code is 502", req.url)
 
-        if resp.status_code / 100 != 2:
-            log("Response\nerror status_code {}\nmsg: {!r}".format(resp.status_code, resp.content))
+        if resp.status_code // 100 != 2:
+            log("Response\nerror status_code {}\nmsg: {!r}".format(resp.status_code, resp.content.decode()))
             raise NGWError(NGWError.TypeNGWError, resp.content, req.url)
 
         try:
