@@ -35,9 +35,13 @@ from ..compat_py import urlparse, parse_qs
 
 
 def ngw_resource_from_qgs_map_layer(qgs_map_layer):
-    o = urlparse(qgs_map_layer.source())
+    layerSource = qgs_map_layer.source()
+    if 'vsicurl' in layerSource:
+        layerSource = layerSource.lstrip('/vsicurl/')
 
-    m = re.search('^.*/resource/\d+/',o.path)
+    o = urlparse(layerSource)
+
+    m = re.search(r'^.*/resource/\d+/',o.path)
     if m is None:
         return None
 
@@ -49,6 +53,9 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     ngw_resources_id = int(basePathStructure[-1])
     requestAttrs = parse_qs(o.query)
 
+    ngw_username = None
+    ngw_password = None
+
     if qgs_map_layer.providerType() == 'WFS':
         if 'username' in requestAttrs:
             ngw_username = requestAttrs.get('username')[0]
@@ -59,7 +66,9 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
             auth_data = o.netloc.split('@')[0]
             ngw_username = auth_data.split(':')[0]
             ngw_password = auth_data.split(':')[1]
+
     else:
+
         return None
     #additionAttrs = {}
     #if requestAttrs.get(u'TYPENAME') is not None:
@@ -70,6 +79,7 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     #additionAttrs.update({u'auth':(ngw_username, ngw_password)})
     #additionAttrs.update({u'baseURL':baseURL})
     #additionAttrs.update({u'resourceId':ngw_resources_id})
+
     ngwConnectionSettings = NGWConnectionSettings("ngw", baseURL, ngw_username, ngw_password)
     ngwConnection = NGWConnection(ngwConnectionSettings)
 
