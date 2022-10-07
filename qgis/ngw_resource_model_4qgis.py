@@ -889,6 +889,44 @@ class QGISResourceJob(NGWResourceModelJob):
         ngw_style = ngw_layer.create_style()
         return ngw_style
 
+    def importAttachments(self, qgs_map_layer, ngw_resource):
+        ''' Checks if the layer attributes have widgets
+            of type "Attachment" and "Storage Type"
+            matches "existing file" and then tries
+            to import the attachment
+        '''
+        def uploadFileCallback(total_size, readed_size, value=None):
+            self.statusChanged.emit(
+                "\"%s\" - Upload (%d%%)" % (
+                    imgf,
+                    readed_size * 100 / (total_size + 0.1) if value is None else value
+                )
+            )
+
+        if ngw_resource.type_id == NGWVectorLayer.type_id:
+            ngw_ftrs = ngw_resource.get_features()
+            for attrInx in qgs_map_layer.attributeList():
+                wgt = qgs_map_layer.editorWidgetSetup(attrInx)
+                if wgt.type() == 'ExternalResource':
+                    wconf = wgt.config()
+                    if (not wconf['StorageType'] and
+                            wconf['StorageMode'] == 0):
+                        root_dir = ''
+                        if wconf['RelativeStorage'] == 1:
+                            root_dir = QgsProject.instance().homePath()
+                        if wconf['RelativeStorage'] == 2:
+                            root_dir = wconf['DefaultRoot']
+                        for finx, ftr in enumerate(qgs_map_layer.getFeatures()):
+                            imgf = f"{root_dir}/{ftr.attributes()[attrInx]}"
+                            if os.path.isfile(imgf):
+                                log(f"Load file: {imgf}")
+                                uploaded_file_info = ngw_ftrs[finx].ngw_vector_layer._res_factory.connection.upload_file(
+                                    imgf, uploadFileCallback
+                                )
+                                log(f"Uploaded file info: {uploaded_file_info}")
+                                id = ngw_ftrs[finx].link_attachment(uploaded_file_info)
+
+
     def overwriteQGISMapLayer(self, qgs_map_layer, ngw_layer_resource):
         layer_type = qgs_map_layer.type()
 
@@ -1037,6 +1075,10 @@ class QGISResourcesImporter(QGISResourceJob):
                     )
                     self.putAddedResourceToResult(ngw_style)
                     ngw_resource.update()
+                
+                # check and import attachments
+                if ngw_resource.type_id == NGWVectorLayer.type_id:
+                    self.importAttachments(qgs_map_layer, ngw_resource)
 
         self.ngw_group.update()
 

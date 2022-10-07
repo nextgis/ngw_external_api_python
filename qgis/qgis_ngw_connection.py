@@ -148,6 +148,8 @@ class QgsNgwConnection(QObject):
         json_data = None
         if params:
             json_data = json.dumps(params).encode('utf-8')
+        if 'json' in kwargs:
+            json_data = json.dumps(kwargs['json']).encode('utf-8')
 
         filename = kwargs.get("file")
 
