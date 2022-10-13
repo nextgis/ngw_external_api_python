@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 import os
+import re
 from os import path
 
 import urllib.parse
@@ -170,7 +171,8 @@ class NGWResource():
 
     def generate_unique_child_name(self, name):
         chd_names = [ch.common.display_name for ch in self.get_children()]
-
+        if re.search('\(\d\)$', name):
+            name = name = name[:-3]
         new_name = name
         id = 1
         if new_name in chd_names:
