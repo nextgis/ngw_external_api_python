@@ -158,6 +158,19 @@ class NGWResource():
         connection.put(url, params=params)
         self.update()
 
+
+    def update_metadata(self, metadata):
+        params = dict(
+            resmeta=dict(
+                items=metadata,
+            ),
+        )
+
+        connection = self._res_factory.connection
+        url = self.get_relative_api_url()
+        connection.put(url, params=params)
+        self.update()
+
     def update(self):
         self._json = self.receive_resource_obj(
             self._res_factory.connection,
