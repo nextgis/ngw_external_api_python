@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 import sys
+import re
 import json
 import traceback
 
@@ -72,6 +73,8 @@ class NGWResourceModelJob(QObject):
         self.result = NGWResourceModelJobResult()
 
     def generate_unique_name(self, name, present_names):
+        if re.search('\(\d\)$', name):
+            name = name = name[:-3]
         new_name = name
         id = 1
         if new_name in present_names:

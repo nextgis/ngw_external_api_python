@@ -83,16 +83,17 @@ class NGWRasterLayer(NGWResource):
 
         return ngw_resource
 
-    def create_qml_style(self, qml, callback):
+    def create_qml_style(self, qml, callback, style_name=None):
         """Create QML style for this layer
 
         qml - full path to qml file
         callback - upload file callback
         """
         connection = self._res_factory.connection
-        style_name = self.generate_unique_child_name(
-            self.common.display_name + ''
-        )
+        if not style_name:
+            style_name = self.generate_unique_child_name(
+                self.common.display_name + ''
+            )
 
         style_file_desc = connection.upload_file(qml, callback)
 

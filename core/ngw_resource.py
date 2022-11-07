@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 import os
+import re
 from os import path
 
 import urllib.parse
@@ -157,6 +158,19 @@ class NGWResource():
         connection.put(url, params=params)
         self.update()
 
+
+    def update_metadata(self, metadata):
+        params = dict(
+            resmeta=dict(
+                items=metadata,
+            ),
+        )
+
+        connection = self._res_factory.connection
+        url = self.get_relative_api_url()
+        connection.put(url, params=params)
+        self.update()
+
     def update(self):
         self._json = self.receive_resource_obj(
             self._res_factory.connection,
@@ -170,7 +184,8 @@ class NGWResource():
 
     def generate_unique_child_name(self, name):
         chd_names = [ch.common.display_name for ch in self.get_children()]
-
+        if re.search('\(\d\)$', name):
+            name = name = name[:-3]
         new_name = name
         id = 1
         if new_name in chd_names:
