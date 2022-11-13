@@ -20,6 +20,7 @@
 """
 from qgis.PyQt.QtCore import *
 from qgis.PyQt.QtNetwork import *
+from qgis.PyQt.QtWidgets import *
 
 from qgis.core import QgsVectorLayer, QgsRasterLayer, QgsMapLayer, QgsProject, QgsRectangle
 from ..core.ngw_vector_layer import NGWVectorLayer
@@ -143,7 +144,7 @@ def add_resource_as_cog_raster_with_style(resource, style_resource):
         raise Exception('Failed to add layer to QGIS')
 
 
-def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
+def add_resource_as_wfs_layers(self, wfs_resource, return_extent=False):
     if not isinstance(wfs_resource, NGWWfsService):
         raise NGWError('Resource type is not WfsService!')
     #Extent stuff
@@ -152,13 +153,25 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
         summary_extent.setMinimal()
     #Add group
     toc_root = QgsProject.instance().layerTreeRoot()
-    layers_group = toc_root.insertGroup(0, wfs_resource.common.display_name)
+    layers_group = None
     #Add layers
+    asked_if_geom_z = False
     for wfs_layer in wfs_resource.wfs.layers:
         url = wfs_resource.get_wfs_url(wfs_layer.keyname) + '&srsname=EPSG:3857&VERSION=1.0.0&REQUEST=GetFeature'
         qgs_wfs_layer = QgsVectorLayer(url, wfs_layer.display_name, 'WFS')
 
         ngw_vector_layer = wfs_resource.get_source_layer(wfs_layer.resource_id)
+        if ngw_vector_layer.is_geom_with_z():
+            if not asked_if_geom_z:
+                my_dialog = QMessageBox()
+                my_dialog.setText(self.tr('WFS has layers with Z coordinate'))
+                my_dialog.setInformativeText(self.tr('Continue adding WFS layers to project?'))
+                my_dialog.setStandardButtons(QMessageBox.Ignore | QMessageBox.Abort);
+                my_dialog.setIcon(QMessageBox.Warning);
+                res = my_dialog.exec()
+                if res != QMessageBox.Ignore:
+                    return
+                asked_if_geom_z = True
 
         # Add vector style. Select the first QGIS style if several.
         ngw_style_res = None
@@ -184,7 +197,10 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
         #summarize extent
         if return_extent:
             _summ_extent(summary_extent, qgs_wfs_layer)
+
         CompatQgis.layers_registry().addMapLayer(qgs_wfs_layer, False)
+        if not layers_group:
+            layers_group = toc_root.insertGroup(0, wfs_resource.common.display_name)
         layers_group.insertLayer(0, qgs_wfs_layer)
 
     if return_extent:
