@@ -167,6 +167,11 @@ class NGWVectorLayer(NGWResource):
     def is_geom_multy(self):
         return self.geom_type() in [self.MULTIPOINT, self.MULTILINESTRING, self.MULTIPOLYGON]
 
+    def is_geom_with_z(self):
+        return self.geom_type() in [self.POINTZ, self.MULTIPOINTZ,
+                                    self.LINESTRINGZ, self.MULTILINESTRINGZ,
+                                    self.POLYGONZ, self.MULTIPOLYGONZ]
+
     def srs(self):
         return self._json.get(self.type_id, {}).get("srs", {}).get("id")
 
