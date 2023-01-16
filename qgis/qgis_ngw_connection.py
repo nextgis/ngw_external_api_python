@@ -72,6 +72,13 @@ class QgsNgwConnection(QObject):
         return self.__auth
 
 
+    def _get_json_param(self, j, key, def_val):
+        try:
+            return j[key]
+        except:
+            return def_val
+
+
     def get(self, sub_url, params=None, **kwargs):
         return self.__request_json(sub_url, 'GET', params, **kwargs)
 
@@ -92,6 +99,8 @@ class QgsNgwConnection(QObject):
         """
         Make a long POST request to NGW server which supports "Lunkwill".
         """
+        default_wait_ms = 2000
+
         # Add specific header to the first request.
         headers = {'X-Lunkwill': 'suggest'}
         rep, j = self.__request_rep_json(sub_url, 'POST', params, headers, **kwargs)
@@ -110,8 +119,8 @@ class QgsNgwConnection(QObject):
                 request_id = j['id']
                 while True:
                     status = j['status']
-                    delay_ms = j['delay_ms']
-                    retry_ms = j['retry_ms']
+                    delay_ms = self._get_json_param(j, 'delay_ms', default_wait_ms) # this param could be not included in reply
+                    retry_ms = self._get_json_param(j, 'retry_ms', default_wait_ms)
 
                     if summary_failed == 0:
                         wait_ms = delay_ms / 1000
@@ -120,7 +129,7 @@ class QgsNgwConnection(QObject):
                     else:
                         raise Exception('Lunkwill request aborted: failed "summary" sub-requests count exceeds maximum')
 
-                    if status == 'processing':
+                    if status == 'processing' or status == 'spooled' or status == 'buffering':
                         time.sleep(wait_ms)
                         try:
                             sub_url = '/api/lunkwill/{}/summary'.format(request_id)
@@ -136,7 +145,7 @@ class QgsNgwConnection(QObject):
                         break
 
                     else:
-                        raise Exception('Lunkwill request failed on server')
+                        raise Exception('Lunkwill request failed on server. Reply: {}'.format(str(j)))
 
         rep.deleteLater()
         del rep
