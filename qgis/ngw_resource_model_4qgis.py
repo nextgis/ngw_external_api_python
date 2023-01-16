@@ -751,7 +751,7 @@ class QGISResourceJob(NGWResourceModelJob):
         tmp_dir = tempfile.mkdtemp('ngw_api_prepare_import')
         tmp_shp = os.path.join(tmp_dir, '4import.shp')
 
-        import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
+        import_crs = qgs_vector_layer.sourceCrs()
         QgsVectorFileWriter.writeAsVectorFormat(
             qgs_vector_layer,
             tmp_shp,
@@ -780,7 +780,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def prepareAsJSON(self, qgs_vector_layer):
         tmp = tempfile.mktemp('.geojson')
-        import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
+        import_crs = qgs_vector_layer.sourceCrs()
         QgsVectorFileWriter.writeAsVectorFormat(
             qgs_vector_layer,
             tmp,
