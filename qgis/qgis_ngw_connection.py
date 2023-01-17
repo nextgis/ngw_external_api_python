@@ -103,7 +103,7 @@ class QgsNgwConnection(QObject):
 
         # Add specific header to the first request.
         headers = {'X-Lunkwill': 'suggest'}
-        rep, j = self.__request_rep_json(sub_url, 'POST', params, headers, **kwargs)
+        rep, j = self.__request_rep_json(sub_url, 'POST', params, headers, True, **kwargs)
 
         # Check that server supports lunkwill and return reply immideately if not (the request just has been processed
         # as usual NGW API request).
@@ -153,7 +153,7 @@ class QgsNgwConnection(QObject):
         return j
 
 
-    def __request_rep(self, sub_url, method, badata=None, params=None, headers=None, **kwargs):
+    def __request_rep(self, sub_url, method, badata=None, params=None, headers=None, do_log=True, **kwargs):
         json_data = None
         if params:
             json_data = json.dumps(params).encode('utf-8')
@@ -164,16 +164,17 @@ class QgsNgwConnection(QObject):
 
         url = self.server_url + sub_url
 
-        log(u"Request\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
-                method,
-                url,
-                #type(json_data),
-                json_data.decode('unicode_escape') if json_data is not None else None,
-                headers,
-                filename.encode('utf-8') if filename else '-',
-                badata.size() if badata else '-'
+        if do_log:
+            log(u"Request\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
+                    method,
+                    url,
+                    #type(json_data),
+                    json_data.decode('unicode_escape') if json_data is not None else None,
+                    headers,
+                    filename.encode('utf-8') if filename else '-',
+                    badata.size() if badata else '-'
+                )
             )
-        )
 
         req = QNetworkRequest(QUrl(url))
 
@@ -260,8 +261,8 @@ class QgsNgwConnection(QObject):
         return req, rep
 
 
-    def __request_rep_json(self, sub_url, method, params=None, headers=None, **kwargs):
-        req, rep = self.__request_rep(sub_url, method, badata=None, params=params, headers=headers, **kwargs)
+    def __request_rep_json(self, sub_url, method, params=None, headers=None, do_log=True, **kwargs):
+        req, rep = self.__request_rep(sub_url, method, badata=None, params=params, headers=headers, do_log=do_log, **kwargs)
 
         status_code = rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
 
@@ -295,7 +296,7 @@ class QgsNgwConnection(QObject):
 
 
     def __request_json(self, sub_url, method, params=None, **kwargs):
-        rep, j = self.__request_rep_json(sub_url, method, params=params, headers=None, **kwargs)
+        rep, j = self.__request_rep_json(sub_url, method, params=params, headers=None, do_log=True, **kwargs)
 
         rep.deleteLater()
         del rep
@@ -311,7 +312,7 @@ class QgsNgwConnection(QObject):
         return self.put(self.get_upload_file_url(), file=filename)
 
 
-    def tus_upload_file(self, filename, callback):
+    def tus_upload_file(self, filename, callback, log_patch_requests=True):
         """
         Implements tus protocol to upload a file to NGW.
         Note: This method internally uses self methods to send synchronous HTTP requests (which internally use
@@ -333,7 +334,7 @@ class QgsNgwConnection(QObject):
             'Upload-Length': str(file_size),
             #'Upload-Metadata': 'name {}'.format(base64name)
         }
-        create_req, create_rep = self.__request_rep(TUS_UPLOAD_FILE_URL, 'POST', None, None, create_hdrs)
+        create_req, create_rep = self.__request_rep(TUS_UPLOAD_FILE_URL, 'POST', None, None, create_hdrs, True)
         create_rep_code = create_rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
         if create_rep_code == 413:
             raise NGWError(NGWError.TypeRequestError, 'HTTP 413: Payload is too large', TUS_UPLOAD_FILE_URL,
@@ -350,6 +351,11 @@ class QgsNgwConnection(QObject):
         max_retry_count = 3
         bytes_sent = 0
 
+        # Allow to skip logging of PATCH requests. Helpful when a large file is being uploaded.
+        # Note: QGIS 3 has a hardcoded limit of log messages.
+        if not log_patch_requests:
+            log('Skip PATCH requests logging')
+
         # Upload file chunk-by-chunk.
         while True:
             badata = QByteArray(file.read(TUS_CHUNK_SIZE))
@@ -357,7 +363,8 @@ class QgsNgwConnection(QObject):
                 break
             bytes_read = badata.size()
 
-            self.sendUploadProgress(bytes_sent, file_size)
+            if log_patch_requests:
+                self.sendUploadProgress(bytes_sent, file_size)
 
             chunk_hdrs = {
                 'Tus-Resumable': TUS_VERSION,
@@ -367,7 +374,7 @@ class QgsNgwConnection(QObject):
             }
             retries = 0
             while retries < max_retry_count:
-                chunk_req, chunk_rep = self.__request_rep(file_upload_url, 'PATCH', badata, None, chunk_hdrs)
+                chunk_req, chunk_rep = self.__request_rep(file_upload_url, 'PATCH', badata, None, chunk_hdrs, log_patch_requests)
                 chunk_rep_code = chunk_rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
                 chunk_rep.deleteLater()
                 del chunk_rep
@@ -380,7 +387,8 @@ class QgsNgwConnection(QObject):
                 break
 
             bytes_sent += bytes_read
-            log('Tus-uploaded chunk of {} bytes. Now {} of overall {} bytes are uploaded'.format(bytes_read, bytes_sent, file_size))
+            if log_patch_requests:
+                log('Tus-uploaded chunk of {} bytes. Now {} of overall {} bytes are uploaded'.format(bytes_read, bytes_sent, file_size))
 
         file.close()
 
