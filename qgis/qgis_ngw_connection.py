@@ -364,7 +364,8 @@ class QgsNgwConnection(QObject):
             bytes_read = badata.size()
 
             if log_patch_requests:
-                self.sendUploadProgress(bytes_sent, file_size)
+                log("Upload %d from %s" % (bytes_sent, file_size,))
+            self.sendUploadProgress(bytes_sent, file_size)
 
             chunk_hdrs = {
                 'Tus-Resumable': TUS_VERSION,
@@ -402,7 +403,6 @@ class QgsNgwConnection(QObject):
 
 
     def sendUploadProgress(self, sent, total):
-        log("Upload %d from %s" % (sent, total,))
         # For Qt 5 the uploadProgress signal is sometimes emited when
         # sent and total are 0.
         # TODO: understand why. For now prevent calling uploadProgressCallback()
