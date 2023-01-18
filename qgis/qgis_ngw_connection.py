@@ -80,22 +80,22 @@ class QgsNgwConnection(QObject):
 
 
     def get(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'GET', params, **kwargs)
+        return self.__request_json(sub_url, 'GET', params, True, **kwargs)
 
     def post(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'POST', params, **kwargs)
+        return self.__request_json(sub_url, 'POST', params, True, **kwargs)
 
     def put(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'PUT', params, **kwargs)
+        return self.__request_json(sub_url, 'PUT', params, True, **kwargs)
 
     def patch(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'PATCH', params, **kwargs)
+        return self.__request_json(sub_url, 'PATCH', params, True, **kwargs)
 
     def delete(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'DELETE', params, **kwargs)
+        return self.__request_json(sub_url, 'DELETE', params, True, **kwargs)
 
 
-    def post_lunkwill(self, sub_url, params=None, **kwargs):
+    def post_lunkwill(self, sub_url, params=None, extended_log=False, **kwargs):
         """
         Make a long POST request to NGW server which supports "Lunkwill".
         """
@@ -117,9 +117,13 @@ class QgsNgwConnection(QObject):
                 summary_failed_attempts = 3
                 summary_failed = 0
                 request_id = j['id']
+
+                if not extended_log:
+                    log('Skip lunkwill summary requests logging for id "{}"'.format(request_id))
+
                 while True:
                     status = j['status']
-                    delay_ms = self._get_json_param(j, 'delay_ms', default_wait_ms) # this param could be not included in reply
+                    delay_ms = self._get_json_param(j, 'delay_ms', default_wait_ms) # this param could be not included into reply
                     retry_ms = self._get_json_param(j, 'retry_ms', default_wait_ms)
 
                     if summary_failed == 0:
@@ -127,21 +131,22 @@ class QgsNgwConnection(QObject):
                     elif summary_failed <= summary_failed_attempts:
                         wait_ms = retry_ms / 1000
                     else:
-                        raise Exception('Lunkwill request aborted: failed "summary" sub-requests count exceeds maximum')
+                        raise Exception('Lunkwill request aborted: failed summary requests count exceeds maximum')
 
                     if status == 'processing' or status == 'spooled' or status == 'buffering':
                         time.sleep(wait_ms)
                         try:
                             sub_url = '/api/lunkwill/{}/summary'.format(request_id)
-                            j = self.get(sub_url, **kwargs)
+                            j = self.__request_json(sub_url, 'GET', None, extended_log, **kwargs)
                             summary_failed = 0
                         except:
-                            log('Lunkwill "summary" sub-request failed. Try again')
+                            if extended_log:
+                                log('Lunkwill summary request failed. Try again')
                             summary_failed += 1
 
                     elif status == 'ready':
                         sub_url = '/api/lunkwill/{}/response'.format(request_id)
-                        j = self.get(sub_url, **kwargs)
+                        j = self.__request_json(sub_url, 'GET', None, True, **kwargs)
                         break
 
                     else:
@@ -295,8 +300,8 @@ class QgsNgwConnection(QObject):
         return rep, json_response
 
 
-    def __request_json(self, sub_url, method, params=None, **kwargs):
-        rep, j = self.__request_rep_json(sub_url, method, params=params, headers=None, do_log=True, **kwargs)
+    def __request_json(self, sub_url, method, params=None, do_log=True, **kwargs):
+        rep, j = self.__request_rep_json(sub_url, method, params=params, headers=None, do_log=do_log, **kwargs)
 
         rep.deleteLater()
         del rep
@@ -312,7 +317,7 @@ class QgsNgwConnection(QObject):
         return self.put(self.get_upload_file_url(), file=filename)
 
 
-    def tus_upload_file(self, filename, callback, log_patch_requests=True):
+    def tus_upload_file(self, filename, callback, extended_log=False):
         """
         Implements tus protocol to upload a file to NGW.
         Note: This method internally uses self methods to send synchronous HTTP requests (which internally use
@@ -353,8 +358,8 @@ class QgsNgwConnection(QObject):
 
         # Allow to skip logging of PATCH requests. Helpful when a large file is being uploaded.
         # Note: QGIS 3 has a hardcoded limit of log messages.
-        if not log_patch_requests:
-            log('Skip PATCH requests logging')
+        if not extended_log:
+            log('Skip PATCH requests logging during uploading of file "{}"'.format(file_guid))
 
         # Upload file chunk-by-chunk.
         while True:
@@ -363,7 +368,7 @@ class QgsNgwConnection(QObject):
                 break
             bytes_read = badata.size()
 
-            if log_patch_requests:
+            if extended_log:
                 log("Upload %d from %s" % (bytes_sent, file_size,))
             self.sendUploadProgress(bytes_sent, file_size)
 
@@ -375,7 +380,7 @@ class QgsNgwConnection(QObject):
             }
             retries = 0
             while retries < max_retry_count:
-                chunk_req, chunk_rep = self.__request_rep(file_upload_url, 'PATCH', badata, None, chunk_hdrs, log_patch_requests)
+                chunk_req, chunk_rep = self.__request_rep(file_upload_url, 'PATCH', badata, None, chunk_hdrs, extended_log)
                 chunk_rep_code = chunk_rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
                 chunk_rep.deleteLater()
                 del chunk_rep
@@ -388,7 +393,7 @@ class QgsNgwConnection(QObject):
                 break
 
             bytes_sent += bytes_read
-            if log_patch_requests:
+            if extended_log:
                 log('Tus-uploaded chunk of {} bytes. Now {} of overall {} bytes are uploaded'.format(bytes_read, bytes_sent, file_size))
 
         file.close()

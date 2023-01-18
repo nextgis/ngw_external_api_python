@@ -62,7 +62,7 @@ class ResourceCreator():
 
         # Use tus uploading for files by default.
         #vector_file_desc = connection.upload_file(filename, upload_callback)
-        vector_file_desc = connection.tus_upload_file(filename, upload_callback)
+        vector_file_desc = connection.tus_upload_file(filename, upload_callback, extended_log=False)
 
         url = parent_ngw_resource.get_api_collection_url()
         params = dict(
@@ -90,7 +90,7 @@ class ResourceCreator():
 
         # Use "lunkwill" layer creation request (specific type of long request) by default.
         #result = connection.post(url, params=params)
-        result = connection.post_lunkwill(url, params=params)
+        result = connection.post_lunkwill(url, params=params, extended_log=False)
 
         ngw_resource = NGWResource.receive_resource_obj(
             connection,
@@ -106,7 +106,7 @@ class ResourceCreator():
 
         # Use tus uploading for files by default.
         #raster_file_desc = connection.upload_file(filename, upload_callback)
-        raster_file_desc = connection.tus_upload_file(filename, upload_callback)
+        raster_file_desc = connection.tus_upload_file(filename, upload_callback, extended_log=False)
 
         url = parent_ngw_resource.get_api_collection_url()
         params = dict(
@@ -126,7 +126,7 @@ class ResourceCreator():
 
         # Use "lunkwill" layer creation request (specific type of long request) by default.
         #result = connection.post(url, params=params)
-        result = connection.post_lunkwill(url, params=params)
+        result = connection.post_lunkwill(url, params=params, extended_log=False)
 
         ngw_resource = NGWResource.receive_resource_obj(
             connection,
