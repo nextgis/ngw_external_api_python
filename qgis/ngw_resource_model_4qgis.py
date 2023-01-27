@@ -1382,7 +1382,10 @@ class QGISStyleUpdater(QGISResourceJob):
     def __init__(self, qgs_map_layer, ngw_resource):
         QGISResourceJob.__init__(self)
         self.qgs_map_layer = qgs_map_layer
-        self.ngw_resource = ngw_resource
+        if isinstance(ngw_resource, NGWVectorLayer) or isinstance(ngw_resource, NGWRasterLayer):
+            self.ngw_resource = ngw_resource.get_children()[0]
+        else:
+            self.ngw_resource = ngw_resource
 
     def _do(self):
         #if self.ngw_resource.type_id == NGWVectorLayer.type_id:
