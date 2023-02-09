@@ -90,7 +90,7 @@ class ResourceCreator():
 
         # Use "lunkwill" layer creation request (specific type of long request) by default.
         #result = connection.post(url, params=params)
-        result = connection.post_lunkwill(url, params=params)
+        result = connection.post_lunkwill(url, params=params, extended_log=False)
 
         ngw_resource = NGWResource.receive_resource_obj(
             connection,
