@@ -62,7 +62,7 @@ class ResourceCreator():
 
         # Use tus uploading for files by default.
         #vector_file_desc = connection.upload_file(filename, upload_callback)
-        vector_file_desc = connection.tus_upload_file(filename, upload_callback)
+        vector_file_desc = connection.tus_upload_file(filename, upload_callback, extended_log=False)
 
         url = parent_ngw_resource.get_api_collection_url()
         params = dict(
