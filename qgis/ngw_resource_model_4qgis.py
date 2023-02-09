@@ -432,9 +432,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 ngw_geom_info[1],
                 ngw_geom_info[2]
             )
-            self.list_of_added_sources.append([vector_file_desc, qgs_vector_layer.dataProvider().dataSourceUri()])
-            print('added to list')
-            print(self.list_of_added_sources)
+            self.list_of_added_sources.append([vector_file_desc, qgs_vector_layer.dataProvider().dataSourceUri()])            
         else:
             ngw_vector_layer = ResourceCreator.create_vector_layer_same_source(
                 ngw_parent_resource,
@@ -445,9 +443,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 ngw_geom_info[0],
                 ngw_geom_info[1],
                 ngw_geom_info[2]
-            )
-            print('clone') 
-            print(new_layer_name)   
+            )           
         aliases = {}
         src_layer_aliases = qgs_vector_layer.attributeAliases()
         for fieldname, alias in list(src_layer_aliases.items()):
