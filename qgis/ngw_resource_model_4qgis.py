@@ -210,7 +210,7 @@ class QGISResourceJob(NGWResourceModelJob):
         self.ngw_version = ngw_version
 
         self.sanitize_fields_names = ["id", "geom"]
-
+        self.list_of_added_sources = []
     def isSuitableLayer(self, qgs_map_layer):
         layer_type = qgs_map_layer.type()
 
@@ -413,17 +413,41 @@ class QGISResourceJob(NGWResourceModelJob):
             return None
 
         ngw_geom_info = self._get_ngw_geom_info(tgt_qgs_layer)
-        ngw_vector_layer = ResourceCreator.create_vector_layer(
-            ngw_parent_resource,
-            filepath,
-            new_layer_name,
-            uploadFileCallback,
-            createLayerCallback,
-            ngw_geom_info[0],
-            ngw_geom_info[1],
-            ngw_geom_info[2]
-        )
-
+        #Check for existing already added same source in importing Qgis Project for skip upload clone data
+        vector_file_desc = {}
+        find_same_source = False
+        for added_source in self.list_of_added_sources:
+            if added_source[1] == qgs_vector_layer.dataProvider().dataSourceUri():
+                find_same_source = True
+                vector_file_desc = added_source[0]
+                break
+        if not find_same_source:
+            ngw_vector_layer, vector_file_desc = ResourceCreator.create_vector_layer(
+                ngw_parent_resource,
+                filepath,
+                new_layer_name,
+                uploadFileCallback,
+                createLayerCallback,
+                ngw_geom_info[0],
+                ngw_geom_info[1],
+                ngw_geom_info[2]
+            )
+            self.list_of_added_sources.append([vector_file_desc, qgs_vector_layer.dataProvider().dataSourceUri()])
+            print('added to list')
+            print(self.list_of_added_sources)
+        else:
+            ngw_vector_layer = ResourceCreator.create_vector_layer_same_source(
+                ngw_parent_resource,
+                vector_file_desc,
+                new_layer_name,
+                uploadFileCallback,
+                createLayerCallback,
+                ngw_geom_info[0],
+                ngw_geom_info[1],
+                ngw_geom_info[2]
+            )
+            print('clone') 
+            print(new_layer_name)   
         aliases = {}
         src_layer_aliases = qgs_vector_layer.attributeAliases()
         for fieldname, alias in list(src_layer_aliases.items()):
