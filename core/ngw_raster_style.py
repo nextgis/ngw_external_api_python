@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -29,6 +28,3 @@ class NGWRasterStyle(NGWResource):
     type_id = 'raster_style'
     icon_path = path.join(ICONS_DIR, 'style.png')
     type_title = 'NGW Raster Style'
-
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)

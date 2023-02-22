@@ -21,9 +21,9 @@
 import json
 
 from os import path
-from .ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
+from .ngw_resource import NGWResource
 
-from ..utils import ICONS_DIR, log
+from ..utils import ICONS_DIR
 
 
 class NGWBaseMap(NGWResource):
@@ -31,9 +31,6 @@ class NGWBaseMap(NGWResource):
     type_id = 'basemap_layer'
     icon_path = path.join(ICONS_DIR, 'base_map.svg')
     type_title = 'NGW Base Map layer'
-
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)
 
     @classmethod
     def create_in_group(cls, name, ngw_group_resource, base_map_url, qms_ext_settings=None):
@@ -69,10 +66,8 @@ class NGWBaseMap(NGWResource):
         return ngw_resource
 
 
-class NGWBaseMapExtSettings(object):
-    """docstring for NGWBaseMapExtSettings"""
+class NGWBaseMapExtSettings:
     def __init__(self, url, epsg, z_min, z_max, y_origin_top):
-        super(NGWBaseMapExtSettings, self).__init__()
         self.url = url
         self.epsg = int(epsg)
         self.z_min = z_min

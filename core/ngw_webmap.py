@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -29,9 +28,6 @@ class NGWWebMap(NGWResource):
     type_id = 'webmap'
     icon_path = path.join(ICONS_DIR, 'web_map.svg')
     type_title = 'NGW Web Map'
-
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)
 
     def get_display_url(self):
         return '%s/%s' % (
@@ -94,7 +90,7 @@ class NGWWebMap(NGWResource):
         return ngw_resource
 
 
-class NGWWebMapItem(object):
+class NGWWebMapItem:
     ITEM_TYPE_ROOT = "root"
     ITEM_TYPE_LAYER = "layer"
     ITEM_TYPE_GROUP = "group"
@@ -121,20 +117,20 @@ class NGWWebMapItem(object):
         return struct
 
     def _attributes(self):
-        return NotImplementedError
+        raise NotImplementedError()
 
 
 class NGWWebMapRoot(NGWWebMapItem):
     def __init__(self):
-        NGWWebMapItem.__init__(self, NGWWebMapItem.ITEM_TYPE_ROOT)
+        super().__init__(NGWWebMapItem.ITEM_TYPE_ROOT)
 
-    def __attributes(self):
+    def _attributes(self):
         return dict()
 
 
 class NGWWebMapLayer(NGWWebMapItem):
     def __init__(self, layer_style_id, display_name, is_visible, transparency):
-        NGWWebMapItem.__init__(self, NGWWebMapItem.ITEM_TYPE_LAYER)
+        super().__init__(NGWWebMapItem.ITEM_TYPE_LAYER)
         self.layer_style_id = layer_style_id
         self.display_name = display_name
         self.is_visible = is_visible
@@ -154,7 +150,7 @@ class NGWWebMapLayer(NGWWebMapItem):
 
 class NGWWebMapGroup(NGWWebMapItem):
     def __init__(self, display_name, expanded=True):
-        NGWWebMapItem.__init__(self, NGWWebMapItem.ITEM_TYPE_GROUP)
+        super().__init__(NGWWebMapItem.ITEM_TYPE_GROUP)
         self.display_name = display_name
         self.expanded = expanded
 

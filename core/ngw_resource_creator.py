@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -18,15 +17,11 @@
  *                                                                         *
  ***************************************************************************/
 """
-import os
 from .ngw_resource import NGWResource
 from .ngw_group_resource import NGWGroupResource
 from .ngw_vector_layer import NGWVectorLayer
 from .ngw_raster_layer import NGWRasterLayer
 from .ngw_wfs_service import NGWWfsService
-from .ngw_webmap import NGWWebMap
-
-from ..qgis.compat_qgis import CompatQgis
 
 
 class ResourceCreator():
@@ -78,9 +73,9 @@ class ResourceCreator():
                 # Should force geometry type in case of 0 features: NGW defines geom type by first feature.
                 # Force only for QGIS >= 3 because QGIS 2 defines geometry type of Shapefile incorrectly.
                 # TODO: check that for NGW < 3.8.0 it is ok to pass these parameters.
-                cast_geometry_type=geom_type if not CompatQgis.is_qgis_2() else None,
-                cast_is_multi=geom_is_multi if not CompatQgis.is_qgis_2() else None,
-                cast_has_z=geom_has_z if not CompatQgis.is_qgis_2() else None,
+                cast_geometry_type=geom_type,
+                cast_is_multi=geom_is_multi,
+                cast_has_z=geom_has_z,
                 fix_errors='LOSSY',
                 skip_errors=True
             )

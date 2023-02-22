@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -29,9 +28,6 @@ class NGWWmsService(NGWResource):
     type_id = 'wmsserver_service'
     icon_path = path.join(ICONS_DIR, 'wms_service.svg')
     type_title = 'NGW WMS Service'
-
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)
 
     def get_url(self):
         return '%s%s' % (

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -29,6 +28,3 @@ class NGWMapServerStyle(NGWResource):
     type_id = 'mapserver_style'
     icon_path = path.join(ICONS_DIR, 'style.png')
     type_title = 'NGW MapServer Style'
-
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -20,7 +19,7 @@
 """
 
 
-class NGWConnectionSettings():
+class NGWConnectionSettings:
     def __init__(self, connection_name=None, server_url=None, username=None, password=None):
         self.connection_name = connection_name
         self.server_url = server_url

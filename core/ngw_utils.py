@@ -34,6 +34,7 @@ from ..utils import log
 from ..compat_py import urlparse, parse_qs
 
 
+# TODO: move to Identify plus
 def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     layerSource = qgs_map_layer.source()
     if 'vsicurl' in layerSource:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -29,6 +28,3 @@ class NGWGroupResource(NGWResource):
     type_id = 'resource_group'
     icon_path = path.join(ICONS_DIR, 'group.png')
     type_title = 'NGW Group resource'
-
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)

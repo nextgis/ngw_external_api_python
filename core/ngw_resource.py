@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -18,13 +17,12 @@
  *                                                                         *
  ***************************************************************************/
 """
-import os
 import re
 from os import path
 
 import urllib.parse
 
-from ..utils import ICONS_DIR, log
+from ..utils import ICONS_DIR
 
 API_RESOURCE_URL = lambda res_id: '/api/resource/%d' % res_id
 API_COLLECTION_URL = '/api/resource/'
@@ -33,7 +31,7 @@ RESOURCE_URL = lambda res_id: '/resource/%d' % res_id
 API_LAYER_EXTENT = lambda res_id: '/api/resource/%d/extent' % res_id
 
 
-class Wrapper():
+class Wrapper:
     def __init__(self, **params):
         self.__dict__.update(params)
 
@@ -41,7 +39,7 @@ DICT_TO_OBJ = lambda d: Wrapper(**d)
 LIST_DICT_TO_LIST_OBJ = lambda l: [Wrapper(**el) for el in l]
 
 
-class NGWResource():
+class NGWResource:
 
     type_id = 'resource'
     icon_path = path.join(ICONS_DIR, 'resource.svg')
@@ -70,7 +68,7 @@ class NGWResource():
         ngw_con.delete(url)
 
     # INSTANCE
-    def __init__(self, resource_factory, resource_json, children_count=None):
+    def __init__(self, resource_factory, resource_json):
         """
         Init resource from json representation
         :param ngw_resource: any ngw_resource
@@ -78,7 +76,7 @@ class NGWResource():
         self._res_factory = resource_factory
         self._json = resource_json
         self._construct()
-        self.children_count = children_count
+        self.children_count = None
 
     def set_children_count(self, children_count):
         self.children_count = children_count

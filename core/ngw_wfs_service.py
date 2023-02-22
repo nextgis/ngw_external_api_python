@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -19,11 +18,10 @@
  ***************************************************************************/
 """
 from os import path
-import urllib.parse
 
 from .ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 
-from ..utils import ICONS_DIR, log
+from ..utils import ICONS_DIR
 
 
 class NGWWfsService(NGWResource):
@@ -32,11 +30,8 @@ class NGWWfsService(NGWResource):
     icon_path = path.join(ICONS_DIR, 'wfs.svg')
     type_title = 'NGW WFS Service'
 
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)
-
     def _construct(self):
-        NGWResource._construct(self)
+        super()._construct()
         #wfsserver_service
         self.wfs = DICT_TO_OBJ(self._json[self.type_id])
         if hasattr(self.wfs, "layers"):

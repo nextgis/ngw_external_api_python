@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -35,7 +34,7 @@ GET_VERSION_URL = '/api/component/pyramid/pkg_version'
 
 class File2Upload(FileIO):
     def __init__(self, path, callback):
-        FileIO.__init__(self, path, "rb")
+        super().__init__(path, "rb")
         self.seek(0, os.SEEK_END)
         self._total = self.tell()
         self._readed = 0
@@ -62,7 +61,7 @@ def _basic_auth_str(username, password):
     return authstr
 
 
-class NGWConnection(object):
+class NGWConnection:
 
     AbilityBaseMap = list(range(1))
 

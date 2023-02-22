@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -26,7 +25,7 @@ from .ngw_qgis_style import NGWQGISVectorStyle
 from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_feature import NGWFeature
 
-from ..utils import ICONS_DIR, log
+from ..utils import ICONS_DIR
 
 ADD_FEATURE_URL = "/api/resource/%s/feature/"
 DEL_ALL_FEATURES_URL = "/api/resource/%s/feature/"
@@ -93,7 +92,7 @@ class NGWVectorLayer(NGWResource):
     FieldTypes = [FieldTypeInteger, FieldTypeBigint, FieldTypeReal, FieldTypeString, FieldTypeDate, FieldTypeTime, FieldTypeDatetime]
 
     def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)
+        super().__init__(resource_factory, resource_json)
 
         if self.type_id in self._json:
             if "geometry_type" in self._json[self.type_id]:

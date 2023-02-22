@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -21,11 +20,9 @@
 FEATURE_URL = lambda res_id, feature_id: '/api/resource/%d/feature/%d' % (res_id, feature_id)
 FEATURE_ATTACHMENTS_URL = lambda res_id, feature_id: '/api/resource/%d/feature/%d/attachment/' % (res_id, feature_id)
 
-from ..utils import log
-
 
 # Need refactoring!
-class NGWFeature(object):
+class NGWFeature:
     def __init__(self, ngw_feature_dict, ngw_vector_layer):
         self.id = ngw_feature_dict.get("id")
         self.geom_wkt = ngw_feature_dict.get("geom")
@@ -60,13 +57,3 @@ class NGWFeature(object):
 
     def setGeom(self, wkt):
         self.geom_wkt = wkt
-
-    def setFieldAsString(self, name, value):
-        self.fields[name] = str(value)
-
-    def setFieldAsInt(self, name, value):
-        self.fields[name] = int(value)
-
-    def setFieldAsDouble(self, name, value):
-        self.fields[name] = double(value)
-

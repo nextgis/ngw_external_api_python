@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -30,11 +29,8 @@ class NGWWmsLayer(NGWResource):
     icon_path = path.join(ICONS_DIR, 'wms_layer.svg') # TODO change icon
     type_title = 'NGW WMS Layer'
 
-    def __init__(self, resource_factory, resource_json):
-        NGWResource.__init__(self, resource_factory, resource_json)
-
     def _construct(self):
-        NGWResource._construct(self)
+        super()._construct()
         self.ngw_wms_connection_url = None
         self.ngw_wms_layers = []
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -36,7 +35,7 @@ from .ngw_base_map import NGWBaseMap
 API_NGW_VERSION = '/api/component/pyramid/pkg_version'
 
 
-class NGWResourceFactory():
+class NGWResourceFactory:
 
     def __init__(self, ngw_connection):
         self.__res_types_register = {
