@@ -58,10 +58,6 @@ class NGWResourceFactory:
         self.__conn = ngw_connection
 
     @property
-    def resources_types_registry(self):
-        return self.__res_types_register
-
-    @property
     def connection(self):
         return self.__conn
 

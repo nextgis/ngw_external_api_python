@@ -36,7 +36,7 @@ from ..utils import log
 from .qt_ngw_resource_model_job_error import *
 
 
-class NGWResourceModelJobResult():
+class NGWResourceModelJobResult:
     def __init__(self):
         self.added_resources = []
         self.deleted_resources = []
@@ -67,7 +67,7 @@ class NGWResourceModelJob(QObject):
     finished = pyqtSignal()
 
     def __init__(self):
-        QObject.__init__(self)
+        super().__init__()
         self.id = self.__class__.__name__
 
         self.result = NGWResourceModelJobResult()
@@ -156,16 +156,14 @@ class NGWResourceModelJob(QObject):
 
 class NGWRootResourcesLoader(NGWResourceModelJob):
     def __init__(self, ngw_connection):
-        log("NGWRootResourcesLoader")
-        NGWResourceModelJob.__init__(self)
+        super().__init__()
         self.ngw_connection = ngw_connection
 
     def _do(self):
         rsc_factory = NGWResourceFactory(self.ngw_connection)
 
         ngw_root_resource = rsc_factory.get_root_resource()
-        if ngw_root_resource is not None:
-            self.putAddedResourceToResult(ngw_root_resource, is_main=True)
+        self.putAddedResourceToResult(ngw_root_resource, is_main=True)
 
 
 class NGWResourceUpdater(NGWResourceModelJob):

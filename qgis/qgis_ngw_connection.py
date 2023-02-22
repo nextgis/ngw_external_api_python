@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -20,19 +19,17 @@
 """
 import json
 import time
-from base64 import b64encode
 
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtNetwork import *
+from qgis.PyQt.QtCore import (
+    QBuffer, QByteArray, QEventLoop, QFile, QIODevice, QObject, QTimer, QUrl)
+from qgis.PyQt.QtNetwork import QNetworkRequest
 
-from qgis.core import *
-from qgis.utils import iface
+from qgis.core import QgsNetworkAccessManager
 
 from ..core.ngw_error import NGWError
 
 from ..utils import log
 
-from ..compat_py import CompatPy
 from .compat_qgis import CompatQgis
 from .compat_qgis import CompatQt
 
@@ -50,8 +47,8 @@ class QgsNgwConnection(QObject):
 
 
     """docstring for QgsNgwConnection"""
-    def __init__(self, conn_settings, parent):
-        super(QgsNgwConnection, self).__init__(parent)
+    def __init__(self, conn_settings, parent=None):
+        super().__init__(parent)
 
         self.__server_url = None
         self.__auth = ("", "")
@@ -434,6 +431,3 @@ class QgsNgwConnection(QObject):
             abilities.append(self.AbilityBaseMap)
 
         return abilities
-
-
-
