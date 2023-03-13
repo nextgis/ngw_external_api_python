@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
  NGW connection edit dialog
@@ -26,14 +23,12 @@ import os
 import re
 
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtGui import *
-from qgis.PyQt.QtWidgets import *
+from qgis.PyQt.QtCore import pyqtSignal, QMutex, QStringListModel, QObject, Qt, QThread
+from qgis.PyQt.QtWidgets import QCompleter, QDialog, QDialogButtonBox
 
 from ..core.ngw_connection_settings import NGWConnectionSettings
 from ..core.ngw_resource_factory import NGWResourceFactory
 from .qgis_ngw_connection import QgsNgwConnection
-from ..utils import log
 
 from ..compat_py import urlparse
 
@@ -63,7 +58,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
     If accept, DialogInstance.ngw_connection_settings contains edited instance
     """
     def __init__(self, parent=None, ngw_connection_settings=None, only_password_change=False):
-        super(NGWConnectionEditDialog, self).__init__(parent)
+        super().__init__(parent)
 
         self._default_server_suffix = ".nextgis.com"
         self.__user_try_accept = False
@@ -345,7 +340,7 @@ class NGWPinger(QObject):
     finished = pyqtSignal()
 
     def __init__(self, ngw_connection_settings):
-        super(NGWPinger, self).__init__()
+        super().__init__()
         self.__ngw_connection_settings = ngw_connection_settings
 
     def run(self):

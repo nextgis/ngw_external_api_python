@@ -31,8 +31,6 @@ from qgis.PyQt.QtCore import *
 from qgis.core import *
 from qgis.gui import *
 
-from ..qt.qt_ngw_resource_base_model import *
-from ..qt.qt_ngw_resource_edit_model import *
 from ..qt.qt_ngw_resource_model_job import *
 from ..qt.qt_ngw_resource_model_job_error import *
 
@@ -52,7 +50,6 @@ from ..utils import log
 from ..utils import ngw_version_compare
 
 from .ngw_plugin_settings import NgwPluginSettings
-from .qgis_ngw_connection import QgsNgwConnection
 
 from ..compat_py import unquote_plus
 from ..compat_py import CompatPy
@@ -95,109 +92,6 @@ def get_wkt(qgis_geometry):
         wkt = wkt.replace(*wkt_fixes[wkb_type])
 
     return wkt
-
-
-class QNGWResourcesModel4QGIS(QNGWResourcesModel):
-
-    def __init__(self, parent):
-        QNGWResourcesModel.__init__(self, parent)
-
-    def _setNgwConnection(self):
-        self._ngw_connection = QgsNgwConnection(self.connectionSettings, self)
-
-    @modelRequest()
-    def createNGWLayers(self, qgs_map_layers, parent_index):
-        if not parent_index.isValid():
-            parent_index = self.index(0, 0, parent_index)
-
-        parent_index = self._nearest_ngw_group_resource_parent(parent_index)
-        parent_item = parent_index.internalPointer()
-        ngw_group = parent_item.data(0, Qt.UserRole)
-
-        return self._startJob(
-            QGISResourcesImporter(qgs_map_layers, ngw_group, self.ngw_version),
-        )
-
-
-    @modelRequest()
-    def updateQGISStyle(self, qgs_map_layer, index):
-        if not index.isValid():
-            index = self.index(0, 0, index)
-
-        item = index.internalPointer()
-        ngw_resource = item.data(0, Qt.UserRole)
-
-        return self._startJob(
-            QGISStyleUpdater(qgs_map_layer, ngw_resource)
-        )
-
-    @modelRequest()
-    def addQGISStyle(self, qgs_map_layer, index):
-        if not index.isValid():
-            index = self.index(0, 0, index)
-
-        item = index.internalPointer()
-        ngw_resource = item.data(0, Qt.UserRole)
-
-        return self._startJob(
-            QGISStyleAdder(qgs_map_layer, ngw_resource)
-        )
-
-
-    @modelRequest()
-    def tryImportCurentQGISProject(self, ngw_group_name, index, iface):
-        if not index.isValid():
-            index = self.index(0, 0, index)
-
-        index = self._nearest_ngw_group_resource_parent(index)
-
-        item = index.internalPointer()
-        ngw_resource = item.data(0, item.NGWResourceRole)
-
-        return self._startJob(
-            CurrentQGISProjectImporter(ngw_group_name, ngw_resource, iface, self.ngw_version),
-        )
-
-    @modelRequest()
-    def createMapForLayer(self, index, ngw_style_id):
-        if not index.isValid():
-            index = self.index(0, 0, index)
-
-        item = index.internalPointer()
-        ngw_resource = item.data(0, Qt.UserRole)
-
-        return self._startJob(
-            MapForLayerCreater(ngw_resource, ngw_style_id)
-        )
-
-    @modelRequest()
-    def createWMSForVector(self, index, ngw_resource_style_id):
-        if not index.isValid():
-            index = self.index(0, 0, index)
-
-        parent_index = self._nearest_ngw_group_resource_parent(index)
-
-        parent_item = parent_index.internalPointer()
-        ngw_parent_resource = parent_item.data(0, Qt.UserRole)
-
-        item = index.internalPointer()
-        ngw_resource = item.data(0, Qt.UserRole)
-
-        return self._startJob(
-            NGWCreateWMSForVector(ngw_resource, ngw_parent_resource, ngw_resource_style_id),
-        )
-
-    @modelRequest()
-    def updateNGWLayer(self, index, qgs_vector_layer):
-        if not index.isValid():
-            index = self.index(0, 0, index)
-
-        item = index.internalPointer()
-        ngw_vector_layer = item.data(0, Qt.UserRole)
-
-        return self._startJob(
-            NGWUpdateVectorLayer(ngw_vector_layer, qgs_vector_layer),
-        )
 
 
 class QGISResourceJob(NGWResourceModelJob):
