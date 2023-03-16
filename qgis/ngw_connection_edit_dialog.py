@@ -96,7 +96,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.leName.editingFinished.connect(self.__name_changed_finished)
 
         accessLinkHtml = u'<a href="{}"><span style=" text-decoration: underline; color:#0000ff;">{}</span></a>'.format(
-            self.tr('http://docs.nextgis.com/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection'),
+            self.tr('https://docs.nextgis.com/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection'),
             self.tr('Where do I get these?')
         )
         self.lAccessLink.setText(accessLinkHtml)

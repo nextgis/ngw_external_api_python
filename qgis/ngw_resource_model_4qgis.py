@@ -1073,7 +1073,7 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             if NgwPluginSettings.get_force_qgis_project_import():
                 self.warningOccurred.emit(
                     JobError(
-                        self.tr("Import layer \"%s\" failed. Skipped") % qgsLayerTreeItem.layer().name(),
+                        self.tr("Import layer '%s' failed. Skipped") % qgsLayerTreeItem.layer().name(),
                         e
                     )
                 )
