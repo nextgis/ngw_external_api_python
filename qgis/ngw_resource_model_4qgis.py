@@ -1191,8 +1191,8 @@ class CurrentQGISProjectImporter(QGISResourceJob):
 
         return ngw_resource
 
-#import QGIS Group with contents
-#2023-03-28
+# import QGIS Group with contents
+# 28/03/2023
 class CurrentQGISGroupImporter(QGISResourceJob):
     """
         if new_group_name is None  -- Update mode
