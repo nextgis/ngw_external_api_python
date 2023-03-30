@@ -1193,43 +1193,18 @@ class CurrentQGISProjectImporter(QGISResourceJob):
 
 # import QGIS Group with contents
 # 28/03/2023
-class CurrentQGISGroupImporter(QGISResourceJob):
-    """
-        if new_group_name is None  -- Update mode
-
-        Update:
-        1. Add new
-        2. Rewrite current (vector only)
-        3. Remove
-        4. Update map
-
-        Update Ext (future):
-        Calculate mapping of qgislayer to ngw resource
-        Show map for user to edit anf cofirm it
-    """
-    def __init__(self, 
-                 #new_group_name, 
-                 ngw_resource, iface, ngw_version):
-        QGISResourceJob.__init__(self, ngw_version)
-        #self.new_group_name = new_group_name
+class CurrentQGISGroupImporter(QGISResourceJob):    
+    def __init__(self, ngw_resource, iface, ngw_version):
+        QGISResourceJob.__init__(self, ngw_version)        
         self.ngw_resource = ngw_resource
         self.iface = iface
 
     def _do(self):
         current_project = QgsProject.instance()
 
-        # update_mode = self.new_group_name is None
-
-        # if update_mode:
         ngw_group_resource = self.ngw_resource
         self.putEditedResourceToResult(ngw_group_resource)
-        # else:
-        #new_group_name = self.unique_resource_name(self.new_group_name, self.ngw_resource)
-        #ngw_group_resource = ResourceCreator.create_group(
-        #    self.ngw_resource,
-        #    new_group_name
-        #)
-
+        
         self.putAddedResourceToResult(ngw_group_resource)
 
         ngw_webmap_root_group = NGWWebMapRoot()
@@ -1241,17 +1216,6 @@ class CurrentQGISGroupImporter(QGISResourceJob):
             ngw_webmap_basemaps,
         )
 
-        """ if not update_mode:
-            self.statusChanged.emit("Import curent qgis project: create webmap")
-            ngw_webmap = self.create_webmap(
-                ngw_group_resource,
-                self.new_group_name + "-webmap",
-                ngw_webmap_root_group.children,
-                ngw_webmap_basemaps
-            )
-            self.putAddedResourceToResult(ngw_webmap, is_main=True) """
-
-        # The group was attached resources,  therefore, it is necessary to upgrade for get children flag
         ngw_group_resource.update()
         self.ngw_resource.update()
 
