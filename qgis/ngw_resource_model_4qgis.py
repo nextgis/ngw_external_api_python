@@ -1218,6 +1218,7 @@ class CurrentQGISGroupImporter(QGISResourceJob):
 
         ngw_group_resource.update()
         self.ngw_resource.update()
+        
     def process_one_level_of_layers_tree(self, qgs_layer_tree_items, ngw_resource_group, ngw_webmap_item, ngw_webmap_basemaps):
         exist_resourse_names = {}
         for r in ngw_resource_group.get_children():
