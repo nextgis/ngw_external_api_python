@@ -1192,7 +1192,6 @@ class CurrentQGISProjectImporter(QGISResourceJob):
         return ngw_resource
 
 # import QGIS Group with contents
-# 28/03/2023
 class CurrentQGISGroupImporter(CurrentQGISProjectImporter):    
     def __init__(self, ngw_resource, iface, ngw_version):
         QGISResourceJob.__init__(self, ngw_version)        
