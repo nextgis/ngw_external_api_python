@@ -2,7 +2,7 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="ru_RU">
 <context>
-    <name>CurrentQGISProjectImporter</name>
+    <name>QGISProjectUploader</name>
     <message>
         <location filename="../ngw_resource_model_4qgis.py" line="1074"/>
         <source>Import layer &apos;%s&apos; failed. Skipped</source>
