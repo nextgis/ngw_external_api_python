@@ -990,7 +990,7 @@ class QGISResourcesUploader(QGISResourceJob):
 
     def add_layer(self, ngw_resource_group, qgsLayerTreeItem, ngw_webmap_item, ngw_webmap_basemaps):
         try:
-            ngw_layer_resources = self.importQGISMapLayer(
+            ngw_resources = self.importQGISMapLayer(
                 qgsLayerTreeItem.layer(),
                 ngw_resource_group
             )
@@ -1007,7 +1007,7 @@ class QGISResourcesUploader(QGISResourceJob):
             else:
                 raise e
 
-        for ngw_resource in ngw_layer_resources:
+        for ngw_resource in ngw_resources:
             self.putAddedResourceToResult(ngw_resource)
 
             if ngw_resource.type_id in [NGWVectorLayer.type_id, NGWRasterLayer.type_id]:
@@ -1093,6 +1093,7 @@ class QGISResourcesUploader(QGISResourceJob):
 
         ngw_resource_child_group.update() # in order to update group items: if they have children items they should become expandable
 
+
 class QGISProjectUploader(QGISResourcesUploader):
     """
         if new_group_name is None  -- Update mode
@@ -1174,6 +1175,7 @@ class QGISProjectUploader(QGISResourcesUploader):
         )
 
         return ngw_resource
+
 
 class MapForLayerCreater(QGISResourceJob):
     def __init__(self, ngw_layer, ngw_style_id):
