@@ -949,7 +949,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
 class QGISResourcesUploader(QGISResourceJob):
     def __init__(self, qgs_resources, ngw_resource, iface, ngw_version=None):
-        QGISResourceJob.__init__(self, ngw_version)
+        super().__init__(ngw_version)
         self.qgs_resources = qgs_resources
         self.ngw_resource = ngw_resource
         self.iface = iface
@@ -1110,8 +1110,7 @@ class QGISProjectUploader(QGISResourcesUploader):
     """
     def __init__(self, new_group_name, ngw_resource, iface, ngw_version):
         project_resources = QgsProject.instance().layerTreeRoot().children()
-        QGISResourcesUploader.__init__(self, project_resources,
-                                       ngw_resource, iface, ngw_version)
+        super().__init__(project_resources, ngw_resource, iface, ngw_version)
         self.new_group_name = new_group_name
 
     def _do(self):
