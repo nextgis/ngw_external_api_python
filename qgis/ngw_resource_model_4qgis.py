@@ -948,41 +948,41 @@ class QGISResourceJob(NGWResourceModelJob):
 
 
 class QGISResourcesUploader(QGISResourceJob):
-    def __init__(self, qgs_resources, ngw_resource, iface, ngw_version=None):
+    def __init__(self, qgs_layer_tree_nodes, ngw_resource, iface, ngw_version=None):
         super().__init__(ngw_version)
-        self.qgs_resources = qgs_resources
+        self.qgs_layer_tree_nodes = qgs_layer_tree_nodes
         self.ngw_resource = ngw_resource
         self.iface = iface
 
     def _do(self):
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_basemaps = []
-        self.process_one_level_of_layers_tree(self.qgs_resources, self.ngw_resource, ngw_webmap_root_group, ngw_webmap_basemaps)
+        self.process_one_level_of_layers_tree(self.qgs_layer_tree_nodes, self.ngw_resource, ngw_webmap_root_group, ngw_webmap_basemaps)
 
         # The group was attached resources,  therefore, it is necessary to upgrade for get children flag
         self.ngw_resource.update()
 
-    def process_one_level_of_layers_tree(self, qgs_layer_tree_items, ngw_resource_group, ngw_webmap_item, ngw_webmap_basemaps):
+    def process_one_level_of_layers_tree(self, qgs_layer_tree_nodes, ngw_resource_group, ngw_webmap_item, ngw_webmap_basemaps):
         exist_resourse_names = {}
         for r in ngw_resource_group.get_children():
             exist_resourse_names[r.common.display_name] = r
 
-        for item in qgs_layer_tree_items:
-            if isinstance(item, QgsLayerTreeLayer):
-                if self.isSuitableLayer(item.layer()) != self.SUITABLE_LAYER:
+        for node in qgs_layer_tree_nodes:
+            if isinstance(node, QgsLayerTreeLayer):
+                if self.isSuitableLayer(node.layer()) != self.SUITABLE_LAYER:
                     continue
 
-                if item.layer().name() not in exist_resourse_names:
-                    self.add_layer(ngw_resource_group, item, ngw_webmap_item, ngw_webmap_basemaps)
-                elif item.layer().name() in exist_resourse_names:
-                    self.update_layer(item, exist_resourse_names[item.layer().name()])
-                    exist_resourse_names.pop(item.layer().name())
+                if node.layer().name() not in exist_resourse_names:
+                    self.add_layer(ngw_resource_group, node, ngw_webmap_item, ngw_webmap_basemaps)
+                elif node.layer().name() in exist_resourse_names:
+                    self.update_layer(node, exist_resourse_names[node.layer().name()])
+                    exist_resourse_names.pop(node.layer().name())
 
-            if isinstance(item, QgsLayerTreeGroup):
-                if item.name() not in exist_resourse_names:
-                    self.add_group(ngw_resource_group, item, ngw_webmap_item, ngw_webmap_basemaps)
-                elif item.name() in exist_resourse_names:
-                    exist_resourse_names.pop(item.name())
+            if isinstance(node, QgsLayerTreeGroup):
+                if node.name() not in exist_resourse_names:
+                    self.add_group(ngw_resource_group, node, ngw_webmap_item, ngw_webmap_basemaps)
+                elif node.name() in exist_resourse_names:
+                    exist_resourse_names.pop(node.name())
 
         for exist_resourse_name in exist_resourse_names:
             # need to delete
@@ -996,7 +996,7 @@ class QGISResourcesUploader(QGISResourceJob):
             )
         except Exception as e:
             log('Exception during adding layer')
-            if NgwPluginSettings.get_force_qgis_project_import() and len(self.qgs_resources) > 1:
+            if NgwPluginSettings.get_force_qgis_project_import() and len(self.qgs_layer_tree_nodes) > 1:
                 self.warningOccurred.emit(
                     JobError(
                         self.tr("Import layer '%s' failed. Skipped") % qgsLayerTreeItem.layer().name(),
@@ -1109,8 +1109,8 @@ class QGISProjectUploader(QGISResourcesUploader):
         Show map for user to edit anf cofirm it
     """
     def __init__(self, new_group_name, ngw_resource, iface, ngw_version):
-        project_resources = QgsProject.instance().layerTreeRoot().children()
-        super().__init__(project_resources, ngw_resource, iface, ngw_version)
+        qgs_layer_tree_nodes = QgsProject.instance().layerTreeRoot().children()
+        super().__init__(qgs_layer_tree_nodes, ngw_resource, iface, ngw_version)
         self.new_group_name = new_group_name
 
     def _do(self):
@@ -1130,7 +1130,7 @@ class QGISProjectUploader(QGISResourcesUploader):
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_basemaps = []
         self.process_one_level_of_layers_tree(
-            self.qgs_resources,
+            self.qgs_layer_tree_nodes,
             ngw_group_resource,
             ngw_webmap_root_group,
             ngw_webmap_basemaps,
