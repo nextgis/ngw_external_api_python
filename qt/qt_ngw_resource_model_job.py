@@ -18,9 +18,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-import sys
-import re
 import json
+import re
+import sys
 import traceback
 
 from qgis.PyQt.QtCore import *
@@ -131,7 +131,7 @@ class NGWResourceModelJob(QObject):
                 self.errorOccurred.emit(JobServerRequestError(self.tr("Bad http comunication.") + "%s"%e, e.url, e.user_msg, e.need_reconnect))
 
             elif e.type == NGWError.TypeNGWUnexpectedAnswer:
-                self.errorOccurred.emit(JobNGWError(self.tr("Cann't parse server answer"), e.url))
+                self.errorOccurred.emit(JobNGWError(self.tr("Can't parse server answer"), e.url))
 
             else:
                 self.errorOccurred.emit(JobServerRequestError(self.tr("Something wrong with request to server"), e.url))
