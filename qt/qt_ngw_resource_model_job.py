@@ -22,6 +22,7 @@ import json
 import re
 import sys
 import traceback
+from typing import List
 
 from qgis.PyQt.QtCore import *
 
@@ -31,12 +32,19 @@ from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
 from ..core.ngw_webmap import NGWWebMap, NGWWebMapLayer, NGWWebMapRoot
 
+from ..qgis.qgis_ngw_connection import QgsNgwConnection
+
 from ..utils import log
 
 from .qt_ngw_resource_model_job_error import *
 
 
 class NGWResourceModelJobResult:
+    added_resources: List[NGWResource]
+    deleted_resources: List[NGWResource]
+    edited_resources: List[NGWResource]
+    main_resource_id: int
+
     def __init__(self):
         self.added_resources = []
         self.deleted_resources = []
@@ -44,17 +52,17 @@ class NGWResourceModelJobResult:
 
         self.main_resource_id = -1
 
-    def putAddedResource(self, ngw_resource, is_main=False):
+    def putAddedResource(self, ngw_resource: NGWResource, is_main: bool = False):
         self.added_resources.append(ngw_resource)
         if is_main:
             self.main_resource_id = ngw_resource.common.id
 
-    def putEditedResource(self, ngw_resource, is_main=False):
+    def putEditedResource(self, ngw_resource: NGWResource, is_main: bool = False):
         self.edited_resources.append(ngw_resource)
         if is_main:
             self.main_resource_id = ngw_resource.common.id
 
-    def putDeletedResource(self, ngw_resource):
+    def putDeletedResource(self, ngw_resource: NGWResource):
         self.deleted_resources.append(ngw_resource)
 
 
@@ -155,7 +163,7 @@ class NGWResourceModelJob(QObject):
 
 
 class NGWRootResourcesLoader(NGWResourceModelJob):
-    def __init__(self, ngw_connection):
+    def __init__(self, ngw_connection: QgsNgwConnection):
         super().__init__()
         self.ngw_connection = ngw_connection
 
@@ -167,8 +175,9 @@ class NGWRootResourcesLoader(NGWResourceModelJob):
 
 
 class NGWResourceUpdater(NGWResourceModelJob):
-    def __init__(self, ngw_resource):
-        NGWResourceModelJob.__init__(self)
+    def __init__(self, ngw_resource: NGWResource):
+        super().__init__()
+        self.result.main_resource_id = ngw_resource.common.id
         self.ngw_resource = ngw_resource
 
     def _do(self):
@@ -179,7 +188,7 @@ class NGWResourceUpdater(NGWResourceModelJob):
 
 class NGWGroupCreater(NGWResourceModelJob):
     def __init__(self, new_group_name, ngw_resource_parent):
-        NGWResourceModelJob.__init__(self)
+        super().__init__()
         self.new_group_name = new_group_name
         self.ngw_resource_parent = ngw_resource_parent
 
