@@ -272,7 +272,7 @@ class NGWVectorLayer(NGWResource):
             extent.get('maxLat', 90),
         )
 
-    def create_qml_style(self, qml, callback, style_name=None):
+    def create_qml_style(self, qml, callback, style_name=None) -> NGWQGISVectorStyle:
         """Create QML style for this layer
 
         qml - full path to qml file

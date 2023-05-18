@@ -25,6 +25,7 @@ import glob
 import shutil
 import zipfile
 import tempfile
+from typing import Optional
 
 from qgis.PyQt.QtCore import QCoreApplication
 
@@ -38,7 +39,7 @@ from ..qt.qt_ngw_resource_model_job_error import *
 from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_vector_layer import NGWVectorLayer
-from ..core.ngw_qgis_style import NGWQGISVectorStyle
+from ..core.ngw_qgis_style import NGWQGISStyle, NGWQGISVectorStyle, NGWQGISRasterStyle
 from ..core.ngw_feature import NGWFeature
 from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_wms_service import NGWWmsService
@@ -100,7 +101,7 @@ class QGISResourceJob(NGWResourceModelJob):
     SUITABLE_LAYER_BAD_GEOMETRY = 1
 
     def __init__(self, ngw_version=None):
-        NGWResourceModelJob.__init__(self)
+        super().__init__()
 
         self.ngw_version = ngw_version
 
@@ -701,7 +702,7 @@ class QGISResourceJob(NGWResourceModelJob):
         )
         return ngw_style
 
-    def addStyle(self, qgs_map_layer, ngw_layer_resource):
+    def addStyle(self, qgs_map_layer, ngw_layer_resource) -> Optional[NGWQGISStyle]:
         layer_type = qgs_map_layer.type()
         if layer_type == QgsMapLayer.VectorLayer or layer_type == QgsMapLayer.RasterLayer:
             tmp = tempfile.mktemp('.qml')
@@ -1258,7 +1259,7 @@ class MapForLayerCreater(QGISResourceJob):
 
 class QGISStyleUpdater(QGISResourceJob):
     def __init__(self, qgs_map_layer, ngw_resource):
-        QGISResourceJob.__init__(self)
+        super().__init__()
         self.qgs_map_layer = qgs_map_layer
         self.ngw_resource = ngw_resource
 
@@ -1267,20 +1268,23 @@ class QGISStyleUpdater(QGISResourceJob):
         self.updateStyle(self.qgs_map_layer, self.ngw_resource)
         self.putEditedResourceToResult(self.ngw_resource)
 
+
 class QGISStyleAdder(QGISResourceJob):
     def __init__(self, qgs_map_layer, ngw_resource):
-        QGISResourceJob.__init__(self)
+        super().__init__()
         self.qgs_map_layer = qgs_map_layer
         self.ngw_resource = ngw_resource
 
     def _do(self):
         ngw_style = self.addStyle(self.qgs_map_layer, self.ngw_resource)
+        if ngw_style is None:
+            return
         self.putAddedResourceToResult(ngw_style)
 
 
 class NGWCreateWMSForVector(QGISResourceJob):
     def __init__(self, ngw_vector_layer, ngw_group_resource, ngw_style_id):
-        NGWResourceModelJob.__init__(self)
+        super().__init__()
         self.ngw_layer = ngw_vector_layer
         self.ngw_group_resource = ngw_group_resource
         self.ngw_style_id = ngw_style_id
@@ -1312,7 +1316,7 @@ class NGWCreateWMSForVector(QGISResourceJob):
 
 class NGWUpdateVectorLayer(QGISResourceJob):
     def __init__(self, ngw_vector_layer, qgs_map_layers):
-        NGWResourceModelJob.__init__(self)
+        super().__init__()
         self.ngw_layer = ngw_vector_layer
         self.qgis_layer = qgs_map_layers
 

@@ -77,7 +77,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.completer_model = QStringListModel()
         completer = QCompleter()
         completer.setModel(self.completer_model)
-        completer.setCompletionMode(QCompleter.PopupCompletion)
+        completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         self.leUrl.setCompleter(completer)
 
         self.cbAsGuest.toggled.connect(self.__cbAsGuestChecked)
@@ -110,10 +110,10 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             self.leName.setText(self.ngw_conn_sett.connection_name)
 
             if self.ngw_conn_sett.username == "":
-                self.cbAsGuest.setCheckState(Qt.Checked)
+                self.cbAsGuest.setCheckState(Qt.CheckState.Checked)
                 self.leUser.setText("administrator")
             else:
-                self.cbAsGuest.setCheckState(Qt.Unchecked)
+                self.cbAsGuest.setCheckState(Qt.CheckState.Unchecked)
                 self.leUser.setText(self.ngw_conn_sett.username)
                 self.lePassword.setText(self.ngw_conn_sett.password)
         else:
@@ -322,7 +322,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         user = ""
         passward = ""
-        if self.cbAsGuest.checkState() == Qt.Unchecked:
+        if self.cbAsGuest.checkState() == Qt.CheckState.Unchecked:
             user = self.leUser.text()
             passward = self.lePassword.text()
 

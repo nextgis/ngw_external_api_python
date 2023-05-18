@@ -78,7 +78,7 @@ class NGWRasterLayer(NGWResource):
 
         return ngw_resource
 
-    def create_qml_style(self, qml, callback, style_name=None):
+    def create_qml_style(self, qml, callback, style_name=None) -> NGWQGISRasterStyle:
         """Create QML style for this layer
 
         qml - full path to qml file

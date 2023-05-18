@@ -24,7 +24,9 @@ import sys
 import traceback
 from typing import List
 
-from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtCore import (
+    QObject, pyqtSignal
+)
 
 from ..core.ngw_error import NGWError
 from ..core.ngw_resource import NGWResource
@@ -36,7 +38,10 @@ from ..qgis.qgis_ngw_connection import QgsNgwConnection
 
 from ..utils import log
 
-from .qt_ngw_resource_model_job_error import *
+from .qt_ngw_resource_model_job_error import (
+    JobNGWError, JobAuthorizationError, NGWResourceModelJobError, JobInternalError,
+    JobServerRequestError
+)
 
 
 class NGWResourceModelJobResult:
@@ -81,7 +86,7 @@ class NGWResourceModelJob(QObject):
         self.result = NGWResourceModelJobResult()
 
     def generate_unique_name(self, name, present_names):
-        if re.search('\(\d\)$', name):
+        if re.search(r'\(\d\)$', name):
             name = name = name[:-3]
         new_name = name
         id = 1
@@ -107,13 +112,13 @@ class NGWResourceModelJob(QObject):
 
         return chain
 
-    def putAddedResourceToResult(self, ngw_resource, is_main=False):
+    def putAddedResourceToResult(self, ngw_resource: NGWResource, is_main: bool = False):
         self.result.putAddedResource(ngw_resource, is_main)
 
-    def putEditedResourceToResult(self, ngw_resource, is_main=False):
+    def putEditedResourceToResult(self, ngw_resource: NGWResource, is_main: bool = False):
         self.result.putEditedResource(ngw_resource, is_main)
 
-    def putDeletedResourceToResult(self, ngw_resource):
+    def putDeletedResourceToResult(self, ngw_resource: NGWResource):
         self.result.putDeletedResource(ngw_resource)
 
     def run(self):
@@ -193,7 +198,8 @@ class NGWGroupCreater(NGWResourceModelJob):
         self.ngw_resource_parent = ngw_resource_parent
 
     def _do(self):
-        new_group_name = self.unique_resource_name(self.new_group_name, self.ngw_resource_parent)
+        new_group_name = self.unique_resource_name(self.new_group_name,
+                                                   self.ngw_resource_parent)
 
         ngw_group_resource = ResourceCreator.create_group(
             self.ngw_resource_parent,

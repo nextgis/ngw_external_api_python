@@ -18,8 +18,16 @@
  ***************************************************************************/
 """
 
+from typing import Optional
+
 
 class NGWConnectionSettings:
+    connection_name: Optional[str]
+    server_url: Optional[str]
+    username: Optional[str]
+    password: Optional[str]
+    proxy_enable: bool
+
     def __init__(self, connection_name=None, server_url=None, username=None, password=None):
         self.connection_name = connection_name
         self.server_url = server_url
