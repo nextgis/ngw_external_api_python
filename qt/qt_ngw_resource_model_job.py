@@ -70,6 +70,11 @@ class NGWResourceModelJobResult:
     def putDeletedResource(self, ngw_resource: NGWResource):
         self.deleted_resources.append(ngw_resource)
 
+    def is_empty(self):
+        return (len(self.added_resources) == 0
+            and len(self.edited_resources) == 0
+            and len(self.deleted_resources) == 0)
+
 
 class NGWResourceModelJob(QObject):
     started = pyqtSignal()

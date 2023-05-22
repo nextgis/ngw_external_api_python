@@ -147,7 +147,7 @@ class QGISResourceJob(NGWResourceModelJob):
             #log(u'>>> Uploading plugin layer "{}"'.format(qgs_plugin_layer.name()))
 
             if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
-                raise JobError(self.tr("Your web GIS cann't create base maps."))
+                raise JobError(self.tr("Your web GIS can't create base maps."))
 
             new_layer_name = self.unique_resource_name(qgs_plugin_layer.name(), ngw_group)
 
@@ -193,7 +193,7 @@ class QGISResourceJob(NGWResourceModelJob):
         if parameters.get("type", "") == "xyz":
 
             if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
-                raise JobError(self.tr("Your web GIS cann't create base maps."))
+                raise JobError(self.tr("Your web GIS can't create base maps."))
 
             epsg = getQgsMapLayerEPSG(qgs_wms_layer)
 
@@ -997,10 +997,10 @@ class QGISResourcesUploader(QGISResourceJob):
             )
         except Exception as e:
             log('Exception during adding layer')
-            if NgwPluginSettings.get_force_qgis_project_import() and len(self.qgs_layer_tree_nodes) > 1:
+            if len(self.qgs_layer_tree_nodes) > 1:
                 self.warningOccurred.emit(
                     JobError(
-                        self.tr("Import layer '%s' failed. Skipped") % qgsLayerTreeItem.layer().name(),
+                        self.tr("Import layer '{}' failed. Skipped").format(qgsLayerTreeItem.layer().name()),
                         e
                     )
                 )

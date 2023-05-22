@@ -52,12 +52,12 @@ class JobServerRequestError(NGWResourceModelJobError):
 
 
 class JobNGWError(JobServerRequestError):
-	"""NGW answer is received, but NGW cann't execute request for perform the job"""
+	"""NGW answer is received, but NGW can't execute request for perform the job"""
 	def __init__(self, msg, url):
 		super().__init__(msg, url)
 
 
 class JobAuthorizationError(JobNGWError):
-	"""NGW cann't execute request for perform the job because user does not have rights"""
+	"""NGW can't execute request for perform the job because user does not have rights"""
 	def __init__(self, url):
 		super().__init__("", url)
