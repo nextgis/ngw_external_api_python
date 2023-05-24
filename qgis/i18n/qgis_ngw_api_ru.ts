@@ -90,27 +90,27 @@
 <context>
     <name>QGISResourceJob</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="515"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="516"/>
         <source>We&apos;ve renamed fields {0} for layer &apos;{1}&apos;. Style for this layer may become invalid.</source>
         <translation>Следующие поля переименованы {0} для слоя &apos;{1}&apos;. Стиль для этого слоя может стать некорректным.</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="593"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="594"/>
         <source>We&apos;ve excluded features with id {0} for layer &apos;{1}&apos;. Reason: invalid geometry.</source>
         <translation>Объекты с id {0} слоя &apos;{1}&apos; были исключены. Причина: неправильная геометрия.</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="195"/>
-        <source>Your web GIS cann&apos;t create base maps.</source>
+        <location filename="../ngw_resource_model_4qgis.py" line="196"/>
+        <source>Your web GIS can&apos;t create base maps.</source>
         <translation>Ваша Веб ГИС не может создавать подложки веб-карт.</translation>
     </message>
 </context>
 <context>
     <name>QGISResourcesUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1000"/>
-        <source>Import layer &apos;%s&apos; failed. Skipped</source>
-        <translation>Ошибка импорта слоя &apos;%s&apos;. Слой пропущен</translation>
+        <location filename="../ngw_resource_model_4qgis.py" line="1001"/>
+        <source>Import layer &apos;{}&apos; failed. Skipped</source>
+        <translation>Ошибка импорта слоя &apos;{}&apos;. Слой пропущен</translation>
     </message>
 </context>
 <context>
