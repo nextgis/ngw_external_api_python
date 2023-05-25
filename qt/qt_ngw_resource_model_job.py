@@ -71,9 +71,11 @@ class NGWResourceModelJobResult:
         self.deleted_resources.append(ngw_resource)
 
     def is_empty(self):
-        return (len(self.added_resources) == 0
+        return (
+            len(self.added_resources) == 0
             and len(self.edited_resources) == 0
-            and len(self.deleted_resources) == 0)
+            and len(self.deleted_resources) == 0
+        )
 
 
 class NGWResourceModelJob(QObject):
