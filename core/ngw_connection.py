@@ -21,9 +21,12 @@ import os
 from io import FileIO
 import json
 import requests
+import urllib.parse
 from base64 import b64encode
 from requests.utils import to_native_string
+from typing import Tuple, Optional
 
+from .ngw_connection_settings import NGWConnectionSettings
 from .ngw_error import NGWError
 
 from ..utils import log
@@ -70,7 +73,7 @@ class NGWConnection:
         self.__session = requests.Session()
         self.__auth = ("", "")
 
-    def __init__(self, conn_settings):
+    def __init__(self, conn_settings: NGWConnectionSettings):
         self.__server_url = None
         self.__session = requests.Session()
         self.__auth = ("", "")
@@ -79,7 +82,7 @@ class NGWConnection:
 
         self.__ngw_components = None
 
-    def set_from_settings(self, conn_settings):
+    def set_from_settings(self, conn_settings: NGWConnectionSettings):
         self.server_url = conn_settings.server_url
         self.set_auth(conn_settings.username, conn_settings.password)
 
@@ -109,11 +112,11 @@ class NGWConnection:
         else:
             self.__server_url = value
 
-    def set_auth(self, username, password):
+    def set_auth(self, username: Optional[str], password: Optional[str]):
         # self.__session.auth = (username, password)
         self.__auth = (username, password)
 
-    def get_auth(self):
+    def get_auth(self) -> Tuple[Optional[str], Optional[str]]:
         # return self.__session.auth
         return self.__auth
 
@@ -132,13 +135,14 @@ class NGWConnection:
         log(
             "Request\nmethod: {}\nurl: {}\ndata: {}\njson:".format(
                 method,
-                self.server_url + sub_url,
+                urllib.parse.urljoin(self.server_url, sub_url),
                 payload,
                 json_data
             )
         )
 
-        req = requests.Request(method, self.server_url + sub_url, data=payload, json=json_data)
+        url = urllib.parse.urljoin(self.server_url, sub_url)
+        req = requests.Request(method, url, data=payload, json=json_data)
 
         if all(map(len, self.__auth)):
             req.headers['Authorization'] = _basic_auth_str(self.__auth[0], self.__auth[1])
@@ -196,7 +200,7 @@ class NGWConnection:
             raise NGWError(NGWError.TypeRequestError, e.message.args[0], self.get_upload_file_url())
 
     def download_file(self, url):
-        req = requests.Request('GET', self.server_url + url)
+        req = requests.Request('GET', urllib.parse.urljoin(self.server_url, url))
 
         if all(map(len, self.__auth)):
             req.headers['Authorization'] = _basic_auth_str(self.__auth[0], self.__auth[1])
@@ -210,7 +214,7 @@ class NGWConnection:
 
         if resp.status_code / 100 != 2:
             raise NGWError(NGWError.TypeNGWError, resp.content, req.url)
-        
+
         return resp.content
 
     def get_ngw_components(self):
@@ -225,7 +229,7 @@ class NGWConnection:
     def get_version(self):
         ngw_components = self.get_ngw_components()
         return ngw_components.get("nextgisweb")
-        
+
     def get_abilities(self):
         ngw_components = self.get_ngw_components()
         abilities = []

@@ -19,6 +19,7 @@
 """
 import json
 import time
+import urllib.parse
 
 from qgis.PyQt.QtCore import (
     QBuffer, QByteArray, QEventLoop, QFile, QIODevice, QObject, QTimer, QUrl)
@@ -164,7 +165,7 @@ class QgsNgwConnection(QObject):
 
         filename = kwargs.get("file")
 
-        url = self.server_url + sub_url
+        url = urllib.parse.urljoin(self.server_url, sub_url)
 
         if do_log:
             log(u"Request\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(

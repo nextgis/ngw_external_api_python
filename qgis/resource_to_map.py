@@ -48,7 +48,7 @@ def _add_geojson_layer(resource):
         raise Exception('Resource type is not VectorLayer!')
     qgs_geojson_layer = QgsVectorLayer(resource.get_absolute_geojson_url(), resource.common.display_name, 'ogr')
     if not qgs_geojson_layer.isValid():
-        raise Exception('Layer %s can\'t be added to the map!' % resource.common.display_name)
+        raise Exception('Layer "{}" can\'t be added to the map!'.format(resource.common.display_name))
     qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
     return qgs_geojson_layer
 
@@ -61,7 +61,7 @@ def _add_cog_raster_layer(resource):
     qgs_raster_layer = QgsRasterLayer(url, resource.common.display_name, 'gdal')
     if not qgs_raster_layer.isValid():
         log('Failed to add raster layer to QGIS. URL: {}'.format(url))
-        raise Exception('Layer "%s" can\'t be added to the map!' % resource.common.display_name)
+        raise Exception('Layer "{}" can\'t be added to the map!'.format(resource.common.display_name))
     return qgs_raster_layer
 
 def _apply_style(style_resource, qgs_layer):

@@ -175,10 +175,7 @@ class NGWVectorLayer(NGWResource):
         return self._json.get(self.type_id, {}).get("srs", {}).get("id")
 
     def get_absolute_geojson_url(self):
-        return '%s/%s' % (
-            self.get_absolute_api_url_with_auth(),
-            'geojson'
-        )
+        return '{url}/geojson'.format(url=self.get_absolute_api_url_with_auth())
 
     def set_icon(self, geometry_type):
         icon_filename = self.icons.get(geometry_type, 'vector_layer.svg')

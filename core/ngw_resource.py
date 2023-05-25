@@ -19,6 +19,7 @@
 """
 import re
 from os import path
+from typing import Tuple
 
 import urllib.parse
 
@@ -111,19 +112,23 @@ class NGWResource:
         return children
 
     def get_absolute_url(self):
-        return self._res_factory.connection.server_url + RESOURCE_URL(self.common.id)
+        base_url = self._res_factory.connection.server_url
+        return urllib.parse.urljoin(base_url, RESOURCE_URL(self.common.id))
 
     def get_absolute_api_url(self):
-        return self._res_factory.connection.server_url + API_RESOURCE_URL(self.common.id)
+        base_url = self._res_factory.connection.server_url
+        return urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
 
     def get_absolute_api_url_with_auth(self):
         creds = self.get_creds()
         if creds is None:
             creds = ['', '']
-        url = self._res_factory.connection.server_url.replace('://', '://{login}:{password}@') + API_RESOURCE_URL(self.common.id)
-        url = url.format(login=urllib.parse.quote_plus(creds[0]), password=urllib.parse.quote_plus(creds[1]))
-        url = u'/vsicurl/' + url
-        return url
+        login = urllib.parse.quote_plus(creds[0])
+        password = urllib.parse.quote_plus(creds[1])
+        base_url = self._res_factory.connection.server_url
+        base_url = base_url.replace('://', f'://{login}:{password}@')
+        url = urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
+        return f'/vsicurl/{url}'
 
     def get_relative_url(self):
         return RESOURCE_URL(self.common.id)
@@ -131,10 +136,8 @@ class NGWResource:
     def get_relative_api_url(self):
         return API_RESOURCE_URL(self.common.id)
 
-    def get_creds(self):
+    def get_creds(self) -> Tuple[str, str]:
         creds = self._res_factory.connection.get_auth()
-        if creds is None or len(creds) != 2:
-            return None
         if creds[0] is None or creds[0] == '':
             return None
         return creds
@@ -155,7 +158,6 @@ class NGWResource:
         url = self.get_relative_api_url()
         connection.put(url, params=params)
         self.update()
-
 
     def update_metadata(self, metadata):
         params = dict(
