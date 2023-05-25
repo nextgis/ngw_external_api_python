@@ -20,6 +20,8 @@
 import datetime
 
 from os import path
+from typing import List
+
 from .ngw_resource import NGWResource, API_LAYER_EXTENT
 from .ngw_qgis_style import NGWQGISVectorStyle
 from .ngw_mapserver_style import NGWMapServerStyle
@@ -242,7 +244,7 @@ class NGWVectorLayer(NGWResource):
         connection.delete(self.get_feature_deleting_url())
 
     # TODO Need refactoring. Paging loading with process
-    def get_features(self):
+    def get_features(self) -> List[NGWFeature]:
         connection = self._res_factory.connection
 
         url = self.get_feature_adding_url()
