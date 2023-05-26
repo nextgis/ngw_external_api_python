@@ -32,6 +32,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import QgsProject, QgsMapLayer, QgsVectorLayer, QgsFeature, \
     QgsLayerTreeLayer, QgsLayerTreeGroup, QgsVectorFileWriter, \
     QgsCoordinateReferenceSystem
+from qgis.gui import QgsFileWidget
 
 from ..qt.qt_ngw_resource_model_job import *
 from ..qt.qt_ngw_resource_model_job_error import *
@@ -785,7 +786,7 @@ class QGISResourceJob(NGWResourceModelJob):
         ngw_style = ngw_layer.create_style()
         return ngw_style
 
-    def importAttachments(self, qgs_map_layer: QgsVectorLayer, ngw_resource: NGWVectorLayer):
+    def importAttachments(self, qgs_vector_layer: QgsVectorLayer, ngw_resource: NGWVectorLayer):
         ''' Checks if the layer attributes have widgets
             of type "Attachment" and "Storage Type"
             matches "existing file" and then tries
@@ -803,23 +804,28 @@ class QGISResourceJob(NGWResourceModelJob):
             return
 
         ngw_ftrs = []
-        for attrInx in qgs_map_layer.attributeList():
-            wgt = qgs_map_layer.editorWidgetSetup(attrInx)
-            if wgt.type() != 'ExternalResource':
+        for attrInx in qgs_vector_layer.attributeList():
+            editor_widget = qgs_vector_layer.editorWidgetSetup(attrInx)
+            if editor_widget.type() != 'ExternalResource':
                 continue
 
-            wconf = wgt.config()
-            if (not wconf['StorageType'] and
-                    wconf['StorageMode'] == 0):
+            editor_config = editor_widget.config()
+            if (
+                editor_config['StorageType'] is None # Local files
+                and editor_config['StorageMode'] == QgsFileWidget.StorageMode.GetFile
+            ):
                 root_dir = ''
-                if wconf['RelativeStorage'] == 1:
+
+                if editor_config['RelativeStorage'] == QgsFileWidget.RelativeStorage.RelativeProject:
                     root_dir = QgsProject.instance().homePath()
-                if wconf['RelativeStorage'] == 2:
-                    root_dir = wconf['DefaultRoot']
-                for finx, ftr in enumerate(qgs_map_layer.getFeatures()):
+                if editor_config['RelativeStorage'] == QgsFileWidget.RelativeStorage.RelativeDefaultPath:
+                    root_dir = editor_config['DefaultRoot']
+
+                for finx, ftr in enumerate(qgs_vector_layer.getFeatures()):
                     imgf = f"{root_dir}/{ftr.attributes()[attrInx]}"
                     if os.path.isfile(imgf):
                         if len(ngw_ftrs) == 0:
+                            # Lazy loading
                             ngw_ftrs = ngw_resource.get_features()
 
                         log(f"Load file: {imgf}")
