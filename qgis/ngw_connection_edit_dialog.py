@@ -277,7 +277,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.thread.start()
 
     def __process_ping_result(self, ping_result):
-        if ping_result is True:
+        if ping_result:
             self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
             self.lbConnectionTesting.setText(self.tr("Connection successful!"))
             self.lbConnectionTesting.setStyleSheet("color: green")
@@ -288,8 +288,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
                 self.need_check_http = True
                 return
 
-            # self.lbConnectionTesting.setText(self.tr("Connection failed! Please check the URL."))
-            self.lbConnectionTesting.setText(self.tr('Specified URL webgis not found! Or your webgis version is below 3'))
+            self.lbConnectionTesting.setText(self.tr('Specified URL Web GIS not found.'))
             self.lbConnectionTesting.setStyleSheet("color: red")
 
     def __process_ping_finish(self):

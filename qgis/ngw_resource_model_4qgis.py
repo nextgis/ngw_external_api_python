@@ -108,6 +108,9 @@ class QGISResourceJob(NGWResourceModelJob):
 
         self.sanitize_fields_names = ["id", "geom"]
 
+    def _layer_status(self, layer_name, status):
+        self.statusChanged.emit(f""""{layer_name}" - {status}""")
+
     def isSuitableLayer(self, qgs_map_layer):
         layer_type = qgs_map_layer.type()
 
@@ -171,11 +174,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def importQgsWMSLayer(self, qgs_wms_layer, ngw_group):
         #log(u'>>> Uploading WMS layer "{}"'.format(qgs_wms_layer.name()))
 
-        self.statusChanged.emit(
-            "\"%s\" - Import as WMS Connection " % (
-                qgs_wms_layer.name(),
-            )
-        )
+        self._layer_status(qgs_wms_layer.name(), self.tr("create WMS connection"))
 
         layer_source = qgs_wms_layer.source()
         parameters = {}
@@ -219,11 +218,8 @@ class QGISResourceJob(NGWResourceModelJob):
                 (parameters.get("username"), parameters.get("password"))
             )
 
-            self.statusChanged.emit(
-                "\"%s\" - Import as WMS Layer " % (
-                    qgs_wms_layer.name(),
-                )
-            )
+            self._layer_status(qgs_wms_layer.name(), self.tr("creating WMS layer"))
+
             ngw_wms_layer_name = self.unique_resource_name(
                 wms_connection.common.display_name + "_layer",
                 ngw_group
@@ -247,18 +243,13 @@ class QGISResourceJob(NGWResourceModelJob):
         log(u'>>> Uploading raster layer "{}" (with the name "{}")'.format(qgs_raster_layer.name(), new_layer_name))
 
         def uploadFileCallback(total_size, readed_size, value=None):
-            self.statusChanged.emit(
-                "\"%s\" - Upload (%d%%)" % (
-                    qgs_raster_layer.name(),
-                    readed_size * 100 / total_size if value is None else value
-                )
-            )
+            self._layer_status(
+                qgs_raster_layer.name(),
+                self.tr("uploading ({}%%)").format(
+                    "%d" % readed_size * 100 / total_size if value is None else value))
+
         def createLayerCallback():
-            self.statusChanged.emit(
-                "\"%s\" - Create" % (
-                    qgs_raster_layer.name()
-                )
-            )
+            self._layer_status(qgs_raster_layer.name(), self.tr("creating"))
 
         layer_provider = qgs_raster_layer.providerType()
         if layer_provider == 'gdal':
@@ -279,18 +270,13 @@ class QGISResourceJob(NGWResourceModelJob):
         log(u'>>> Uploading vector layer "{}" (with the name "{}")'.format(qgs_vector_layer.name(), new_layer_name))
 
         def uploadFileCallback(total_size, readed_size, value=None):
-            self.statusChanged.emit(
-                "\"%s\" - Upload (%d%%)" % (
-                    qgs_vector_layer.name(),
-                    readed_size * 100 / (total_size + 0.1) if value is None else value
-                )
-            )
+            self._layer_status(
+                qgs_vector_layer.name(),
+                self.tr("uploading ({}%%)").format(
+                    int(readed_size * 100 / total_size if value is None else value)))
+
         def createLayerCallback():
-            self.statusChanged.emit(
-                "\"%s\" - Create" % (
-                    qgs_vector_layer.name()
-                )
-            )
+            self._layer_status(qgs_vector_layer.name(), self.tr("creating"))
 
         if self.isSuitableLayer(qgs_vector_layer) == self.SUITABLE_LAYER_BAD_GEOMETRY:
             self.errorOccurred.emit(
@@ -338,24 +324,17 @@ class QGISResourceJob(NGWResourceModelJob):
         #        aliases[rfn] = src_layer_aliases[fn]
 
         if len(aliases) > 0:
-            self.statusChanged.emit(
-                "\"%s\" - Add aliases" % qgs_vector_layer.name()
-            )
+            self._layer_status(qgs_vector_layer.name(), self.tr("adding aliases"))
             ngw_vector_layer.add_aliases(aliases)
 
-        self.statusChanged.emit(
-            "\"%s\" - Finishing" % qgs_vector_layer.name()
-        )
-
+        self._layer_status(qgs_vector_layer.name(), self.tr("finishing"))
         os.remove(filepath)
 
         return ngw_vector_layer
 
 
     def prepareImportFile(self, qgs_vector_layer):
-        self.statusChanged.emit(
-            "\"%s\" - Prepare" % qgs_vector_layer.name()
-        )
+        self._layer_status(qgs_vector_layer.name(), self.tr("preparing"))
 
         layer_has_mixed_geoms = False
         layer_has_bad_fields = False
@@ -366,7 +345,7 @@ class QGISResourceJob(NGWResourceModelJob):
         #    layer_has_mixed_geoms, fids_with_notvalid_geom = self.checkGeometry(qgs_vector_layer)
 
         # Check specific fields.
-        if (NgwPluginSettings.get_sanitize_rename_fields() and self.hasBadFields(qgs_vector_layer) and not self.ngwSupportsAutoRenameFields()):
+        if NgwPluginSettings.get_sanitize_rename_fields() and self.hasBadFields(qgs_vector_layer) and not self.ngwSupportsAutoRenameFields():
             log('Incorrect fields of layer will be renamed by NextGIS Connect')
             layer_has_bad_fields = True
         else:
@@ -403,57 +382,48 @@ class QGISResourceJob(NGWResourceModelJob):
         fids_with_not_valid_geom = []
 
         features_count = qgs_vector_layer.featureCount()
-        features_counter = 0
         progress = 0
-        for feature in qgs_vector_layer.getFeatures():
-            v = features_counter * 100 / features_count
+        for features_counter, feature in enumerate(qgs_vector_layer.getFeatures(), start=1):
+            v = round(features_counter * 100 / features_count)
             if progress < v:
                 progress = v
-                self.statusChanged.emit(
-                    "\"%s\" - Check geometry (%d%%)" % (
-                        qgs_vector_layer.name(),
-                        features_counter * 100 / features_count
-                    )
-                )
-            features_counter += 1
-            if feature.geometry() is None:
-                fids_with_not_valid_geom.append(feature.id())
+                self._layer_status(
+                    qgs_vector_layer.name(),
+                    self.tr("checking geometry ({}%%)").format(progress))
+
+            fid, geom = feature.geometry(), feature.id()
+
+            if geom is None:
+                fids_with_not_valid_geom.append(fid)
                 continue
 
-            # isGeosValid excepted to some geometries
-            # if not feature.geometry().isGeosValid():
-            #     log("Feature %s has not valid geometry (geos)" % str(feature.id()))
-            #     fids_with_not_valid_geom.append(feature.id())
-
             # Fix one point line. Method isGeosValid return true for same geometry.
-            if feature.geometry().type() == CompatQgisGeometryType.Line:
-                g = feature.geometry()
-                if g.isMultipart():
-                    for polyline in g.asMultiPolyline():
+            if geom.type() == CompatQgisGeometryType.Line:
+                if geom.isMultipart():
+                    for polyline in geom.asMultiPolyline():
                         if len(polyline) < 2:
-                            fids_with_not_valid_geom.append(feature.id())
+                            fids_with_not_valid_geom.append(fid)
                             break
                 else:
-                    if len(g.asPolyline()) < 2:
-                        fids_with_not_valid_geom.append(feature.id())
+                    if len(geom.asPolyline()) < 2:
+                        fids_with_not_valid_geom.append(fid)
 
-            elif feature.geometry().type() == CompatQgisGeometryType.Polygon:
-                g = feature.geometry()
-                if g.isMultipart():
-                    for polygon in g.asMultiPolygon():
+            elif geom.type() == CompatQgisGeometryType.Polygon:
+                if geom.isMultipart():
+                    for polygon in geom.asMultiPolygon():
                         for polyline in polygon:
                             if len(polyline) < 4:
-                                log("Feature %s has not valid geometry (less then 4 points)" % str(feature.id()))
-                                fids_with_not_valid_geom.append(feature.id())
+                                log("Feature %s has not valid geometry (less then 4 points)" % str(fid))
+                                fids_with_not_valid_geom.append(fid)
                                 break
                 else:
-                    for polyline in g.asPolygon():
+                    for polyline in geom.asPolygon():
                         if len(polyline) < 4:
-                            log("Feature %s has not valid geometry (less then 4 points)" % str(feature.id()))
-                            fids_with_not_valid_geom.append(feature.id())
+                            log("Feature %s has not valid geometry (less then 4 points)" % str(fid))
+                            fids_with_not_valid_geom.append(fid)
                             break
 
-            if feature.geometry().isMultipart():
+            if geom.isMultipart():
                 has_multipart_geometries = True
             else:
                 has_simple_geometries = True
@@ -464,15 +434,8 @@ class QGISResourceJob(NGWResourceModelJob):
             #     log("Feature %s has invalid geometry: %s" % (str(feature.id()), ', '.join(err.what() for err in errors)))
             #     fids_with_not_valid_geom.append(feature.id())
 
-        self.statusChanged.emit(
-            "\"%s\" - Check geometry (%d%%)" % (
-                qgs_vector_layer.name(),
-                100
-            )
-        )
-
         return (
-            (has_multipart_geometries and has_simple_geometries),
+            has_multipart_geometries and has_simple_geometries,
             fids_with_not_valid_geom
         )
 
@@ -544,9 +507,9 @@ class QGISResourceJob(NGWResourceModelJob):
         qgs_vector_layer_dst.commitChanges()
         qgs_vector_layer_dst.startEditing()
         features_count = qgs_vector_layer_src.featureCount()
-        features_counter = 1
+
         progress = 0
-        for feature in qgs_vector_layer_src.getFeatures():
+        for features_counter, feature in enumerate(qgs_vector_layer_src.getFeatures(), start=1):
             if feature.id() in fids_with_notvalid_geom:
                 continue
 
@@ -578,16 +541,12 @@ class QGISResourceJob(NGWResourceModelJob):
                 new_feature.setAttribute(fname, fval)
             qgs_vector_layer_dst.addFeature(new_feature)
 
-            tmp_progress = features_counter * 100 / features_count
-            if tmp_progress > progress:
-                progress = tmp_progress
-                self.statusChanged.emit(
-                    "\"%s\" - Prepare layer for import (%d%%)" % (
-                        qgs_vector_layer_src.name(),
-                        features_counter * 100 / features_count
-                    )
-                )
-            features_counter += 1
+            v = round(features_counter * 100 / features_count)
+            if progress < v:
+                progress = v
+                self._layer_status(
+                    qgs_vector_layer_src.name(),
+                    self.tr("preparing layer ({}%%)").format(progress))
 
         qgs_vector_layer_dst.commitChanges()
 
@@ -661,9 +620,7 @@ class QGISResourceJob(NGWResourceModelJob):
         basePath = os.path.splitext(tmp_shp)[0]
         baseName = os.path.splitext(os.path.basename(tmp_shp))[0]
 
-        self.statusChanged.emit(
-            "\"%s\" - Packing" % qgs_vector_layer.name()
-        )
+        self._layer_status(qgs_vector_layer.name(), self.tr("packing"))
 
         zf = zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED)
         for i in glob.iglob(basePath + '.*'):
@@ -691,10 +648,9 @@ class QGISResourceJob(NGWResourceModelJob):
     def addQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                "Style for \"%s\" - Upload (%d%%)" % (
-                    ngw_layer_resource.common.display_name,
-                    readed_size * 100 / total_size
-                )
+                self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name.name())
+                + " - "
+                + self.tr("uploading ({}%%)").format(int(readed_size * 100 / total_size))
             )
 
         ngw_style = ngw_layer_resource.create_qml_style(
@@ -704,12 +660,8 @@ class QGISResourceJob(NGWResourceModelJob):
         return ngw_style
 
     def addStyle(self, qgs_map_layer, ngw_layer_resource) -> Optional[NGWQGISStyle]:
-        layer_type = qgs_map_layer.type()
-        if layer_type == QgsMapLayer.VectorLayer or layer_type == QgsMapLayer.RasterLayer:
+        if qgs_map_layer.type() in (QgsMapLayer.VectorLayer, QgsMapLayer.RasterLayer):
             tmp = tempfile.mktemp('.qml')
-            self.statusChanged.emit(
-                "Style for \"%s\" - Save as qml" % qgs_map_layer.name()
-            )
             msg, saved = qgs_map_layer.saveNamedStyle(tmp)
             ngw_resource = self.addQMLStyle(tmp, ngw_layer_resource)
             os.remove(tmp)
@@ -720,15 +672,9 @@ class QGISResourceJob(NGWResourceModelJob):
         #         ngw_resource = ngw_layer_resource.create_style()
         #         return ngw_resource
 
-        return None
-
     def updateStyle(self, qgs_map_layer, ngw_layer_resource):
-        layer_type = qgs_map_layer.type()
-        if layer_type == QgsMapLayer.VectorLayer or layer_type == QgsMapLayer.RasterLayer:
+        if qgs_map_layer.type() in (QgsMapLayer.VectorLayer, QgsMapLayer.RasterLayer):
             tmp = tempfile.mktemp('.qml')
-            self.statusChanged.emit(
-                "Style for \"%s\" - Save as qml" % qgs_map_layer.name()
-            )
             msg, saved = qgs_map_layer.saveNamedStyle(tmp)
             self.updateQMLStyle(tmp, ngw_layer_resource)
             os.remove(tmp)
@@ -736,10 +682,9 @@ class QGISResourceJob(NGWResourceModelJob):
     def updateQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                "Style for \"%s\" - Upload (%d%%)" % (
-                    ngw_layer_resource.common.display_name,
-                    readed_size * 100 / total_size
-                )
+                self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name.name())
+                + " - "
+                + self.tr("uploading ({}%%)").format(int(readed_size * 100 / total_size))
             )
 
         ngw_layer_resource.update_qml(
@@ -793,12 +738,10 @@ class QGISResourceJob(NGWResourceModelJob):
             to import the attachment
         '''
         def uploadFileCallback(total_size, readed_size, value=None):
-            self.statusChanged.emit(
-                "\"%s\" - Upload (%d%%)" % (
-                    imgf,
-                    readed_size * 100 / (total_size + 0.1) if value is None else value
-                )
-            )
+            self._layer_status(
+                imgf,
+                self.tr("uploading ({}%%)").format(
+                    int(readed_size * 100 / total_size if value is None else value)))
 
         if ngw_resource.type_id != NGWVectorLayer.type_id:
             return
@@ -847,34 +790,22 @@ class QGISResourceJob(NGWResourceModelJob):
     def overwriteQgsVectorLayer(self, qgs_map_layer, ngw_layer_resource):
         block_size = 10
         total_count = qgs_map_layer.featureCount()
-        current_count = 0
-        done = 0
 
-        self.statusChanged.emit(
-            "\"%s\" - Remove all feature" % (
-                ngw_layer_resource.common.display_name,
-            )
-        )
+        self._layer_status(ngw_layer_resource.common.display_name, self.tr("removing all features"))
         ngw_layer_resource.delete_all_features()
 
-        self.statusChanged.emit(
-            "\"%s\" - Add features" % (
-                ngw_layer_resource.common.display_name,
-            )
-        )
+        features_counter = 0
+        progress = 0
         for features in self.getFeaturesPart(qgs_map_layer, ngw_layer_resource, block_size):
             ngw_layer_resource.patch_features(features)
-            current_count += len(features)
 
-            d = current_count * 100 / total_count
-            if done < d:
-                done = d
-                self.statusChanged.emit(
-                    "\"%s\" - Add features (%d%%)" % (
-                        ngw_layer_resource.common.display_name ,
-                        done
-                    )
-                )
+            features_counter += len(features)
+            v = int(features_counter * 100 / total_count)
+            if progress < v:
+                progress = v
+                self._layer_status(
+                    ngw_layer_resource.common.display_name,
+                    self.tr("adding features ({}%%)").format(progress))
 
     def getFeaturesPart(self, qgs_map_layer, ngw_layer_resource, pack_size):
         ngw_features=[]
@@ -1013,7 +944,7 @@ class QGISResourcesUploader(QGISResourceJob):
             if len(self.qgs_layer_tree_nodes) > 1:
                 self.warningOccurred.emit(
                     JobError(
-                        self.tr("Import layer '{}' failed. Skipped").format(qgsLayerTreeItem.layer().name()),
+                        "Import layer \"{}\" failed. Skipped.".format(qgsLayerTreeItem.layer().name()),
                         e
                     )
                 )
@@ -1076,7 +1007,7 @@ class QGISResourcesUploader(QGISResourceJob):
         chd_names = [ch.common.display_name for ch in ngw_resource_group.get_children()]
 
         group_name = qgsLayerTreeGroup.name()
-        self.statusChanged.emit("Import folder \"%s\"" % group_name)
+        # self.statusChanged.emit("Import folder \"%s\"" % group_name)
 
         if group_name in chd_names:
             id = 1
@@ -1151,7 +1082,6 @@ class QGISProjectUploader(QGISResourcesUploader):
         )
 
         if not update_mode:
-            self.statusChanged.emit("Import curent qgis project: create webmap")
             ngw_webmap = self.create_webmap(
                 ngw_group_resource,
                 self.new_group_name + "-webmap",
@@ -1165,6 +1095,8 @@ class QGISProjectUploader(QGISResourcesUploader):
         self.ngw_resource.update()
 
     def create_webmap(self, ngw_resource, ngw_webmap_name, ngw_webmap_items, ngw_webmap_basemaps):
+        self._layer_status(ngw_webmap_name, self.tr("creating"))
+
         rectangle = self.iface.mapCanvas().extent()
         ct = CompatQgis.coordinate_transform_obj(
             self.iface.mapCanvas().mapSettings().destinationCrs(),
@@ -1328,10 +1260,10 @@ class NGWCreateWMSForVector(QGISResourceJob):
 
 
 class NGWUpdateVectorLayer(QGISResourceJob):
-    def __init__(self, ngw_vector_layer, qgs_map_layers):
+    def __init__(self, ngw_vector_layer, qgs_map_layer):
         super().__init__()
         self.ngw_layer = ngw_vector_layer
-        self.qgis_layer = qgs_map_layers
+        self.qgis_layer = qgs_map_layer
 
     def createNGWFeatureDictFromQGSFeature(self, qgs_feature):
         feature_dict = {}
@@ -1379,31 +1311,19 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         log(">>> NGWUpdateVectorLayer _do")
         block_size = 10
         total_count = self.qgis_layer.featureCount()
-        current_count = 0
-        done = 0
 
-        self.statusChanged.emit(
-            "\"%s\" - Remove all feature" % (
-                self.qgis_layer ,
-            )
-        )
+        self._layer_status(self.qgis_layer.name(), self.tr("removing all features"))
         self.ngw_layer.delete_all_features()
 
-        self.statusChanged.emit(
-            "\"%s\" - Add features" % (
-                self.qgis_layer ,
-            )
-        )
+        features_counter = 0
+        progress = 0
         for features in self.getFeaturesPart(block_size):
             self.ngw_layer.patch_features(features)
-            current_count += len(features)
 
-            d = current_count * 100 / total_count
-            if done < d:
-                done = d
-                self.statusChanged.emit(
-                    "\"%s\" - Add features (%d%%)" % (
-                        self.qgis_layer ,
-                        done
-                    )
-                )
+            features_counter += len(features)
+            v = int(features_counter * 100 / total_count)
+            if progress < v:
+                progress = v
+                self._layer_status(
+                    self.qgis_layer.name(),
+                    self.tr("adding features ({}%%)").format(progress))
