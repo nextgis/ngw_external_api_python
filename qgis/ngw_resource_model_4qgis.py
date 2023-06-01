@@ -648,7 +648,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def addQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name.name())
+                self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name)
                 + " - "
                 + self.tr("uploading ({}%%)").format(int(readed_size * 100 / total_size))
             )
@@ -682,7 +682,7 @@ class QGISResourceJob(NGWResourceModelJob):
     def updateQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name.name())
+                self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name)
                 + " - "
                 + self.tr("uploading ({}%%)").format(int(readed_size * 100 / total_size))
             )
