@@ -753,10 +753,11 @@ class QGISResourceJob(NGWResourceModelJob):
                 continue
 
             editor_config = editor_widget.config()
-            if (
-                editor_config['StorageType'] is None # Local files
-                and editor_config['StorageMode'] == QgsFileWidget.StorageMode.GetFile
-            ):
+
+            is_local = editor_config['StorageType'].isNull()
+            GET_FILE_MODE = QgsFileWidget.StorageMode.GetFile
+            is_file = editor_config['StorageMode'] == GET_FILE_MODE
+            if is_local and is_file:
                 root_dir = ''
 
                 if editor_config['RelativeStorage'] == QgsFileWidget.RelativeStorage.RelativeProject:
