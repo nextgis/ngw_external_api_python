@@ -90,12 +90,12 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1315"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1317"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1327"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1329"/>
         <source>adding features ({}%%)</source>
         <translation>добавление объектов ({}%%)</translation>
     </message>
@@ -103,7 +103,7 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1098"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1100"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
@@ -181,12 +181,12 @@
         <translation>Стиль для &quot;{}&quot;</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="794"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="795"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="806"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="807"/>
         <source>adding features ({}%%)</source>
         <translation>добавление объектов ({}%%)</translation>
     </message>
