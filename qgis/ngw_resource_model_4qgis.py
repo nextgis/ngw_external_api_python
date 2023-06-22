@@ -844,7 +844,7 @@ class QGISResourceJob(NGWResourceModelJob):
             value = qgs_feature.attribute(qgsField.name())
             attributes[qgsField.name()] = CompatQt.get_clean_python_value(value)
 
-        feature_dict["fields"] = self.ngw_layer.construct_ngw_feature_as_json(attributes)
+        feature_dict["fields"] = ngw_layer_resource.construct_ngw_feature_as_json(attributes)
 
         return feature_dict
 
@@ -918,7 +918,8 @@ class QGISResourcesUploader(QGISResourceJob):
                 if self.isSuitableLayer(node.layer()) != self.SUITABLE_LAYER:
                     continue
 
-                if node.layer().name() not in exist_resourse_names:
+                is_project_uploading = isinstance(self, QGISProjectUploader)
+                if not is_project_uploading or node.layer().name() not in exist_resourse_names:
                     self.add_layer(ngw_resource_group, node, ngw_webmap_item, ngw_webmap_basemaps)
                 elif node.layer().name() in exist_resourse_names:
                     self.update_layer(node, exist_resourse_names[node.layer().name()])
