@@ -46,7 +46,6 @@ class NGWResource:
     icon_path = path.join(ICONS_DIR, 'resource.svg')
     type_title = 'NGW Resource'
 
-
     # STATIC
     @classmethod
     def receive_resource_obj(cls, ngw_con, res_id):
@@ -182,14 +181,18 @@ class NGWResource:
         children = self.get_children()
         self.set_children_count(len(children))
 
-    def generate_unique_child_name(self, name):
+    def generate_unique_child_name(self, name: str):
         chd_names = [ch.common.display_name for ch in self.get_children()]
-        if re.search('\(\d\)$', name):
-            name = name = name[:-3]
+        if name not in chd_names:
+            return name
+
+        if re.search(r'\(\d\)$', name):
+            name = name[:-3]
         new_name = name
+        new_name_with_space = None
         id = 1
-        if new_name in chd_names:
-            while(new_name in chd_names):
-                new_name = name + "(%d)" % id
-                id += 1
-        return new_name
+        while (new_name in chd_names or new_name_with_space in chd_names):
+            new_name = f'{name}({id})'
+            new_name_with_space = f'{name} ({id})'
+            id += 1
+        return new_name if new_name_with_space is None else new_name_with_space

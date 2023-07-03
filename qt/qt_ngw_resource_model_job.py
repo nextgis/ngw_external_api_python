@@ -93,15 +93,19 @@ class NGWResourceModelJob(QObject):
         self.result = NGWResourceModelJobResult()
 
     def generate_unique_name(self, name, present_names):
+        if name not in present_names:
+            return name
+
         if re.search(r'\(\d\)$', name):
-            name = name = name[:-3]
+            name = name[:-3]
         new_name = name
+        new_name_with_space = None
         id = 1
-        if new_name in present_names:
-            while(new_name in present_names):
-                new_name = name + "(%d)" % id
-                id += 1
-        return new_name
+        while (new_name in present_names or new_name_with_space in present_names):
+            new_name = f'{name}({id})'
+            new_name_with_space = f'{name} ({id})'
+            id += 1
+        return new_name if new_name_with_space is None else new_name_with_space
 
     def unique_resource_name(self, resource_name, ngw_group):
         chd_names = [ch.common.display_name for ch in ngw_group.get_children()]
