@@ -243,10 +243,12 @@ class QGISResourceJob(NGWResourceModelJob):
         log(u'>>> Uploading raster layer "{}" (with the name "{}")'.format(qgs_raster_layer.name(), new_layer_name))
 
         def uploadFileCallback(total_size, readed_size, value=None):
+            if value is None:
+                value = round(readed_size * 100 / total_size)
             self._layer_status(
                 qgs_raster_layer.name(),
-                self.tr("uploading ({}%%)").format(
-                    "%d" % readed_size * 100 / total_size if value is None else value))
+                self.tr("uploading ({}%)").format(value)
+            )
 
         def createLayerCallback():
             self._layer_status(qgs_raster_layer.name(), self.tr("creating"))
@@ -754,7 +756,8 @@ class QGISResourceJob(NGWResourceModelJob):
 
             editor_config = editor_widget.config()
 
-            is_local = editor_config['StorageType'].isNull()
+            # storagetype can be str or null qvariant
+            is_local = not editor_config['StorageType']
             GET_FILE_MODE = QgsFileWidget.StorageMode.GetFile
             is_file = editor_config['StorageMode'] == GET_FILE_MODE
             if is_local and is_file:
