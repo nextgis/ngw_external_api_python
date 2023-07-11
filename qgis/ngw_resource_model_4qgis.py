@@ -31,7 +31,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 
 from qgis.core import QgsProject, QgsMapLayer, QgsVectorLayer, QgsFeature, \
     QgsLayerTreeLayer, QgsLayerTreeGroup, QgsVectorFileWriter, \
-    QgsCoordinateReferenceSystem
+    QgsCoordinateReferenceSystem, QgsCoordinateTransform
 from qgis.gui import QgsFileWidget
 
 from ..qt.qt_ngw_resource_model_job import *
@@ -274,7 +274,7 @@ class QGISResourceJob(NGWResourceModelJob):
         def uploadFileCallback(total_size, readed_size, value=None):
             self._layer_status(
                 qgs_vector_layer.name(),
-                self.tr("uploading ({}%%)").format(
+                self.tr("uploading ({}%)").format(
                     int(readed_size * 100 / total_size if value is None else value)))
 
         def createLayerCallback():
@@ -391,7 +391,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 progress = v
                 self._layer_status(
                     qgs_vector_layer.name(),
-                    self.tr("checking geometry ({}%%)").format(progress))
+                    self.tr("checking geometry ({}%)").format(progress))
 
             fid, geom = feature.geometry(), feature.id()
 
@@ -548,7 +548,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 progress = v
                 self._layer_status(
                     qgs_vector_layer_src.name(),
-                    self.tr("preparing layer ({}%%)").format(progress))
+                    self.tr("preparing layer ({}%)").format(progress))
 
         qgs_vector_layer_dst.commitChanges()
 
@@ -605,22 +605,48 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return field_name_map
 
-    def prepareAsShape(self, qgs_vector_layer):
+    def prepareAsShape(self, qgs_vector_layer: QgsVectorLayer):
         tmp_dir = tempfile.mkdtemp('ngw_api_prepare_import')
-        tmp_shp = os.path.join(tmp_dir, '4import.shp')
+        tmp_shape_path = os.path.join(tmp_dir, '4import.shp')
 
-        import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
-        QgsVectorFileWriter.writeAsVectorFormat(
-            qgs_vector_layer,
-            tmp_shp,
-            'utf-8',
-            import_crs,
-            driverName='ESRI Shapefile' # required for QGIS >= 3.0, otherwise GPKG is used
+        source_srs = qgs_vector_layer.sourceCrs()
+        destination_srs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
+
+        writer = QgsVectorFileWriter(
+            vectorFileName=tmp_shape_path,
+            fileEncoding='UTF-8',
+            fields=qgs_vector_layer.fields(),
+            geometryType=qgs_vector_layer.wkbType(),
+            srs=destination_srs,
+            driverName='ESRI Shapefile'  # required for QGIS >= 3.0, otherwise GPKG is used
         )
 
+        transform = None
+        if source_srs != destination_srs:
+            transform = QgsCoordinateTransform(
+                source_srs, destination_srs, QgsProject.instance()
+            )
+
+        for feature in qgs_vector_layer.getFeatures():
+            try:
+                if transform is not None:
+                    geometry = feature.geometry()
+                    geometry.transform(transform)
+                    feature.setGeometry(geometry)
+                writer.addFeature(feature)
+            except Exception:
+                self.warningOccurred.emit(
+                    JobWarning(self.tr(
+                        "Feature {} haven't been added. Please check geometry"
+                    ).format(feature.id()))
+                )
+                continue
+
+        del writer  # save changes
+
         tmp = tempfile.mktemp('.zip')
-        basePath = os.path.splitext(tmp_shp)[0]
-        baseName = os.path.splitext(os.path.basename(tmp_shp))[0]
+        basePath = os.path.splitext(tmp_shape_path)[0]
+        baseName = os.path.splitext(os.path.basename(tmp_shape_path))[0]
 
         self._layer_status(qgs_vector_layer.name(), self.tr("packing"))
 
@@ -635,24 +661,51 @@ class QGISResourceJob(NGWResourceModelJob):
         return tmp
 
     def prepareAsJSON(self, qgs_vector_layer):
-        tmp = tempfile.mktemp('.geojson')
-        import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
-        QgsVectorFileWriter.writeAsVectorFormat(
-            qgs_vector_layer,
-            tmp,
-            'utf-8',
-            import_crs,
+        tmp_geojson_path = tempfile.mktemp('.geojson')
+
+        source_srs = qgs_vector_layer.sourceCrs()
+        destination_srs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
+
+        writer = QgsVectorFileWriter(
+            vectorFileName=tmp_geojson_path,
+            fileEncoding='UTF-8',
+            fields=qgs_vector_layer.fields(),
+            geometryType=qgs_vector_layer.wkbType(),
+            srs=destination_srs,
             driverName='GeoJSON'
         )
 
-        return tmp
+        transform = None
+        if source_srs != destination_srs:
+            transform = QgsCoordinateTransform(
+                source_srs, destination_srs, QgsProject.instance()
+            )
+
+        for feature in qgs_vector_layer.getFeatures():
+            try:
+                if transform is not None:
+                    geometry = feature.geometry()
+                    geometry.transform(transform)
+                    feature.setGeometry(geometry)
+                writer.addFeature(feature)
+            except Exception:
+                self.warningOccurred.emit(
+                    JobWarning(self.tr(
+                        "Feature {} haven't been added. Please check geometry"
+                    ).format(feature.id()))
+                )
+                continue
+
+        del writer  # save changes
+
+        return tmp_geojson_path
 
     def addQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
                 self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name)
                 + " - "
-                + self.tr("uploading ({}%%)").format(int(readed_size * 100 / total_size))
+                + self.tr("uploading ({}%)").format(int(readed_size * 100 / total_size))
             )
 
         ngw_style = ngw_layer_resource.create_qml_style(
@@ -686,7 +739,7 @@ class QGISResourceJob(NGWResourceModelJob):
             self.statusChanged.emit(
                 self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name)
                 + " - "
-                + self.tr("uploading ({}%%)").format(int(readed_size * 100 / total_size))
+                + self.tr("uploading ({}%)").format(int(readed_size * 100 / total_size))
             )
 
         ngw_layer_resource.update_qml(
@@ -742,7 +795,7 @@ class QGISResourceJob(NGWResourceModelJob):
         def uploadFileCallback(total_size, readed_size, value=None):
             self._layer_status(
                 imgf,
-                self.tr("uploading ({}%%)").format(
+                self.tr("uploading ({}%)").format(
                     int(readed_size * 100 / total_size if value is None else value)))
 
         if ngw_resource.type_id != NGWVectorLayer.type_id:
@@ -809,7 +862,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 progress = v
                 self._layer_status(
                     ngw_layer_resource.common.display_name,
-                    self.tr("adding features ({}%%)").format(progress))
+                    self.tr("adding features ({}%)").format(progress))
 
     def getFeaturesPart(self, qgs_map_layer, ngw_layer_resource, pack_size):
         ngw_features=[]
@@ -1331,4 +1384,4 @@ class NGWUpdateVectorLayer(QGISResourceJob):
                 progress = v
                 self._layer_status(
                     self.qgis_layer.name(),
-                    self.tr("adding features ({}%%)").format(progress))
+                    self.tr("adding features ({}%)").format(progress))
