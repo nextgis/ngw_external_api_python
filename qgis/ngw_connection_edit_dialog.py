@@ -65,6 +65,9 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.__only_password_change = only_password_change
 
         self.setupUi(self)
+        self.leUrl.setShowClearButton(False)
+        self.urlRequiredLabel.hide()
+        self.nameRequiredLabel.hide()
 
         self.lbConnectionTesting.setVisible(False)
         #self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
@@ -82,8 +85,8 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         self.cbAsGuest.toggled.connect(self.__cbAsGuestChecked)
 
-        self.leUrl.textEdited.connect(self.__url_changed)
-        self.leUrl.textEdited.connect(self.__fill_conneection_name)
+        self.leUrl.valueChanged.connect(self.__url_changed)
+        self.leUrl.valueChanged.connect(self.__fill_conneection_name)
 
         # self.timerUrlChange = QTimer()
         # self.timerUrlChange.setSingleShot(True)
@@ -125,6 +128,10 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.force_http = False
         self.need_check_http = False
 
+        size = self.size()
+        size.setHeight(self.minimumHeight())
+        self.resize(size)
+
     def set_alert_msg(self, msg):
         self.lbConnectionTesting.setVisible(True)
         self.lbConnectionTesting.setText(msg)
@@ -135,6 +142,10 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         lower_test = text.lower()
         self.leUrl.setText(lower_test)
         self.leUrl.setCursorPosition(curent_cursor_position)
+        if len(lower_test) > 0:
+            self.leUrl.setHighlighted(False)
+            self.urlRequiredLabel.hide()
+
         self.__autocomplete_url(lower_test)
 
     def __autocomplete_url(self, text):
@@ -185,6 +196,10 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         return url
 
     def __fill_conneection_name(self, url):
+        if len(self.leName.value()) > 0:
+            self.leName.setHighlighted(False)
+            self.nameRequiredLabel.hide()
+
         if self.__user_change_connection_name is True:
             return
 
@@ -199,18 +214,17 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
     def __cbAsGuestChecked(self, as_guest):
         accessLinkHtml = ""
-        if not as_guest:
-            self.leUser.setEnabled(True)
-            self.lePassword.setEnabled(True)
-        else:
-            self.leUser.setEnabled(False)
-            self.lePassword.setEnabled(False)
+
+        self.lbUser.setDisabled(as_guest)
+        self.lbPassword.setDisabled(as_guest)
+        self.leUser.setDisabled(as_guest)
+        self.lePassword.setDisabled(as_guest)
 
     def __name_changed_process(self, text):
         self.__validate_fields()
 
     def __name_changed_finished(self):
-        self.__user_change_connection_name = True
+        self.__user_change_connection_name = len(self.leName.value()) > 0
 
     @property
     def ngw_connection_settings(self):
@@ -221,22 +235,24 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             return True
 
         validation_result = True
+
         url = self.leUrl.text()
         if url == "":
-            self.leUrl.setStyleSheet("background-color: #FFCCCC")
-            self.leUrl.setPlaceholderText(self.tr("Fill it!"))
-
+            self.leUrl.setHighlighted(True)
+            self.urlRequiredLabel.show()
             validation_result = False
         else:
-            self.leUrl.setStyleSheet("background-color: None")
+            self.leUrl.setHighlighted(False)
+            self.urlRequiredLabel.hide()
+
         name = self.leName.text()
         if name == "":
-            self.leName.setStyleSheet("background-color: #FFCCCC")
-            self.leName.setPlaceholderText(self.tr("Fill it!"))
-
+            self.leName.setHighlighted(True)
+            self.nameRequiredLabel.show()
             validation_result = False
         else:
-            self.leName.setStyleSheet("background-color: None")
+            self.leName.setHighlighted(False)
+            self.nameRequiredLabel.hide()
 
         return validation_result
 
