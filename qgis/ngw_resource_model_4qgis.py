@@ -359,22 +359,22 @@ class QGISResourceJob(NGWResourceModelJob):
         else:
             layer = qgs_vector_layer
 
-        if layer.featureCount() == 0:
-            log(u'Layer "{}" has 0 features after checking & fixing (actually skipping) geometries'.format(layer.name()))
-            import_format = 'ESRI Shapefile'
-        else:
-            layer_provider = layer.dataProvider()
-            log('Source layer\'s data provider: "{}"'.format(layer_provider.storageType()))
-            if layer_provider.storageType() in ['ESRI Shapefile', 'Delimited text file']: # CSV is here due to incorrect column types defining in GeoJSON
-                import_format = 'ESRI Shapefile'
-            else:
-                import_format = 'GeoJSON'
+        # if layer.featureCount() == 0:
+        #     log(u'Layer "{}" has 0 features after checking & fixing (actually skipping) geometries'.format(layer.name()))
+        #     import_format = 'ESRI Shapefile'
+        # else:
+        #     layer_provider = layer.dataProvider()
+        #     log('Source layer\'s data provider: "{}"'.format(layer_provider.storageType()))
+        #     if layer_provider.storageType() == 'ESRI Shapefile':
+        #         import_format = 'ESRI Shapefile'
+        #     else:
+        #         import_format = 'GeoJSON'
 
-        log('Use "{}" format to upload to NGW'.format(import_format))
-        if import_format == 'ESRI Shapefile':
-            return self.prepareAsShape(layer), layer, rename_fields_map
-        else:
-            return self.prepareAsJSON(layer), layer, rename_fields_map
+        # log('Use "{}" format to upload to NGW'.format(import_format))
+        # if import_format == 'ESRI Shapefile':
+        #     return self.prepareAsShape(layer), layer, rename_fields_map
+        # else:
+        return self.prepareAsGPKG(layer), layer, rename_fields_map
 
 
     def checkGeometry(self, qgs_vector_layer):
@@ -606,6 +606,7 @@ class QGISResourceJob(NGWResourceModelJob):
         return field_name_map
 
     def prepareAsShape(self, qgs_vector_layer: QgsVectorLayer):
+        # TODO delete if no problem with gpkg
         tmp_dir = tempfile.mkdtemp('ngw_api_prepare_import')
         tmp_shape_path = os.path.join(tmp_dir, '4import.shp')
 
@@ -661,6 +662,7 @@ class QGISResourceJob(NGWResourceModelJob):
         return tmp
 
     def prepareAsJSON(self, qgs_vector_layer):
+        # TODO delete if no problem with gpkg
         tmp_geojson_path = tempfile.mktemp('.geojson')
 
         source_srs = qgs_vector_layer.sourceCrs()
@@ -699,6 +701,46 @@ class QGISResourceJob(NGWResourceModelJob):
         del writer  # save changes
 
         return tmp_geojson_path
+
+    def prepareAsGPKG(self, qgs_vector_layer: QgsVectorLayer):
+        tmp_gpkg_path = tempfile.mktemp('.gpkg')
+
+        source_srs = qgs_vector_layer.sourceCrs()
+        destination_srs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
+
+        writer = QgsVectorFileWriter(
+            vectorFileName=tmp_gpkg_path,
+            fileEncoding='UTF-8',
+            fields=qgs_vector_layer.fields(),
+            geometryType=qgs_vector_layer.wkbType(),
+            srs=destination_srs,
+            driverName='GPKG'
+        )
+
+        transform = None
+        if source_srs != destination_srs:
+            transform = QgsCoordinateTransform(
+                source_srs, destination_srs, QgsProject.instance()
+            )
+
+        for feature in qgs_vector_layer.getFeatures():
+            try:
+                if transform is not None:
+                    geometry = feature.geometry()
+                    geometry.transform(transform)
+                    feature.setGeometry(geometry)
+                writer.addFeature(feature)
+            except Exception:
+                self.warningOccurred.emit(
+                    JobWarning(self.tr(
+                        "Feature {} haven't been added. Please check geometry"
+                    ).format(feature.id()))
+                )
+                continue
+
+        del writer  # save changes
+
+        return tmp_gpkg_path
 
     def addQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
