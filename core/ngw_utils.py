@@ -95,7 +95,7 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
         if ngw_resource.type_id == 'wfsserver_service':
             layers = ngw_resource.get_layers()
             for layer in layers:
-                if layer["keyname"] ==  layer_name:
+                if layer["keyname"] == layer_name:
                     ngw_resources_id = layer["resource_id"]
                     break
             return ngwResourceFactory.get_resource(ngw_resources_id)

@@ -114,6 +114,8 @@ class NGWConnection:
 
     def set_auth(self, username: Optional[str], password: Optional[str]):
         # self.__session.auth = (username, password)
+        username = username if username is not None else ""
+        password = password if password is not None else ""
         self.__auth = (username, password)
 
     def get_auth(self) -> Tuple[Optional[str], Optional[str]]:
