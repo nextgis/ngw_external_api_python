@@ -56,7 +56,7 @@
     <message>
         <location filename="../ngw_connection_edit_dialog_base.ui" line="211"/>
         <source>Name&lt;span style=&quot; color:#ff0000;&quot;&gt;*&lt;/span&gt;</source>
-        <translation>Name&lt;span style=&quot; color:#ff0000;&quot;&gt;*&lt;/span&gt;</translation>
+        <translation>Название&lt;span style=&quot; color:#ff0000;&quot;&gt;*&lt;/span&gt;</translation>
     </message>
 </context>
 <context>
