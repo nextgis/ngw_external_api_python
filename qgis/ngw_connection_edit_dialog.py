@@ -63,6 +63,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self._default_server_suffix = ".nextgis.com"
         self.__user_try_accept = False
         self.__only_password_change = only_password_change
+        self.ngw_conn_sett = ngw_connection_settings
 
         self.setupUi(self)
         self.leUrl.setShowClearButton(False)
@@ -105,8 +106,6 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.lAccessLink.setText(accessLinkHtml)
 
         self.__cbAsGuestChecked(self.cbAsGuest.checkState())
-
-        self.ngw_conn_sett = ngw_connection_settings
 
         if self.ngw_conn_sett is not None:
             self.leUrl.setText(self.ngw_conn_sett.server_url)
