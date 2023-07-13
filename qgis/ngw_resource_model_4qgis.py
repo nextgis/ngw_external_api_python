@@ -1184,7 +1184,7 @@ class QGISProjectUploader(QGISResourcesUploader):
         if not update_mode:
             ngw_webmap = self.create_webmap(
                 ngw_group_resource,
-                self.new_group_name + "-webmap",
+                self.new_group_name + " — webmap",
                 ngw_webmap_root_group.children,
                 ngw_webmap_basemaps
             )
