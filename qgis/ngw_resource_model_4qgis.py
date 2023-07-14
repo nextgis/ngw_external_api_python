@@ -25,6 +25,7 @@ import glob
 import shutil
 import zipfile
 import tempfile
+import packaging
 from typing import Optional
 
 from qgis.PyQt.QtCore import QCoreApplication
@@ -54,12 +55,10 @@ from ..utils import ngw_version_compare
 
 from .ngw_plugin_settings import NgwPluginSettings
 
-from ..compat_py import unquote_plus
-from ..compat_py import CompatPy
+from urllib.parse import unquote_plus
 from .compat_qgis import QgsWkbTypes
 from .compat_qgis import CompatQgis
 from .compat_qgis import CompatQt
-from .compat_qgis import CompatQgisMsgLogLevel, CompatQgisMsgBarLevel
 from .compat_qgis import CompatQgisGeometryType, CompatQgisWkbType
 
 
@@ -460,10 +459,12 @@ class QGISResourceJob(NGWResourceModelJob):
                 vers_ok = False
         else:
             # A full PEP 440 comparing.
-            vers_ok = CompatPy.pep440GreaterOrEqual(self.ngw_version, NGW_AUTORENAME_FIELDS_VERS)
+            current_ngw_version = packaging.version.parse(self.ngw_version)
+            ngw_version_with_support = packaging.version.parse(
+                NGW_AUTORENAME_FIELDS_VERS
+            )
+            vers_ok = current_ngw_version >= ngw_version_with_support
 
-        if vers_ok is None:
-            return False
         if vers_ok:
             log('Assume that NGW of version "{}" supports auto-renaming fields'.format(self.ngw_version))
             return True

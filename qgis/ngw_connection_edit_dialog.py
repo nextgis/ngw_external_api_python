@@ -30,7 +30,7 @@ from ..core.ngw_connection_settings import NGWConnectionSettings
 from ..core.ngw_resource_factory import NGWResourceFactory
 from .qgis_ngw_connection import QgsNgwConnection
 
-from ..compat_py import urlparse
+from urllib.parse import urlparse
 
 
 __author__ = 'NextGIS'

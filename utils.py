@@ -21,16 +21,15 @@
 import os
 import sys
 
-from .compat_py import CompatPy
-
 
 ICONS_DIR = os.path.join(
-    CompatPy.get_dirname(__file__),
+    os.path.dirname(__file__),
     'icons'
 )
 
 ngw_api_logger = None
 debug = False
+
 
 def setLogger(logger):
     global ngw_api_logger
@@ -82,6 +81,3 @@ def ngw_version_compare(lversion, rversion):
         return 0
     except:
         return None
-
-
-
