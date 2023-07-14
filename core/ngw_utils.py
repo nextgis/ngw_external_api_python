@@ -31,28 +31,27 @@ from .ngw_error import NGWError
 
 from ..utils import log
 
-from ..compat_py import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 
 
 # TODO: move to Identify plus
 def ngw_resource_from_qgs_map_layer(qgs_map_layer):
-    layerSource = qgs_map_layer.source()
-    if 'vsicurl' in layerSource:
-        layerSource = layerSource.lstrip('/vsicurl/')
+    layer_source = qgs_map_layer.source()
+    layer_source = layer_source.lstrip('/vsicurl/')
 
-    o = urlparse(layerSource)
+    url_components = urlparse(layer_source)
 
-    m = re.search(r'^.*/resource/\d+/',o.path)
-    if m is None:
+    match = re.search(r'^.*/resource/\d+/', url_components.path)
+    if match is None:
         return None
 
     # o.path is '.../resource/<resource id>/.......'
     # m.group() is '.../resource/<resource id>/'
-    basePathStructure = m.group().strip('/').split('/')
+    basePathStructure = match.group().strip('/').split('/')
 
-    baseURL = o.scheme + '://' + o.netloc.split('@')[-1] + '/' + '/'.join(basePathStructure[:-3])
+    baseURL = url_components.scheme + '://' + url_components.netloc.split('@')[-1] + '/' + '/'.join(basePathStructure[:-3])
     ngw_resources_id = int(basePathStructure[-1])
-    requestAttrs = parse_qs(o.query)
+    requestAttrs = parse_qs(url_components.query)
 
     ngw_username = None
     ngw_password = None
@@ -63,13 +62,10 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
         if 'password' in requestAttrs:
             ngw_password = requestAttrs.get('password')[0]
     elif qgs_map_layer.providerType() == 'ogr':
-        if o.netloc.find('@') != -1:
-            auth_data = o.netloc.split('@')[0]
-            ngw_username = auth_data.split(':')[0]
-            ngw_password = auth_data.split(':')[1]
-
+        if url_components.username and url_components.password:
+            ngw_username = unquote(url_components.username)
+            ngw_password = unquote(url_components.password)
     else:
-
         return None
     #additionAttrs = {}
     #if requestAttrs.get(u'TYPENAME') is not None:
