@@ -71,10 +71,10 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         self.nameRequiredLabel.hide()
 
         self.lbConnectionTesting.setVisible(False)
-        #self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        #self.buttonBox.button(QDialogButtonBox.Save).setEnabled(False)
 
         if self.__only_password_change:
-            self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
+            self.buttonBox.button(QDialogButtonBox.Save).setEnabled(True)
             self.leUrl.setEnabled(False)
             self.leName.setEnabled(False)
 
@@ -149,7 +149,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
     def __autocomplete_url(self, text):
         #if not self.__only_password_change:
-        #    self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        #    self.buttonBox.button(QDialogButtonBox.Save).setEnabled(False)
 
         text_complete = self._default_server_suffix
 
@@ -293,7 +293,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
     def __process_ping_result(self, ping_result):
         if ping_result:
-            self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
+            self.buttonBox.button(QDialogButtonBox.Save).setEnabled(True)
             self.lbConnectionTesting.setText(self.tr("Connection successful!"))
             self.lbConnectionTesting.setStyleSheet("color: green")
 

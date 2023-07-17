@@ -32,7 +32,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 
 from qgis.core import QgsProject, QgsMapLayer, QgsVectorLayer, QgsFeature, \
     QgsLayerTreeLayer, QgsLayerTreeGroup, QgsVectorFileWriter, \
-    QgsCoordinateReferenceSystem, QgsCoordinateTransform
+    QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsProviderRegistry
 from qgis.gui import QgsFileWidget
 
 from ..qt.qt_ngw_resource_model_job import *
@@ -149,8 +149,8 @@ class QGISResourceJob(NGWResourceModelJob):
         if qgs_plugin_layer.pluginLayerType() == 'PyTiledLayer' and hasattr(qgs_plugin_layer, "layerDef") and hasattr(qgs_plugin_layer.layerDef, "serviceUrl"):
             #log(u'>>> Uploading plugin layer "{}"'.format(qgs_plugin_layer.name()))
 
-            if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
-                raise JobError(self.tr("Your web GIS can't create base maps."))
+            # if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
+            #     raise JobError(self.tr("Your web GIS can't create base maps."))
 
             new_layer_name = self.unique_resource_name(qgs_plugin_layer.name(), ngw_group)
 
@@ -171,28 +171,18 @@ class QGISResourceJob(NGWResourceModelJob):
             return [ngw_basemap]
 
     def importQgsWMSLayer(self, qgs_wms_layer, ngw_group):
-        #log(u'>>> Uploading WMS layer "{}"'.format(qgs_wms_layer.name()))
+        # log(u'>>> Uploading WMS layer "{}"'.format(qgs_wms_layer.name()))
 
         self._layer_status(qgs_wms_layer.name(), self.tr("create WMS connection"))
 
         layer_source = qgs_wms_layer.source()
-        parameters = {}
-        for parameter in layer_source.split('&'):
-            key, value = parameter.split("=", 1) # take the first occured because sometimes e.g. "apikey=..." can be met
-            value = unquote_plus(value)
-
-            if key in parameters:
-                if not isinstance(parameters[key], list):
-                    parameters[key] = [parameters[key], ]
-
-                parameters[key].append(value)
-            else:
-                parameters[key] = value
+        provider_metadata = QgsProviderRegistry.instance().providerMetadata('wms')
+        parameters = provider_metadata.decodeUri(layer_source)
 
         if parameters.get("type", "") == "xyz":
 
-            if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
-                raise JobError(self.tr("Your web GIS can't create base maps."))
+            # if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
+            #     raise JobError(self.tr("Your web GIS can't create base maps."))
 
             epsg = getQgsMapLayerEPSG(qgs_wms_layer)
 
@@ -358,23 +348,7 @@ class QGISResourceJob(NGWResourceModelJob):
         else:
             layer = qgs_vector_layer
 
-        # if layer.featureCount() == 0:
-        #     log(u'Layer "{}" has 0 features after checking & fixing (actually skipping) geometries'.format(layer.name()))
-        #     import_format = 'ESRI Shapefile'
-        # else:
-        #     layer_provider = layer.dataProvider()
-        #     log('Source layer\'s data provider: "{}"'.format(layer_provider.storageType()))
-        #     if layer_provider.storageType() == 'ESRI Shapefile':
-        #         import_format = 'ESRI Shapefile'
-        #     else:
-        #         import_format = 'GeoJSON'
-
-        # log('Use "{}" format to upload to NGW'.format(import_format))
-        # if import_format == 'ESRI Shapefile':
-        #     return self.prepareAsShape(layer), layer, rename_fields_map
-        # else:
         return self.prepareAsGPKG(layer), layer, rename_fields_map
-
 
     def checkGeometry(self, qgs_vector_layer):
         has_simple_geometries = False
