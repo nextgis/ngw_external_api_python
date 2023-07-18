@@ -90,12 +90,12 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1415"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1390"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1427"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1402"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -103,7 +103,7 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1198"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1173"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
@@ -111,87 +111,82 @@
 <context>
     <name>QGISResourceJob</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="482"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="457"/>
         <source>We&apos;ve renamed fields {0} for layer &apos;{1}&apos;. Style for this layer may become invalid.</source>
-        <translation>Следующие поля переименованы {0} для слоя &apos;{1}&apos;. Стиль для этого слоя может стать некорректным.</translation>
+        <translation>Следующие поля переименованы {0} для слоя '{1}'. Стиль для этого слоя может стать некорректным.</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="556"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="531"/>
         <source>We&apos;ve excluded features with id {0} for layer &apos;{1}&apos;. Reason: invalid geometry.</source>
-        <translation>Объекты с id {0} слоя &apos;{1}&apos; были исключены. Причина: неправильная геометрия.</translation>
+        <translation>Объекты с id {0} слоя '{1}' были исключены. Причина: неправильная геометрия.</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="196"/>
-        <source>Your web GIS can&apos;t create base maps.</source>
-        <translation>Ваша Веб ГИС не может создавать подложки веб-карт.</translation>
-    </message>
-    <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="177"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="176"/>
         <source>create WMS connection</source>
         <translation>создание соединения WMS</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="221"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="210"/>
         <source>creating WMS layer</source>
         <translation>создание слоя WMS</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="281"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="270"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="329"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="318"/>
         <source>adding aliases</source>
         <translation>добавление псевдонимов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="332"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="321"/>
         <source>finishing</source>
         <translation>завершение</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="339"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="328"/>
         <source>preparing</source>
         <translation>подготовка</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="652"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="627"/>
         <source>packing</source>
         <translation>архивирование</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="781"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="756"/>
         <source>Style for &quot;{}&quot;</source>
         <translation>Стиль для &quot;{}&quot;</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="893"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="868"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="838"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="813"/>
         <source>uploading ({}%)</source>
         <translation>загрузка ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="392"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="365"/>
         <source>checking geometry ({}%)</source>
         <translation>проверка геометрии ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="549"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="524"/>
         <source>preparing layer ({}%)</source>
         <translation>подготовка слоя ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="734"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="709"/>
         <source>Feature {} haven&apos;t been added. Please check geometry</source>
         <translation>Объект {} не был добавлен. Пожалуйста, проверьте геометрию</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="905"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="880"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
