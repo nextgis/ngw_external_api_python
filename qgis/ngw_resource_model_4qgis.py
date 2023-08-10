@@ -25,14 +25,16 @@ import glob
 import shutil
 import zipfile
 import tempfile
-import packaging
+import pkg_resources
 from typing import Optional
 
 from qgis.PyQt.QtCore import QCoreApplication
 
-from qgis.core import QgsProject, QgsMapLayer, QgsVectorLayer, QgsFeature, \
-    QgsLayerTreeLayer, QgsLayerTreeGroup, QgsVectorFileWriter, \
-    QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsProviderRegistry
+from qgis.core import (
+    QgsProject, QgsMapLayer, QgsVectorLayer, QgsFeature,
+    QgsLayerTreeLayer, QgsLayerTreeGroup, QgsVectorFileWriter,
+    QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsProviderRegistry,
+)
 from qgis.gui import QgsFileWidget
 
 from ..qt.qt_ngw_resource_model_job import *
@@ -55,7 +57,6 @@ from ..utils import ngw_version_compare
 
 from .ngw_plugin_settings import NgwPluginSettings
 
-from urllib.parse import unquote_plus
 from .compat_qgis import QgsWkbTypes
 from .compat_qgis import CompatQgis
 from .compat_qgis import CompatQt
@@ -433,8 +434,8 @@ class QGISResourceJob(NGWResourceModelJob):
                 vers_ok = False
         else:
             # A full PEP 440 comparing.
-            current_ngw_version = packaging.version.parse(self.ngw_version)
-            ngw_version_with_support = packaging.version.parse(
+            current_ngw_version = pkg_resources.parse_version(self.ngw_version)
+            ngw_version_with_support = pkg_resources.parse_version(
                 NGW_AUTORENAME_FIELDS_VERS
             )
             vers_ok = current_ngw_version >= ngw_version_with_support
@@ -1008,7 +1009,13 @@ class QGISResourcesUploader(QGISResourceJob):
             # need to delete
             pass
 
-    def add_layer(self, ngw_resource_group, qgsLayerTreeItem, ngw_webmap_item, ngw_webmap_basemaps):
+    def add_layer(
+        self,
+        ngw_resource_group,
+        qgsLayerTreeItem: QgsLayerTreeLayer,
+        ngw_webmap_item,
+        ngw_webmap_basemaps
+    ):
         try:
             ngw_resources = self.importQGISMapLayer(
                 qgsLayerTreeItem.layer(),
@@ -1042,7 +1049,8 @@ class QGISResourcesUploader(QGISResourceJob):
                         ngw_style.common.id,
                         qgsLayerTreeItem.layer().name(),
                         CompatQgis.is_layer_checked(qgsLayerTreeItem),
-                        0
+                        0,
+                        legend=qgsLayerTreeItem.isExpanded()
                     )
                 )
 
@@ -1063,7 +1071,8 @@ class QGISResourcesUploader(QGISResourceJob):
                         ngw_resource.common.id,
                         ngw_resource.common.display_name,
                         CompatQgis.is_layer_checked(qgsLayerTreeItem),
-                        transparency
+                        transparency,
+                        legend=qgsLayerTreeItem.isExpanded(),
                     )
                 )
 
@@ -1227,7 +1236,8 @@ class MapForLayerCreater(QGISResourceJob):
                 self.ngw_style_id,
                 self.ngw_layer.common.display_name,
                 True,
-                0
+                0,
+                legend=True
             )
         )
 
@@ -1256,7 +1266,8 @@ class MapForLayerCreater(QGISResourceJob):
                 self.ngw_style_id,
                 self.ngw_layer.common.display_name,
                 True,
-                0
+                0,
+                legend=True
             )
         )
 

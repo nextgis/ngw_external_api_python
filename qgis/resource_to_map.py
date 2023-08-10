@@ -146,16 +146,19 @@ def add_resource_as_cog_raster_with_style(resource, style_resource):
 def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
     if not isinstance(wfs_resource, NGWWfsService):
         raise NGWError('Resource type is not WfsService!')
-    #Extent stuff
+
+    # Extent stuff
     if return_extent:
         summary_extent = QgsRectangle()
         summary_extent.setMinimal()
-    #Add group
+
+    # Add group
     toc_root = QgsProject.instance().layerTreeRoot()
     layers_group = toc_root.insertGroup(0, wfs_resource.common.display_name)
-    #Add layers
+
+    # Add layers
     for wfs_layer in wfs_resource.wfs.layers:
-        url = wfs_resource.get_wfs_url(wfs_layer.keyname) + '&srsname=EPSG:3857&VERSION=1.0.0&REQUEST=GetFeature'
+        url = wfs_resource.get_wfs_url(wfs_layer.keyname)
         qgs_wfs_layer = QgsVectorLayer(url, wfs_layer.display_name, 'WFS')
 
         ngw_vector_layer = wfs_resource.get_source_layer(wfs_layer.resource_id)

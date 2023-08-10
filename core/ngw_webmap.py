@@ -129,14 +129,26 @@ class NGWWebMapRoot(NGWWebMapItem):
 
 
 class NGWWebMapLayer(NGWWebMapItem):
-    def __init__(self, layer_style_id, display_name, is_visible, transparency):
+    def __init__(
+        self,
+        layer_style_id,
+        display_name,
+        is_visible,
+        transparency,
+        legend
+    ):
         super().__init__(NGWWebMapItem.ITEM_TYPE_LAYER)
         self.layer_style_id = layer_style_id
         self.display_name = display_name
         self.is_visible = is_visible
         self.transparency = transparency
+        self.legend = legend
 
     def _attributes(self):
+        legend = None
+        if self.legend is not None:
+            legend = 'expand' if self.legend else 'collapse'
+
         return dict(
             layer_style_id=self.layer_style_id,
             display_name=self.display_name,
@@ -144,7 +156,8 @@ class NGWWebMapLayer(NGWWebMapItem):
             layer_enabled=self.is_visible,
             layer_max_scale_denom=None,
             layer_min_scale_denom=None,
-            layer_transparency=self.transparency
+            layer_transparency=self.transparency,
+            legend_symbols=legend
         )
 
 

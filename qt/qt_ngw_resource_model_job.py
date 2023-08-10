@@ -274,7 +274,8 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
                 self.ngw_style.common.id,
                 ngw_layer.common.display_name,
                 True,
-                None
+                None,
+                legend=True
             )
         )
 
