@@ -19,6 +19,8 @@
 """
 from os import path
 
+from qgis.core import QgsDataSourceUri
+
 from .ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 
 from ..utils import ICONS_DIR
@@ -38,15 +40,18 @@ class NGWWfsService(NGWResource):
             self.wfs.layers = LIST_DICT_TO_LIST_OBJ(self.wfs.layers)
 
     def get_wfs_url(self, layer_keyname):
+        uri = QgsDataSourceUri()
         creds = self.get_creds_for_url()
-        creds_str = ''
-        if creds is not None:
-            creds_str = '&username=%s&password=%s' % (creds[0], creds[1])
-        return '%s%s%s' % (
-            self.get_absolute_api_url(),
-            '/wfs?SERVICE=WFS&TYPENAME=%s' % layer_keyname,
-            creds_str
-        )
+        if creds and creds[0] and creds[1]:
+            uri.setUsername(creds[0])
+            uri.setPassword(creds[1])
+        uri.setParam('typename', layer_keyname)
+        uri.setParam('srsname', 'EPSG:3857')
+        uri.setParam('version', 'auto')
+        uri.setParam('url', self.get_absolute_api_url() + '/wfs')
+        uri.setParam('restrictToRequestBBOX', '1')
+
+        return uri.uri(True)
 
     def get_creds_for_url(self):
         creds = self.get_creds()
