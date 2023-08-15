@@ -35,7 +35,7 @@ from .compat_qgis import CompatQgis
 from .compat_qgis import CompatQt
 
 
-UPLOAD_FILE_URL = '/api/component/file_upload/upload'
+UPLOAD_FILE_URL = '/api/component/file_upload/'
 GET_VERSION_URL = '/api/component/pyramid/pkg_version'
 TUS_UPLOAD_FILE_URL = '/api/component/file_upload/'
 TUS_VERSION = '1.0.0'
