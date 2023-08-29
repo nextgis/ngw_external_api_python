@@ -240,10 +240,6 @@ class QgsNgwConnection(QObject):
             timer.start(CLIENT_TIMEOUT)
 
             loop.exec_()
-
-        rep.finished.disconnect(loop.quit)
-
-        loop.deleteLater()
         del loop
 
         if iodevice is not None:

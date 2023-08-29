@@ -581,103 +581,6 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return field_name_map
 
-    def prepareAsShape(self, qgs_vector_layer: QgsVectorLayer):
-        # TODO delete if no problem with gpkg
-        tmp_dir = tempfile.mkdtemp('ngw_api_prepare_import')
-        tmp_shape_path = os.path.join(tmp_dir, '4import.shp')
-
-        source_srs = qgs_vector_layer.sourceCrs()
-        destination_srs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
-
-        writer = QgsVectorFileWriter(
-            vectorFileName=tmp_shape_path,
-            fileEncoding='UTF-8',
-            fields=qgs_vector_layer.fields(),
-            geometryType=qgs_vector_layer.wkbType(),
-            srs=destination_srs,
-            driverName='ESRI Shapefile'  # required for QGIS >= 3.0, otherwise GPKG is used
-        )
-
-        transform = None
-        if source_srs != destination_srs:
-            transform = QgsCoordinateTransform(
-                source_srs, destination_srs, QgsProject.instance()
-            )
-
-        for feature in qgs_vector_layer.getFeatures():
-            try:
-                if transform is not None:
-                    geometry = feature.geometry()
-                    geometry.transform(transform)
-                    feature.setGeometry(geometry)
-                writer.addFeature(feature)
-            except Exception:
-                self.warningOccurred.emit(
-                    JobWarning(self.tr(
-                        "Feature {} haven't been added. Please check geometry"
-                    ).format(feature.id()))
-                )
-                continue
-
-        del writer  # save changes
-
-        tmp = tempfile.mktemp('.zip')
-        basePath = os.path.splitext(tmp_shape_path)[0]
-        baseName = os.path.splitext(os.path.basename(tmp_shape_path))[0]
-
-        self._layer_status(qgs_vector_layer.name(), self.tr("packing"))
-
-        zf = zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED)
-        for i in glob.iglob(basePath + '.*'):
-            ext = os.path.splitext(i)[1]
-            zf.write(i, baseName + ext)
-
-        zf.close()
-        shutil.rmtree(tmp_dir)
-
-        return tmp
-
-    def prepareAsJSON(self, qgs_vector_layer):
-        # TODO delete if no problem with gpkg
-        tmp_geojson_path = tempfile.mktemp('.geojson')
-
-        source_srs = qgs_vector_layer.sourceCrs()
-        destination_srs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
-
-        writer = QgsVectorFileWriter(
-            vectorFileName=tmp_geojson_path,
-            fileEncoding='UTF-8',
-            fields=qgs_vector_layer.fields(),
-            geometryType=qgs_vector_layer.wkbType(),
-            srs=destination_srs,
-            driverName='GeoJSON'
-        )
-
-        transform = None
-        if source_srs != destination_srs:
-            transform = QgsCoordinateTransform(
-                source_srs, destination_srs, QgsProject.instance()
-            )
-
-        for feature in qgs_vector_layer.getFeatures():
-            try:
-                if transform is not None:
-                    geometry = feature.geometry()
-                    geometry.transform(transform)
-                    feature.setGeometry(geometry)
-                writer.addFeature(feature)
-            except Exception:
-                self.warningOccurred.emit(
-                    JobWarning(self.tr(
-                        "Feature {} haven't been added. Please check geometry"
-                    ).format(feature.id()))
-                )
-                continue
-
-        del writer  # save changes
-
-        return tmp_geojson_path
-
     def prepareAsGPKG(self, qgs_vector_layer: QgsVectorLayer):
         tmp_gpkg_path = tempfile.mktemp('.gpkg')
 
@@ -1023,7 +926,17 @@ class QGISResourcesUploader(QGISResourceJob):
             )
         except Exception as e:
             log('Exception during adding layer')
-            if len(self.qgs_layer_tree_nodes) > 1:
+
+            has_several_elements = len(self.qgs_layer_tree_nodes) > 1
+            group_selected = (
+                len(self.qgs_layer_tree_nodes) == 1
+                and isinstance(
+                    self.qgs_layer_tree_nodes[0],
+                    QgsLayerTreeGroup
+                )
+            )
+
+            if has_several_elements or group_selected:
                 self.warningOccurred.emit(
                     JobError(
                         "Import layer \"{}\" failed. Skipped.".format(qgsLayerTreeItem.layer().name()),
