@@ -90,12 +90,12 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1401"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1314"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1413"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1326"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -103,7 +103,7 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1182"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1095"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
@@ -151,22 +151,17 @@
         <translation>подготовка</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="628"/>
-        <source>packing</source>
-        <translation>архивирование</translation>
-    </message>
-    <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="757"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="660"/>
         <source>Style for &quot;{}&quot;</source>
         <translation>Стиль для &quot;{}&quot;</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="869"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="772"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="814"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="717"/>
         <source>uploading ({}%)</source>
         <translation>загрузка ({}%)</translation>
     </message>
@@ -181,12 +176,12 @@
         <translation>подготовка слоя ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="710"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="613"/>
         <source>Feature {} haven&apos;t been added. Please check geometry</source>
         <translation>Объект {} не был добавлен. Пожалуйста, проверьте геометрию</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="881"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="784"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -194,12 +189,12 @@
 <context>
     <name>QgsNgwConnection</name>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="343"/>
+        <location filename="../qgis_ngw_connection.py" line="339"/>
         <source>File is too large for uploading</source>
         <translation>Загружаемый файл слишком большой</translation>
     </message>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="256"/>
+        <location filename="../qgis_ngw_connection.py" line="252"/>
         <source>Connection closed by QGIS. Increase timeout (Settings -&gt; Options -&gt; Network) to 300000 and retry.</source>
         <translation>Соединение прервано QGIS. Увеличьте таймаут для сетевых запросов (Установки -&gt; Параметры -&gt; Сеть) до 300000 и повторите попытку.</translation>
     </message>
