@@ -287,16 +287,12 @@ class QGISResourceJob(NGWResourceModelJob):
             )
             return None
 
-        ngw_geom_info = self._get_ngw_geom_info(tgt_qgs_layer)
         ngw_vector_layer = ResourceCreator.create_vector_layer(
             ngw_parent_resource,
             filepath,
             new_layer_name,
             uploadFileCallback,
             createLayerCallback,
-            ngw_geom_info[0],
-            ngw_geom_info[1],
-            ngw_geom_info[2]
         )
 
         aliases = {}
@@ -824,50 +820,6 @@ class QGISResourceJob(NGWResourceModelJob):
         feature_dict["fields"] = ngw_layer_resource.construct_ngw_feature_as_json(attributes)
 
         return feature_dict
-
-
-    def _get_ngw_geom_info(self, qgs_vector_layer):
-        wkb_type = CompatQgis.get_wkb_type(qgs_vector_layer.wkbType())
-
-        if (wkb_type == CompatQgisWkbType.WKBPoint or
-            wkb_type == CompatQgisWkbType.WKBMultiPoint or
-            wkb_type == CompatQgisWkbType.WKBPointZ or
-            wkb_type == CompatQgisWkbType.WKBMultiPointZ):
-            geom_type = 'POINT'
-        elif (wkb_type == CompatQgisWkbType.WKBLineString or
-            wkb_type == CompatQgisWkbType.WKBMultiLineString or
-            wkb_type == CompatQgisWkbType.WKBLineStringZ or
-            wkb_type == CompatQgisWkbType.WKBMultiLineStringZ):
-            geom_type = 'LINESTRING'
-        elif (wkb_type == CompatQgisWkbType.WKBPolygon or
-            wkb_type == CompatQgisWkbType.WKBMultiPolygon or
-            wkb_type == CompatQgisWkbType.WKBPolygonZ or
-            wkb_type == CompatQgisWkbType.WKBMultiPolygonZ):
-            geom_type = 'POLYGON'
-        else:
-            geom_type = None # default for NGW >= 3.8.0
-
-        if (wkb_type in [CompatQgisWkbType.WKBMultiPoint,
-            CompatQgisWkbType.WKBMultiLineString,
-            CompatQgisWkbType.WKBMultiPolygon,
-            CompatQgisWkbType.WKBMultiPointZ,
-            CompatQgisWkbType.WKBMultiLineStringZ,
-            CompatQgisWkbType.WKBMultiPolygonZ]):
-            geom_is_multi = True
-        else:
-            geom_is_multi = False
-
-        if (wkb_type in [CompatQgisWkbType.WKBPointZ,
-            CompatQgisWkbType.WKBLineStringZ,
-            CompatQgisWkbType.WKBPolygonZ,
-            CompatQgisWkbType.WKBMultiPointZ,
-            CompatQgisWkbType.WKBMultiLineStringZ,
-            CompatQgisWkbType.WKBMultiPolygonZ]):
-            geom_has_z = True
-        else:
-            geom_has_z = False
-
-        return geom_type, geom_is_multi, geom_has_z
 
 
 class QGISResourcesUploader(QGISResourceJob):
