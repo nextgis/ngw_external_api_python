@@ -21,19 +21,18 @@
  ***************************************************************************/
 """
 import os
-import glob
-import shutil
-import zipfile
 import tempfile
 import pkg_resources
-from typing import Optional
+from collections import Counter
+from typing import Optional, List, cast
 
 from qgis.PyQt.QtCore import QCoreApplication
 
 from qgis.core import (
-    QgsProject, QgsMapLayer, QgsVectorLayer, QgsFeature,
+    QgsProject, QgsMapLayer, QgsVectorLayer, QgsRasterLayer, QgsFeature,
     QgsLayerTreeLayer, QgsLayerTreeGroup, QgsVectorFileWriter,
-    QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsProviderRegistry,
+    QgsLayerTreeNode, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
+    QgsProviderRegistry, QgsPluginLayer
 )
 from qgis.gui import QgsFileWidget
 
@@ -878,12 +877,65 @@ class QGISResourcesUploader(QGISResourceJob):
         self.iface = iface
 
     def _do(self):
+        self._check_quote()
+
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_basemaps = []
         self.process_one_level_of_layers_tree(self.qgs_layer_tree_nodes, self.ngw_resource, ngw_webmap_root_group, ngw_webmap_basemaps)
 
         # The group was attached resources,  therefore, it is necessary to upgrade for get children flag
         self.ngw_resource.update()
+
+    def _check_quote(self, add_map: bool = False) -> None:
+        def resource_type_for_layer(node: QgsLayerTreeNode) -> Optional[str]:
+            layer = cast(QgsLayerTreeLayer, node).layer()
+            if isinstance(layer, QgsVectorLayer):
+                return 'vector_layer'
+            if isinstance(layer, QgsRasterLayer):
+                data_provider = layer.dataProvider().name()  # type: ignore
+                if data_provider == 'gdal':
+                    return 'raster_layer'
+                if data_provider == 'wms':
+                    registry = QgsProviderRegistry.instance()
+                    provider_metadata = registry.providerMetadata('wms')
+                    parameters = provider_metadata.decodeUri(layer.source())
+                    return (
+                        'basemap_layer'
+                        if parameters.get('type') == 'xyz'
+                        else 'wmsclient_layer'
+                    )
+            if isinstance(layer, QgsPluginLayer):
+                return 'basemap_layer'
+            return None
+
+        def resource_type_for_node(
+            node: QgsLayerTreeNode
+        ) -> List[Optional[str]]:
+            if node.nodeType() == QgsLayerTreeNode.NodeType.NodeLayer:
+                return [resource_type_for_layer(node)]
+
+            layers_node: List[Optional[str]] = []
+            for child in node.children():
+                if child.nodeType() == QgsLayerTreeNode.NodeType.NodeLayer:
+                    layers_node.append(resource_type_for_layer(child))
+                else:
+                    layers_node.extend(resource_type_for_node(child))
+            return layers_node
+
+        resources_type = []
+        for node in self.qgs_layer_tree_nodes:
+            resources_type.extend(resource_type_for_node(node))
+
+        counter = Counter(resources_type)
+        if add_map:
+            counter['webmap'] = 1
+        del counter[None]
+
+        result = self.ngw_resource._res_factory.connection.post(
+            '/api/component/resource/check_quota', counter
+        )
+        if not result['success']:
+            raise JobError(result['message'])
 
     def process_one_level_of_layers_tree(self, qgs_layer_tree_nodes, ngw_resource_group, ngw_webmap_item, ngw_webmap_basemaps):
         exist_resourse_names = {}
@@ -1057,6 +1109,8 @@ class QGISProjectUploader(QGISResourcesUploader):
 
     def _do(self):
         update_mode = self.new_group_name is None
+
+        self._check_quote(add_map=not update_mode)
 
         if update_mode:
             ngw_group_resource = self.ngw_resource
