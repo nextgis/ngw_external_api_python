@@ -592,7 +592,11 @@ class QGISResourceJob(NGWResourceModelJob):
             fields=qgs_vector_layer.fields(),
             geometryType=qgs_vector_layer.wkbType(),
             srs=destination_srs,
-            driverName='GPKG'
+            driverName='GPKG',
+            layerOptions=(
+                QgsVectorFileWriter.defaultDatasetOptions('GPKG')
+                + ['SPATIAL_INDEX=NO']
+            )
         )
 
         transform = None
