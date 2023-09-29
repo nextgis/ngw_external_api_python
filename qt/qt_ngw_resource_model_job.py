@@ -106,7 +106,9 @@ class NGWResourceModelJob(QObject):
         new_name = name
         new_name_with_space = None
         id = 1
-        while (new_name in present_names or new_name_with_space in present_names):
+        while (
+            new_name in present_names or new_name_with_space in present_names
+        ):
             new_name = f'{name}({id})'
             new_name_with_space = f'{name} ({id})'
             id += 1
@@ -114,7 +116,9 @@ class NGWResourceModelJob(QObject):
 
     def unique_resource_name(self, resource_name, ngw_group):
         chd_names = [ch.common.display_name for ch in ngw_group.get_children()]
-        unique_resource_name = self.generate_unique_name(resource_name, chd_names)
+        unique_resource_name = self.generate_unique_name(
+            resource_name, chd_names
+        )
         return unique_resource_name
 
     def getResourcesChain2Root(self, ngw_resource):
@@ -128,10 +132,14 @@ class NGWResourceModelJob(QObject):
 
         return chain
 
-    def putAddedResourceToResult(self, ngw_resource: NGWResource, is_main: bool = False):
+    def putAddedResourceToResult(
+        self, ngw_resource: NGWResource, is_main: bool = False
+    ):
         self.result.putAddedResource(ngw_resource, is_main)
 
-    def putEditedResourceToResult(self, ngw_resource: NGWResource, is_main: bool = False):
+    def putEditedResourceToResult(
+        self, ngw_resource: NGWResource, is_main: bool = False
+    ):
         self.result.putEditedResource(ngw_resource, is_main)
 
     def putDeletedResourceToResult(self, ngw_resource: NGWResource):
@@ -149,21 +157,28 @@ class NGWResourceModelJob(QObject):
                 elif ngw_exeption_dict.get("status_code") == 401:
                     self.errorOccurred.emit(JobAuthorizationError(e.url))
                 else:
-                    self.errorOccurred.emit(
-                        JobNGWError(
-                            "%s" % ngw_exeption_dict.get("message", "No message"),
-                             e.url
-                        )
-                    )
+                    self.errorOccurred.emit(JobNGWError(
+                        str(ngw_exeption_dict.get("message", "No message")),
+                        e.url
+                    ))
 
             elif e.type == NGWError.TypeRequestError:
-                self.errorOccurred.emit(JobServerRequestError(self.tr("Bad http comunication.") + "%s"%e, e.url, e.user_msg, e.need_reconnect))
+                self.errorOccurred.emit(JobServerRequestError(
+                    self.tr("Bad http comunication.") + str(e),
+                    e.url,
+                    e.user_msg,
+                    e.need_reconnect
+                ))
 
             elif e.type == NGWError.TypeNGWUnexpectedAnswer:
-                self.errorOccurred.emit(JobNGWError(self.tr("Can't parse server answer"), e.url))
+                self.errorOccurred.emit(JobNGWError(
+                    self.tr("Can't parse server answer"), e.url
+                ))
 
             else:
-                self.errorOccurred.emit(JobServerRequestError(self.tr("Something wrong with request to server"), e.url))
+                self.errorOccurred.emit(JobServerRequestError(
+                    self.tr("Something wrong with request to server"), e.url
+                ))
 
         except NGWResourceModelJobError as e:
             self.errorOccurred.emit(e)
@@ -171,10 +186,14 @@ class NGWResourceModelJob(QObject):
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             extracted_list = traceback.extract_tb(exc_traceback)
-            extracted_list = [(f.split("\\")[-1], l, func, text) for f, l, func, text in extracted_list]
-            #log(">>> Unexpected error: %s %s\n%s" % (type(e), e, traceback.format_list(extracted_list)) )
+            extracted_list = [
+                (f.split("\\")[-1], l, func, text)
+                for f, l, func, text in extracted_list
+            ]
             log('ERROR: \n{}'.format(traceback.format_exc()))
-            self.errorOccurred.emit(JobInternalError(str(e), traceback.format_list(extracted_list)))
+            self.errorOccurred.emit(JobInternalError(
+                str(e), traceback.format_list(extracted_list)
+            ))
 
         self.dataReceived.emit(self.result)
         self.finished.emit()
@@ -184,6 +203,8 @@ class NGWResourceModelJob(QObject):
 
 
 class NGWRootResourcesLoader(NGWResourceModelJob):
+    ngw_connection: QgsNgwConnection
+
     def __init__(self, ngw_connection: QgsNgwConnection):
         super().__init__()
         self.ngw_connection = ngw_connection
@@ -226,6 +247,8 @@ class NGWResourceUpdater(NGWResourceModelJob):
 
 
 class NGWGroupCreater(NGWResourceModelJob):
+    new_group_name: str
+
     def __init__(self, new_group_name, ngw_resource_parent):
         super().__init__()
         self.new_group_name = new_group_name
@@ -321,5 +344,5 @@ class NGWRenameResource(NGWResourceModelJob):
     def _do(self):
         self.ngw_resource.change_name(self.new_name)
 
-        #self.putAddedResourceToResult(self.ngw_resource, is_main=True)
+        # self.putAddedResourceToResult(self.ngw_resource, is_main=True)
         self.putEditedResourceToResult(self.ngw_resource, is_main=True)

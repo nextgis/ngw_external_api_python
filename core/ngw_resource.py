@@ -19,7 +19,7 @@
 """
 import re
 from os import path
-from typing import Any, Tuple, Optional, TYPE_CHECKING
+from typing import Any, Tuple, Optional, List, TYPE_CHECKING
 
 import urllib.parse
 
@@ -50,6 +50,8 @@ class NGWResource:
     type_id = 'resource'
     icon_path = path.join(ICONS_DIR, 'resource.svg')
     type_title = 'NGW Resource'
+
+    _res_factory: Any  # NGWResourceFactory
 
     # STATIC
     @classmethod
@@ -107,16 +109,18 @@ class NGWResource:
         else:
             return None
 
-    def get_children(self):
-        children = []
-        if self.common.children:
-            children_json = NGWResource.receive_resource_children(
-                self._res_factory.connection, self.common.id
+    def get_children(self) -> List['NGWResource']:
+        if not self.common.children:
+            return []
+
+        children_json = NGWResource.receive_resource_children(
+            self._res_factory.connection, self.common.id
+        )
+        children: List[NGWResource] = []
+        for child_json in children_json:
+            children.append(
+                self._res_factory.get_resource_by_json(child_json)
             )
-            for child_json in children_json:
-                children.append(
-                    self._res_factory.get_resource_by_json(child_json)
-                )
         return children
 
     def get_absolute_url(self):

@@ -17,6 +17,9 @@
  *                                                                         *
  ***************************************************************************/
 """
+
+from typing import Dict, Type
+
 from .ngw_webmap import NGWWebMap
 from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_qgis_style import NGWQGISVectorStyle
@@ -32,12 +35,17 @@ from .ngw_wfs_service import NGWWfsService
 from .ngw_resource import NGWResource
 from .ngw_base_map import NGWBaseMap
 
+from ..qgis.qgis_ngw_connection import QgsNgwConnection
+
 API_NGW_VERSION = '/api/component/pyramid/pkg_version'
 
 
 class NGWResourceFactory:
+    __res_types_register: Dict[str, Type[NGWResource]]
+    __default_type: str
+    __conn: QgsNgwConnection
 
-    def __init__(self, ngw_connection):
+    def __init__(self, ngw_connection: QgsNgwConnection):
         self.__res_types_register = {
             NGWResource.type_id: NGWResource,
             NGWWfsService.type_id: NGWWfsService,
@@ -58,21 +66,23 @@ class NGWResourceFactory:
         self.__conn = ngw_connection
 
     @property
-    def connection(self):
+    def connection(self) -> QgsNgwConnection:
         return self.__conn
 
-    def get_resource(self, resource_id):
+    def get_resource(self, resource_id: int) -> NGWResource:
         res_json = NGWResource.receive_resource_obj(self.__conn, resource_id)
         return self.get_resource_by_json(res_json)
 
-    def get_resource_by_json(self, res_json):
+    def get_resource_by_json(self, res_json) -> NGWResource:
+        resource_type: Type[NGWResource]
         if res_json['resource']['cls'] in self.__res_types_register:
-            resource = self.__res_types_register[res_json['resource']['cls']](self, res_json)
+            resource_type = \
+                self.__res_types_register[res_json['resource']['cls']]
         else:
-            resource = self.__res_types_register[self.__default_type](self, res_json)
-        return resource
+            resource_type = self.__res_types_register[self.__default_type]
+        return resource_type(self, res_json)
 
-    def get_root_resource(self):
+    def get_root_resource(self) -> NGWResource:
         return self.get_resource(0)
 
     def get_ngw_verson(self):

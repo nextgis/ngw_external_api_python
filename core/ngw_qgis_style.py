@@ -18,6 +18,8 @@
  ***************************************************************************/
 """
 from os import path
+from typing import Tuple
+
 from .ngw_resource import NGWResource
 
 from typing import Optional, Tuple

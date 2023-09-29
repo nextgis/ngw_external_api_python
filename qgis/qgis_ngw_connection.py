@@ -22,13 +22,17 @@ import time
 import urllib.parse
 from typing import Optional, Tuple
 
+from typing import Tuple, Dict, Optional, Any
+
 from qgis.PyQt.QtCore import (
-    QBuffer, QByteArray, QEventLoop, QFile, QIODevice, QObject, QTimer, QUrl)
+    QBuffer, QByteArray, QEventLoop, QFile, QIODevice, QObject, QTimer, QUrl
+)
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
 from qgis.core import QgsNetworkAccessManager
 
 from ..core.ngw_error import NGWError
+from ..core.ngw_connection_settings import NGWConnectionSettings
 
 from ..utils import log
 
@@ -43,38 +47,39 @@ TUS_VERSION = '1.0.0'
 TUS_CHUNK_SIZE = 16777216
 CLIENT_TIMEOUT = 3 * 60 * 1000
 
-
 class QgsNgwConnection(QObject):
+    """NextGIS Web API connection"""
     AbilityBaseMap = list(range(1))
 
-    __auth: Tuple[Optional[str], Optional[str]]
+    server_url: str
+    __auth: Tuple[str, str]
+    __ngw_components: Optional[Dict]
 
-    def __init__(self, conn_settings, parent=None):
+    def __init__(
+        self,
+        conn_settings: NGWConnectionSettings,
+        parent: Optional[QObject] = None
+    ) -> None:
         super().__init__(parent)
 
-        self.__server_url = None
-        self.__auth = ("", "")
         self.set_from_settings(conn_settings)
 
         self.__ngw_components = None
 
-    def set_from_settings(self, conn_settings):
+    def set_from_settings(self, conn_settings: NGWConnectionSettings):
         self.server_url = conn_settings.server_url
         self.set_auth(conn_settings.username, conn_settings.password)
 
-    def set_auth(
-        self, username: Optional[str], password: Optional[str]
-    ) -> None:
+    def set_auth(self, username: Optional[str], password: Optional[str]):
+        username = username if username is not None else ""
+        password = password if password is not None else ""
         self.__auth = (username, password)
 
-    def get_auth(self) -> Tuple[Optional[str], Optional[str]]:
+    def get_auth(self) -> Tuple[str, str]:
         return self.__auth
 
-    def _get_json_param(self, j, key, def_val):
-        try:
-            return j[key]
-        except:
-            return def_val
+    def _get_json_param(self, j: Dict, key: str, def_val: Any):
+        return j.get(key, def_val)
 
     def get(self, sub_url, params=None, **kwargs):
         return self.__request_json(sub_url, 'GET', params, True, **kwargs)
@@ -90,7 +95,6 @@ class QgsNgwConnection(QObject):
 
     def delete(self, sub_url, params=None, **kwargs):
         return self.__request_json(sub_url, 'DELETE', params, True, **kwargs)
-
 
     def post_lunkwill(self, sub_url, params=None, extended_log=False, **kwargs):
         """
@@ -153,7 +157,6 @@ class QgsNgwConnection(QObject):
         del rep
 
         return j
-
 
     def __request_rep(self, sub_url, method, badata=None, params=None, headers=None, do_log=True, **kwargs):
         json_data = None
@@ -258,7 +261,6 @@ class QgsNgwConnection(QObject):
 
         return req, rep
 
-
     def __request_rep_json(self, sub_url, method, params=None, headers=None, do_log=True, **kwargs):
         req, rep = self.__request_rep(sub_url, method, badata=None, params=params, headers=headers, do_log=do_log, **kwargs)
 
@@ -292,7 +294,6 @@ class QgsNgwConnection(QObject):
 
         return rep, json_response
 
-
     def __request_json(self, sub_url, method, params=None, do_log=True, **kwargs):
         rep, j = self.__request_rep_json(sub_url, method, params=params, headers=None, do_log=do_log, **kwargs)
 
@@ -301,14 +302,12 @@ class QgsNgwConnection(QObject):
 
         return j
 
-
     def get_upload_file_url(self):
         return UPLOAD_FILE_URL
 
     def upload_file(self, filename, callback):
         self.uploadProgressCallback = callback
         return self.put(self.get_upload_file_url(), file=filename)
-
 
     def tus_upload_file(self, filename, callback, extended_log=False):
         """
@@ -399,7 +398,6 @@ class QgsNgwConnection(QObject):
         # Finally GET and return NGW result of uploaded file.
         return self.get(file_upload_url)
 
-
     def sendUploadProgress(self, sent, total):
         # For Qt 5 the uploadProgress signal is sometimes emited when
         # sent and total are 0.
@@ -408,17 +406,14 @@ class QgsNgwConnection(QObject):
         if sent != 0 and total != 0:
             self.uploadProgressCallback(total, sent)
 
-
     def get_ngw_components(self):
         if self.__ngw_components is None:
             self.__ngw_components = self.get(GET_VERSION_URL)
         return self.__ngw_components
 
-
     def get_version(self):
         ngw_components = self.get_ngw_components()
         return ngw_components.get("nextgisweb")
-
 
     def get_abilities(self):
         ngw_components = self.get_ngw_components()
