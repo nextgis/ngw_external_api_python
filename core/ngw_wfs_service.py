@@ -18,6 +18,7 @@
  ***************************************************************************/
 """
 from os import path
+from typing import Tuple, Optional
 
 from qgis.core import QgsDataSourceUri
 
@@ -34,7 +35,7 @@ class NGWWfsService(NGWResource):
 
     def _construct(self):
         super()._construct()
-        #wfsserver_service
+        # wfsserver_service
         self.wfs = DICT_TO_OBJ(self._json[self.type_id])
         if hasattr(self.wfs, "layers"):
             self.wfs.layers = LIST_DICT_TO_LIST_OBJ(self.wfs.layers)
@@ -42,7 +43,7 @@ class NGWWfsService(NGWResource):
     def get_wfs_url(self, layer_keyname):
         uri = QgsDataSourceUri()
         creds = self.get_creds_for_url()
-        if creds and creds[0] and creds[1]:
+        if creds[0] and creds[1]:
             uri.setUsername(creds[0])
             uri.setPassword(creds[1])
         uri.setParam('typename', layer_keyname)
@@ -53,18 +54,19 @@ class NGWWfsService(NGWResource):
 
         return uri.uri(True)
 
-    def get_creds_for_url(self):
+    def get_creds_for_url(self) -> Tuple[Optional[str], Optional[str]]:
         creds = self.get_creds()
-        if creds is None or creds[0] == '' or creds[1] == '':
-            return None
-        # It seems we should escape only '&' character, but not other reserved ones in a password. The use of
-        # urllib.parse.quote_plus() on a password leads to WFS authentication errors when other symbols occur
-        # such as '.', '+', '@'. Understand why. What else and how should we correcyly replace here?
-        # Also this approach does not work in QGIS 2.
+        if not creds[0] or not creds[1]:
+            return creds
+
+        # It seems we should escape only '&' character, but not other reserved
+        # ones in a password. The use of urllib.parse.quote_plus() on a
+        # password leads to WFS authentication errors when other symbols occur
+        # such as '.', '+', '@'. Understand why. What else and how should we
+        # correcyly replace here? Also this approach does not work in QGIS 2.
         login = creds[0]
         password = creds[1].replace('&', '%26')
         return login, password
-
 
     def get_layers(self):
         return self._json["wfsserver_service"]["layers"]

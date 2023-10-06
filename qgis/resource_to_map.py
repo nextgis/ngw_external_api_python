@@ -18,8 +18,10 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtNetwork import *
+from qgis.PyQt.QtCore import (
+    QByteArray, QUrl, QEventLoop, QTemporaryFile, QIODevice
+)
+from qgis.PyQt.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from qgis.core import QgsVectorLayer, QgsRasterLayer, QgsMapLayer, QgsProject, QgsRectangle
 from ..core.ngw_vector_layer import NGWVectorLayer
@@ -29,7 +31,7 @@ from ..core.ngw_qgis_style import NGWQGISStyle
 
 from ..utils import log
 
-from .compat_qgis import CompatQgis, CompatQgisMsgLogLevel, CompatQgisMsgBarLevel, CompatQgisGeometryType, CompatQgisWkbType
+from .compat_qgis import CompatQgis
 
 
 class UnsupportedRasterTypeException(Exception):
@@ -43,14 +45,22 @@ def _add_aliases(qgs_vector_layer, ngw_vector_layer):
             continue
         CompatQgis.set_field_alias(qgs_vector_layer, field_name, field_alias)
 
+
 def _add_geojson_layer(resource):
     if not isinstance(resource, NGWVectorLayer):
         raise Exception('Resource type is not VectorLayer!')
-    qgs_geojson_layer = QgsVectorLayer(resource.get_absolute_geojson_url(), resource.common.display_name, 'ogr')
+    qgs_geojson_layer = QgsVectorLayer(
+        resource.get_absolute_geojson_url(),
+        resource.common.display_name,
+        'ogr'
+    )
     if not qgs_geojson_layer.isValid():
-        raise Exception('Layer "{}" can\'t be added to the map!'.format(resource.common.display_name))
+        raise Exception('Layer "{}" can\'t be added to the map!'.format(
+            resource.common.display_name
+        ))
     qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
     return qgs_geojson_layer
+
 
 def _add_cog_raster_layer(resource):
     if not isinstance(resource, NGWRasterLayer):
@@ -61,15 +71,18 @@ def _add_cog_raster_layer(resource):
     qgs_raster_layer = QgsRasterLayer(url, resource.common.display_name, 'gdal')
     if not qgs_raster_layer.isValid():
         log('Failed to add raster layer to QGIS. URL: {}'.format(url))
-        raise Exception('Layer "{}" can\'t be added to the map!'.format(resource.common.display_name))
+        raise Exception('Layer "{}" can\'t be added to the map!'.format(
+            resource.common.display_name
+        ))
     return qgs_raster_layer
+
 
 def _apply_style(style_resource, qgs_layer):
     ev_loop = QEventLoop()
     qml_url = style_resource.download_qml_url()
     qml_req = QNetworkRequest(QUrl(qml_url))
     creds = style_resource.get_creds_for_qml()
-    if creds is not None:
+    if creds[0] and creds[1]:
         creds_str = creds[0] + ':' + creds[1]
         authstr = creds_str.encode('utf-8')
         authstr = QByteArray(authstr).toBase64()
@@ -86,7 +99,7 @@ def _apply_style(style_resource, qgs_layer):
 
     filename = None
     file = QTemporaryFile()
-    if file.open(QIODevice.WriteOnly):
+    if file.open(QIODevice.OpenModeFlag.WriteOnly):
         file.write(reply.readAll())
         filename = file.fileName()
         file.close()
@@ -106,12 +119,17 @@ def add_resource_as_geojson(resource, return_extent=False):
     CompatQgis.layers_registry().addMapLayer(qgs_geojson_layer)
 
     if return_extent:
-        if qgs_geojson_layer.extent().isEmpty() and qgs_geojson_layer.type() == QgsMapLayer.VectorLayer:
+        if (
+            qgs_geojson_layer.extent().isEmpty()
+            and qgs_geojson_layer.type() == QgsMapLayer.VectorLayer
+        ):
             qgs_geojson_layer.updateExtents()
             return qgs_geojson_layer.extent()
 
 
-def add_resource_as_geojson_with_style(resource, style_resource, return_extent=False):
+def add_resource_as_geojson_with_style(
+    resource, style_resource, return_extent=False
+):
     qgs_geojson_layer = _add_geojson_layer(resource)
 
     _apply_style(style_resource, qgs_geojson_layer)
@@ -132,6 +150,7 @@ def add_resource_as_cog_raster(resource):
     map_layer = CompatQgis.layers_registry().addMapLayer(qgs_raster_layer)
     if map_layer is None:
         raise Exception('Failed to add layer to QGIS')
+
 
 def add_resource_as_cog_raster_with_style(resource, style_resource):
     qgs_raster_layer = _add_cog_raster_layer(resource)
@@ -170,14 +189,16 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
             if isinstance(child, NGWQGISStyle):
                 ngw_style_res = child
                 break
-        if not ngw_style_res is None:
+        if ngw_style_res is not None:
             loop = QEventLoop()
             nam = QNetworkAccessManager()
             nam.finished.connect(loop.quit)
-            reply = nam.get(QNetworkRequest(QUrl(ngw_style_res.download_qml_url())))
+            reply = nam.get(QNetworkRequest(
+                QUrl(ngw_style_res.download_qml_url())
+            ))
             loop.exec_()
             tmpfile = QTemporaryFile()
-            if tmpfile.open(QIODevice.WriteOnly):
+            if tmpfile.open(QIODevice.OpenModeFlag.WriteOnly):
                 tmpfile.write(reply.readAll())
                 tmpfile.close()
                 qgs_wfs_layer.loadNamedStyle(tmpfile.fileName())

@@ -67,11 +67,7 @@ def _basic_auth_str(username, password):
 class NGWConnection:
 
     AbilityBaseMap = list(range(1))
-
-    def __init__(self):
-        self.__server_url = None
-        self.__session = requests.Session()
-        self.__auth = ("", "")
+    __auth: Tuple[Optional[str], Optional[str]]
 
     def __init__(self, conn_settings: NGWConnectionSettings):
         self.__server_url = None
@@ -113,13 +109,9 @@ class NGWConnection:
             self.__server_url = value
 
     def set_auth(self, username: Optional[str], password: Optional[str]):
-        # self.__session.auth = (username, password)
-        username = username if username is not None else ""
-        password = password if password is not None else ""
         self.__auth = (username, password)
 
     def get_auth(self) -> Tuple[Optional[str], Optional[str]]:
-        # return self.__session.auth
         return self.__auth
 
     def __request(self, sub_url, method, params=None, **kwargs):

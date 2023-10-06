@@ -20,6 +20,7 @@
 import json
 import time
 import urllib.parse
+from typing import Optional, Tuple
 
 from qgis.PyQt.QtCore import (
     QBuffer, QByteArray, QEventLoop, QFile, QIODevice, QObject, QTimer, QUrl)
@@ -42,12 +43,12 @@ TUS_VERSION = '1.0.0'
 TUS_CHUNK_SIZE = 16777216
 CLIENT_TIMEOUT = 3 * 60 * 1000
 
-class QgsNgwConnection(QObject):
 
+class QgsNgwConnection(QObject):
     AbilityBaseMap = list(range(1))
 
+    __auth: Tuple[Optional[str], Optional[str]]
 
-    """docstring for QgsNgwConnection"""
     def __init__(self, conn_settings, parent=None):
         super().__init__(parent)
 
@@ -57,25 +58,23 @@ class QgsNgwConnection(QObject):
 
         self.__ngw_components = None
 
-
     def set_from_settings(self, conn_settings):
         self.server_url = conn_settings.server_url
         self.set_auth(conn_settings.username, conn_settings.password)
 
-
-    def set_auth(self, username, password):
+    def set_auth(
+        self, username: Optional[str], password: Optional[str]
+    ) -> None:
         self.__auth = (username, password)
 
-    def get_auth(self):
+    def get_auth(self) -> Tuple[Optional[str], Optional[str]]:
         return self.__auth
-
 
     def _get_json_param(self, j, key, def_val):
         try:
             return j[key]
         except:
             return def_val
-
 
     def get(self, sub_url, params=None, **kwargs):
         return self.__request_json(sub_url, 'GET', params, True, **kwargs)

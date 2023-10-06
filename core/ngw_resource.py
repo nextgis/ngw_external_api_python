@@ -19,7 +19,7 @@
 """
 import re
 from os import path
-from typing import Tuple
+from typing import Any, Tuple, Optional, TYPE_CHECKING
 
 import urllib.parse
 
@@ -35,6 +35,11 @@ API_LAYER_EXTENT = lambda res_id: '/api/resource/%d/extent' % res_id
 class Wrapper:
     def __init__(self, **params):
         self.__dict__.update(params)
+
+    if TYPE_CHECKING:
+        def __setattr__(self, __name: str, __value: Any) -> None: ...
+        def __getattr__(self, __name: str) -> Any: ...
+
 
 DICT_TO_OBJ = lambda d: Wrapper(**d)
 LIST_DICT_TO_LIST_OBJ = lambda l: [Wrapper(**el) for el in l]
@@ -86,13 +91,13 @@ class NGWResource:
         Construct resource from self._json
         Can be overridden in a derived class
         """
-        #resource
+        # resource
         self.common = DICT_TO_OBJ(self._json['resource'])
         if self.common.parent:
             self.common.parent = DICT_TO_OBJ(self.common.parent)
         if self.common.owner_user:
             self.common.owner_user = DICT_TO_OBJ(self.common.owner_user)
-        #resmeta
+        # resmeta
         if 'resmeta' in self._json:
             self.metadata = DICT_TO_OBJ(self._json['resmeta'])
 
@@ -105,9 +110,13 @@ class NGWResource:
     def get_children(self):
         children = []
         if self.common.children:
-            children_json = NGWResource.receive_resource_children(self._res_factory.connection, self.common.id)
+            children_json = NGWResource.receive_resource_children(
+                self._res_factory.connection, self.common.id
+            )
             for child_json in children_json:
-                children.append(self._res_factory.get_resource_by_json(child_json))
+                children.append(
+                    self._res_factory.get_resource_by_json(child_json)
+                )
         return children
 
     def get_absolute_url(self):
@@ -119,13 +128,12 @@ class NGWResource:
         return urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
 
     def get_absolute_api_url_with_auth(self):
-        creds = self.get_creds()
-        if creds is None:
-            creds = ['', '']
-        login = urllib.parse.quote_plus(creds[0])
-        password = urllib.parse.quote_plus(creds[1])
         base_url = self._res_factory.connection.server_url
-        base_url = base_url.replace('://', f'://{login}:{password}@')
+        creds = self.get_creds()
+        if creds[0] and creds[1]:
+            login = urllib.parse.quote_plus(creds[0])
+            password = urllib.parse.quote_plus(creds[1])
+            base_url = base_url.replace('://', f'://{login}:{password}@')
         url = urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
         return f'/vsicurl/{url}'
 
@@ -135,11 +143,8 @@ class NGWResource:
     def get_relative_api_url(self):
         return API_RESOURCE_URL(self.common.id)
 
-    def get_creds(self) -> Tuple[str, str]:
-        creds = self._res_factory.connection.get_auth()
-        if creds[0] is None or creds[0] == '':
-            return None
-        return creds
+    def get_creds(self) -> Tuple[Optional[str], Optional[str]]:
+        return self._res_factory.connection.get_auth()
 
     @classmethod
     def get_api_collection_url(cls):

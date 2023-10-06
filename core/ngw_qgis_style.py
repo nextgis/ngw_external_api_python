@@ -20,6 +20,8 @@
 from os import path
 from .ngw_resource import NGWResource
 
+from typing import Optional, Tuple
+
 from ..utils import ICONS_DIR
 
 
@@ -37,7 +39,6 @@ class NGWQGISStyle(NGWResource):
         params = dict(
             resource=dict(
                 display_name=self.common.display_name,
-
             ),
         )
         params[self.type_id] = dict(
@@ -48,8 +49,10 @@ class NGWQGISStyle(NGWResource):
         connection.put(url, params=params)
         self.update()
 
-    def get_creds_for_qml(self):
-        return self.get_creds() # do not quot this because it is used as header when downloading qml style
+    def get_creds_for_qml(self) -> Tuple[Optional[str], Optional[str]]:
+        # do not quot this because it is used as header when downloading
+        # qml style
+        return self.get_creds()
 
 
 class NGWQGISVectorStyle(NGWQGISStyle):
