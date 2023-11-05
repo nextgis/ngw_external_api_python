@@ -1,3 +1,4 @@
+from .ngw_resource import NGWResource
 from .ngw_attachment import NGWAttachment
 from .ngw_base_map import NGWBaseMap
 from .ngw_group_resource import NGWGroupResource
@@ -15,6 +16,7 @@ from .ngw_wms_service import NGWWmsService
 from .ngw_error import NGWError
 
 __all__ = [
+    "NGWResource",
     "NGWBaseMap",
     "NGWGroupResource",
     "NGWMapServerStyle",

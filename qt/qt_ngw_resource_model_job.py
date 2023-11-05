@@ -22,7 +22,7 @@ import json
 import re
 import sys
 import traceback
-from typing import List
+from typing import List, Union
 
 from qgis.PyQt.QtCore import (
     QObject, pyqtSignal
@@ -30,6 +30,7 @@ from qgis.PyQt.QtCore import (
 
 from ..core.ngw_error import NGWError
 from ..core.ngw_resource import NGWResource
+from ..core.ngw_group_resource import NGWGroupResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
 from ..core.ngw_webmap import NGWWebMap, NGWWebMapLayer, NGWWebMapRoot
@@ -57,17 +58,21 @@ class NGWResourceModelJobResult:
 
         self.main_resource_id = -1
 
-    def putAddedResource(self, ngw_resource: NGWResource, is_main: bool = False):
+    def putAddedResource(
+        self, ngw_resource: NGWResource, is_main: bool = False
+    ) -> None:
         self.added_resources.append(ngw_resource)
         if is_main:
             self.main_resource_id = ngw_resource.common.id
 
-    def putEditedResource(self, ngw_resource: NGWResource, is_main: bool = False):
+    def putEditedResource(
+        self, ngw_resource: NGWResource, is_main: bool = False
+    ) -> None:
         self.edited_resources.append(ngw_resource)
         if is_main:
             self.main_resource_id = ngw_resource.common.id
 
-    def putDeletedResource(self, ngw_resource: NGWResource):
+    def putDeletedResource(self, ngw_resource: NGWResource) -> None:
         self.deleted_resources.append(ngw_resource)
 
     def is_empty(self):
@@ -191,15 +196,33 @@ class NGWRootResourcesLoader(NGWResourceModelJob):
 
 
 class NGWResourceUpdater(NGWResourceModelJob):
-    def __init__(self, ngw_resource: NGWResource):
+    def __init__(
+        self,
+        ngw_resources: Union[NGWResource, List[NGWResource]],
+        *,
+        recursive: bool = False
+    ) -> None:
         super().__init__()
-        self.result.main_resource_id = ngw_resource.common.id
-        self.ngw_resource = ngw_resource
+        if isinstance(ngw_resources, list):
+            self.ngw_resources = ngw_resources
+        else:
+            self.ngw_resources = [ngw_resources]
+            self.result.main_resource_id = ngw_resources.common.id
+        self.recursive = recursive
 
     def _do(self):
-        ngw_resource_children = self.ngw_resource.get_children()
+        for ngw_resource in self.ngw_resources:
+            self.__get_children(ngw_resource)
+
+    def __get_children(self, ngw_resource: NGWResource):
+        ngw_resource_children = ngw_resource.get_children()
         for ngw_resource_child in ngw_resource_children:
             self.putAddedResourceToResult(ngw_resource_child)
+            if (
+                self.recursive
+                and isinstance(ngw_resource_child, NGWGroupResource)
+            ):
+                self.__get_children(ngw_resource_child)
 
 
 class NGWGroupCreater(NGWResourceModelJob):
@@ -209,12 +232,12 @@ class NGWGroupCreater(NGWResourceModelJob):
         self.ngw_resource_parent = ngw_resource_parent
 
     def _do(self):
-        new_group_name = self.unique_resource_name(self.new_group_name,
-                                                   self.ngw_resource_parent)
+        new_group_name = self.unique_resource_name(
+            self.new_group_name, self.ngw_resource_parent
+        )
 
         ngw_group_resource = ResourceCreator.create_group(
-            self.ngw_resource_parent,
-            new_group_name
+            self.ngw_resource_parent, new_group_name
         )
 
         self.putAddedResourceToResult(ngw_group_resource, is_main=True)
