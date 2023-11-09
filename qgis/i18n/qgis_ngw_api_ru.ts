@@ -90,12 +90,12 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1372"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1377"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1384"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1389"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -103,7 +103,7 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1153"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1158"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
@@ -111,77 +111,77 @@
 <context>
     <name>QGISResourceJob</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="457"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="462"/>
         <source>We&apos;ve renamed fields {0} for layer &apos;{1}&apos;. Style for this layer may become invalid.</source>
         <translation>Следующие поля переименованы {0} для слоя '{1}'. Стиль для этого слоя может стать некорректным.</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="531"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="536"/>
         <source>We&apos;ve excluded features with id {0} for layer &apos;{1}&apos;. Reason: invalid geometry.</source>
         <translation>Объекты с id {0} слоя '{1}' были исключены. Причина: неправильная геометрия.</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="176"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="181"/>
         <source>create WMS connection</source>
         <translation>создание соединения WMS</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="210"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="215"/>
         <source>creating WMS layer</source>
         <translation>создание слоя WMS</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="270"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="275"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="318"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="323"/>
         <source>adding aliases</source>
         <translation>добавление псевдонимов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="321"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="326"/>
         <source>finishing</source>
         <translation>завершение</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="328"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="333"/>
         <source>preparing</source>
         <translation>подготовка</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="663"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="668"/>
         <source>Style for &quot;{}&quot;</source>
         <translation>Стиль для &quot;{}&quot;</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="775"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="780"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="720"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="725"/>
         <source>uploading ({}%)</source>
         <translation>загрузка ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="365"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="370"/>
         <source>checking geometry ({}%)</source>
         <translation>проверка геометрии ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="524"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="529"/>
         <source>preparing layer ({}%)</source>
         <translation>подготовка слоя ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="616"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="621"/>
         <source>Feature {} haven&apos;t been added. Please check geometry</source>
         <translation>Объект {} не был добавлен. Пожалуйста, проверьте геометрию</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="787"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="792"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -189,12 +189,12 @@
 <context>
     <name>QgsNgwConnection</name>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="338"/>
+        <location filename="../qgis_ngw_connection.py" line="460"/>
         <source>File is too large for uploading</source>
         <translation>Загружаемый файл слишком большой</translation>
     </message>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="251"/>
+        <location filename="../qgis_ngw_connection.py" line="326"/>
         <source>Connection closed by QGIS. Increase timeout (Settings -&gt; Options -&gt; Network) to 300000 and retry.</source>
         <translation>Соединение прервано QGIS. Увеличьте таймаут для сетевых запросов (Установки -&gt; Параметры -&gt; Сеть) до 300000 и повторите попытку.</translation>
     </message>
