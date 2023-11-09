@@ -140,15 +140,6 @@ class CompatQgis:
         return True if COMPAT_QGIS_VERSION == 2 else False
 
     @classmethod
-    def layers_registry(cls):
-        if COMPAT_QGIS_VERSION == 2:
-            return core.QgsMapLayerRegistry.instance()
-        elif COMPAT_QGIS_VERSION == 3:
-            return core.QgsProject.instance()
-        else:
-            raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
-
-    @classmethod
     def layers_tree(cls, iface):
         if COMPAT_QGIS_VERSION == 2:
             return iface.legendInterface()
@@ -311,6 +302,3 @@ class CompatQt:
             return v
         else:
             raise NotImplementedError(COMPAT_QGIS_UNSUPPORTED_MSG)
-
-
-

@@ -111,43 +111,34 @@ def _apply_style(style_resource, qgs_layer):
         qgs_layer.loadNamedStyle(filename)
 
 
-def add_resource_as_geojson(resource, return_extent=False):
+def add_resource_as_geojson(resource):
     qgs_geojson_layer = _add_geojson_layer(resource)
 
     _add_aliases(qgs_geojson_layer, resource)
 
-    CompatQgis.layers_registry().addMapLayer(qgs_geojson_layer)
-
-    if return_extent:
-        if (
-            qgs_geojson_layer.extent().isEmpty()
-            and qgs_geojson_layer.type() == QgsMapLayer.VectorLayer
-        ):
-            qgs_geojson_layer.updateExtents()
-            return qgs_geojson_layer.extent()
+    project = QgsProject.instance()
+    assert project is not None
+    project.addMapLayer(qgs_geojson_layer)
 
 
-def add_resource_as_geojson_with_style(
-    resource, style_resource, return_extent=False
-):
+def add_resource_as_geojson_with_style(resource, style_resource):
     qgs_geojson_layer = _add_geojson_layer(resource)
 
     _apply_style(style_resource, qgs_geojson_layer)
 
     _add_aliases(qgs_geojson_layer, resource)
 
-    CompatQgis.layers_registry().addMapLayer(qgs_geojson_layer)
-
-    if return_extent:
-        if qgs_geojson_layer.extent().isEmpty() and qgs_geojson_layer.type() == QgsMapLayer.VectorLayer:
-            qgs_geojson_layer.updateExtents()
-            return qgs_geojson_layer.extent()
+    project = QgsProject.instance()
+    assert project is not None
+    project.addMapLayer(qgs_geojson_layer)
 
 
 def add_resource_as_cog_raster(resource):
     qgs_raster_layer = _add_cog_raster_layer(resource)
 
-    map_layer = CompatQgis.layers_registry().addMapLayer(qgs_raster_layer)
+    project = QgsProject.instance()
+    assert project is not None
+    map_layer = project.addMapLayer(qgs_raster_layer)
     if map_layer is None:
         raise Exception('Failed to add layer to QGIS')
 
@@ -157,7 +148,9 @@ def add_resource_as_cog_raster_with_style(resource, style_resource):
 
     _apply_style(style_resource, qgs_raster_layer)
 
-    map_layer = CompatQgis.layers_registry().addMapLayer(qgs_raster_layer)
+    project = QgsProject.instance()
+    assert project is not None
+    map_layer = project.addMapLayer(qgs_raster_layer)
     if map_layer is None:
         raise Exception('Failed to add layer to QGIS')
 
@@ -208,7 +201,10 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
         #summarize extent
         if return_extent:
             _summ_extent(summary_extent, qgs_wfs_layer)
-        CompatQgis.layers_registry().addMapLayer(qgs_wfs_layer, False)
+
+        project = QgsProject.instance()
+        assert project is not None
+        project.addMapLayer(qgs_wfs_layer, False)
         layers_group.insertLayer(0, qgs_wfs_layer)
 
     if return_extent:
