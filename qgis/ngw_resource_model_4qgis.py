@@ -22,7 +22,12 @@
 """
 import os
 import tempfile
-import pkg_resources
+try:
+    from packaging import version
+    parse_version = version.parse
+except Exception:
+    import pkg_resources
+    parse_version = pkg_resources.parse_version
 from collections import Counter
 from typing import Optional, List, cast
 
@@ -433,8 +438,8 @@ class QGISResourceJob(NGWResourceModelJob):
                 vers_ok = False
         else:
             # A full PEP 440 comparing.
-            current_ngw_version = pkg_resources.parse_version(self.ngw_version)
-            ngw_version_with_support = pkg_resources.parse_version(
+            current_ngw_version = parse_version(self.ngw_version)
+            ngw_version_with_support = parse_version(
                 NGW_AUTORENAME_FIELDS_VERS
             )
             vers_ok = current_ngw_version >= ngw_version_with_support
