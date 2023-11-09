@@ -26,5 +26,4 @@ from ..utils import ICONS_DIR
 class NGWGroupResource(NGWResource):
 
     type_id = 'resource_group'
-    icon_path = path.join(ICONS_DIR, 'group.png')
     type_title = 'NGW Group resource'

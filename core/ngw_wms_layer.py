@@ -26,7 +26,6 @@ from ..utils import ICONS_DIR
 class NGWWmsLayer(NGWResource):
 
     type_id = 'wmsclient_layer'
-    icon_path = path.join(ICONS_DIR, 'wms_layer.svg') # TODO change icon
     type_title = 'NGW WMS Layer'
 
     def _construct(self):

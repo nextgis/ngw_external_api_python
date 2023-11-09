@@ -28,8 +28,6 @@ from ..utils import ICONS_DIR
 
 
 class NGWQGISStyle(NGWResource):
-    icon_path = path.join(ICONS_DIR, 'style.png')
-
     def download_qml_url(self):
         return self.get_absolute_api_url() + "/qml"
 

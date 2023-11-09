@@ -30,7 +30,6 @@ from ..utils import ICONS_DIR
 class NGWWfsService(NGWResource):
 
     type_id = 'wfsserver_service'
-    icon_path = path.join(ICONS_DIR, 'wfs.svg')
     type_title = 'NGW WFS Service'
 
     def _construct(self):

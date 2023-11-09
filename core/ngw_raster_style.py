@@ -26,5 +26,4 @@ from ..utils import ICONS_DIR
 class NGWRasterStyle(NGWResource):
 
     type_id = 'raster_style'
-    icon_path = path.join(ICONS_DIR, 'style.png')
     type_title = 'NGW Raster Style'

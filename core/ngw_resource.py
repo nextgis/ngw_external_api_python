@@ -85,6 +85,10 @@ class NGWResource:
         self._construct()
         self.children_count = None
 
+        icon_path = path.join(ICONS_DIR, f'{self.common.cls}.svg')
+        if path.exists(icon_path):
+            self.icon_path = icon_path
+
     def set_children_count(self, children_count):
         self.children_count = children_count
 
@@ -123,15 +127,15 @@ class NGWResource:
             )
         return children
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         base_url = self._res_factory.connection.server_url
         return urllib.parse.urljoin(base_url, RESOURCE_URL(self.common.id))
 
-    def get_absolute_api_url(self):
+    def get_absolute_api_url(self) -> str:
         base_url = self._res_factory.connection.server_url
         return urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
 
-    def get_absolute_api_url_with_auth(self):
+    def get_absolute_api_url_with_auth(self) -> str:
         base_url = self._res_factory.connection.server_url
         creds = self.get_creds()
         if creds[0] and creds[1]:
@@ -141,17 +145,17 @@ class NGWResource:
         url = urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
         return f'/vsicurl/{url}'
 
-    def get_relative_url(self):
+    def get_relative_url(self) -> str:
         return RESOURCE_URL(self.common.id)
 
-    def get_relative_api_url(self):
+    def get_relative_api_url(self) -> str:
         return API_RESOURCE_URL(self.common.id)
 
     def get_creds(self) -> Tuple[Optional[str], Optional[str]]:
         return self._res_factory.connection.get_auth()
 
     @classmethod
-    def get_api_collection_url(cls):
+    def get_api_collection_url(cls) -> str:
         return API_COLLECTION_URL
 
     def change_name(self, name):

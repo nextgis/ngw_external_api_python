@@ -29,7 +29,6 @@ from ..utils import ICONS_DIR
 class NGWBaseMap(NGWResource):
 
     type_id = 'basemap_layer'
-    icon_path = path.join(ICONS_DIR, 'base_map.svg')
     type_title = 'NGW Base Map layer'
 
     @classmethod
@@ -73,7 +72,7 @@ class NGWBaseMapExtSettings:
         self.z_min = z_min
         self.z_max = z_max
         self.y_origin_top = y_origin_top
-    
+
     def toJSON(self):
         d = {}
         if self.url is None:

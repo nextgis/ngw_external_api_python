@@ -26,7 +26,6 @@ from ..utils import ICONS_DIR
 class NGWWmsService(NGWResource):
 
     type_id = 'wmsserver_service'
-    icon_path = path.join(ICONS_DIR, 'wms_service.svg')
     type_title = 'NGW WMS Service'
 
     def get_url(self):

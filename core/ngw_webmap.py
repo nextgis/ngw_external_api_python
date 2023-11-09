@@ -26,7 +26,6 @@ from ..utils import ICONS_DIR
 class NGWWebMap(NGWResource):
 
     type_id = 'webmap'
-    icon_path = path.join(ICONS_DIR, 'web_map.svg')
     type_title = 'NGW Web Map'
 
     def get_display_url(self):

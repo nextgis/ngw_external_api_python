@@ -28,7 +28,6 @@ from ..utils import ICONS_DIR
 class NGWRasterLayer(NGWResource):
 
     type_id = 'raster_layer'
-    icon_path = path.join(ICONS_DIR, 'raster_layer.svg')
     type_title = 'NGW Raster Layer'
 
     def __init__(self, resource_factory, resource_json):

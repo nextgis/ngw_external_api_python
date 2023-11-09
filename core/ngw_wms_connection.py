@@ -26,9 +26,8 @@ from ..utils import ICONS_DIR
 class NGWWmsConnection(NGWResource):
 
     type_id = 'wmsclient_connection'
-    icon_path = path.join(ICONS_DIR, 'wms_connection.svg') # TODO change icon
     type_title = 'NGW WMS Connection'
-    
+
     def get_connection_url(self):
         return self._json.get(self.type_id, {}).get("url")
 

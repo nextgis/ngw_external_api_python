@@ -41,7 +41,6 @@ class NGWVectorLayer(NGWResource):
     """
 
     type_id = 'vector_layer'
-    icon_path = path.join(ICONS_DIR, 'vector_layer.svg')
     type_title = 'NGW Vector Layer'
 
     UNKNOWN = 0
@@ -96,9 +95,9 @@ class NGWVectorLayer(NGWResource):
     def __init__(self, resource_factory, resource_json):
         super().__init__(resource_factory, resource_json)
 
-        if self.type_id in self._json:
-            if "geometry_type" in self._json[self.type_id]:
-                self.set_icon(self.geom_type())
+        # if self.type_id in self._json:
+        #     if "geometry_type" in self._json[self.type_id]:
+        #         self.set_icon(self.geom_type())
 
         self._field_defs = {}
         for field_def in self._json.get("feature_layer", {}).get("fields", []):
@@ -357,9 +356,17 @@ class NGWVectorLayer(NGWResource):
         url = self.get_relative_api_url()
 
         params = dict(
-            feature_layer = flayer_dict
+            feature_layer=flayer_dict
         )
 
         res = connection.put(url, params=params)
 
         self.update()
+
+    def export(self, path: str, format: str = 'GPKG', srs: int = 3857) -> None:
+        url = self.get_relative_api_url()
+        export_url = \
+            f'{url}/export?format={format}&srs={srs}&fid=&zipped=false'
+
+        connection = self._res_factory.connection
+        connection.download(export_url, path)
