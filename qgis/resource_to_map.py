@@ -18,7 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from typing import Dict
+from typing import Dict, List
 from qgis.PyQt.QtCore import (
     QByteArray, QUrl, QEventLoop, QTemporaryFile, QIODevice
 )
@@ -68,7 +68,7 @@ def _add_lookup_tables(
     if len(lookup_table_id_for_field) == 0:
         return
 
-    lookup_tables: Dict[int, Dict[str, str]] = {}
+    lookup_tables: Dict[int, List[Dict[str, str]]] = {}
     lookup_table_ids = set(lookup_table_id_for_field.values())
     for lookup_table_id in lookup_table_ids:
         connection: QgsNgwConnection = ngw_vector_layer._res_factory.connection
@@ -81,11 +81,11 @@ def _add_lookup_tables(
         if (lookup_table := result.get('lookup_table')) is None:
             continue
 
-        lookup_tables[lookup_table_id] = {
-            description: value
+        lookup_tables[lookup_table_id] = [
+            {description: value}
             for value, description
             in lookup_table['items'].items()
-        }
+        ]
 
     layer_fields = qgs_vector_layer.fields()
     for field_name, lookup_table_id in lookup_table_id_for_field.items():
