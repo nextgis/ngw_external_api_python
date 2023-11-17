@@ -18,16 +18,23 @@
  *                                                                         *
  ***************************************************************************/
 """
+from typing import Dict
 from qgis.PyQt.QtCore import (
     QByteArray, QUrl, QEventLoop, QTemporaryFile, QIODevice
 )
 from qgis.PyQt.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
-from qgis.core import QgsVectorLayer, QgsRasterLayer, QgsMapLayer, QgsProject, QgsRectangle
+from qgis.core import (
+    QgsVectorLayer, QgsRasterLayer, QgsMapLayer, QgsProject, QgsRectangle,
+    QgsEditorWidgetSetup
+)
+
+from ..core.ngw_resource import API_RESOURCE_URL
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_wfs_service import NGWWfsService
 from ..core.ngw_qgis_style import NGWQGISStyle
+from .qgis_ngw_connection import QgsNgwConnection
 
 from ..utils import log
 
@@ -38,12 +45,58 @@ class UnsupportedRasterTypeException(Exception):
     pass
 
 
-def _add_aliases(qgs_vector_layer, ngw_vector_layer):
+def _add_aliases(
+    qgs_vector_layer: QgsVectorLayer, ngw_vector_layer: NGWVectorLayer
+) -> None:
     for field_name, field_def in list(ngw_vector_layer.field_defs.items()):
         field_alias = field_def.get('display_name')
         if not field_alias:
             continue
         CompatQgis.set_field_alias(qgs_vector_layer, field_name, field_alias)
+
+
+def _add_lookup_tables(
+    qgs_vector_layer: QgsVectorLayer, ngw_vector_layer: NGWVectorLayer
+) -> None:
+    lookup_table_id_for_field: Dict[str, int] = {}
+
+    for field_name, field_def in list(ngw_vector_layer.field_defs.items()):
+        if (lookup_table := field_def.get('lookup_table')) is None:
+            continue
+        lookup_table_id_for_field[field_name] = lookup_table['id']
+
+    if len(lookup_table_id_for_field) == 0:
+        return
+
+    lookup_tables: Dict[int, Dict[str, str]] = {}
+    lookup_table_ids = set(lookup_table_id_for_field.values())
+    for lookup_table_id in lookup_table_ids:
+        connection: QgsNgwConnection = ngw_vector_layer._res_factory.connection
+        lookup_url = API_RESOURCE_URL(lookup_table_id)
+        try:
+            result = connection.get(lookup_url)
+        except Exception:
+            continue
+
+        if (lookup_table := result.get('lookup_table')) is None:
+            continue
+
+        lookup_tables[lookup_table_id] = {
+            description: value
+            for value, description
+            in lookup_table['items'].items()
+        }
+
+    layer_fields = qgs_vector_layer.fields()
+    for field_name, lookup_table_id in lookup_table_id_for_field.items():
+        field_index = layer_fields.indexFromName(field_name)
+        if field_index == -1 or lookup_table_id not in lookup_tables:
+            continue
+
+        setup = QgsEditorWidgetSetup(
+            'ValueMap', {'map': lookup_tables[lookup_table_id]}
+        )
+        qgs_vector_layer.setEditorWidgetSetup(field_index, setup)
 
 
 def _add_geojson_layer(resource):
@@ -115,6 +168,7 @@ def add_resource_as_geojson(resource):
     qgs_geojson_layer = _add_geojson_layer(resource)
 
     _add_aliases(qgs_geojson_layer, resource)
+    _add_lookup_tables(qgs_geojson_layer, resource)
 
     project = QgsProject.instance()
     assert project is not None
@@ -127,6 +181,7 @@ def add_resource_as_geojson_with_style(resource, style_resource):
     _apply_style(style_resource, qgs_geojson_layer)
 
     _add_aliases(qgs_geojson_layer, resource)
+    _add_lookup_tables(qgs_geojson_layer, resource)
 
     project = QgsProject.instance()
     assert project is not None
@@ -197,6 +252,7 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
                 qgs_wfs_layer.loadNamedStyle(tmpfile.fileName())
 
         _add_aliases(qgs_wfs_layer, ngw_vector_layer)
+        _add_lookup_tables(qgs_wfs_layer, ngw_vector_layer)
 
         #summarize extent
         if return_extent:
