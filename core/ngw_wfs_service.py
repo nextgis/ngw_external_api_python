@@ -23,6 +23,8 @@ from qgis.core import QgsDataSourceUri
 
 from .ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
 
+from nextgis_connect.ngw_connection.ngw_connections_manager import NgwConnectionsManager
+
 
 class NGWWfsService(NGWResource):
 
@@ -36,11 +38,11 @@ class NGWWfsService(NGWResource):
             self.wfs.layers = LIST_DICT_TO_LIST_OBJ(self.wfs.layers)
 
     def get_wfs_url(self, layer_keyname):
+        connections_manager = NgwConnectionsManager()
+        connection = connections_manager.connection(self.connection_id)
+
         uri = QgsDataSourceUri()
-        creds = self.get_creds_for_url()
-        if creds[0] and creds[1]:
-            uri.setUsername(creds[0])
-            uri.setPassword(creds[1])
+        uri.setAuthConfigId(connection.auth_config_id)
         uri.setParam('typename', layer_keyname)
         uri.setParam('srsname', 'EPSG:3857')
         uri.setParam('version', 'auto')
@@ -48,20 +50,6 @@ class NGWWfsService(NGWResource):
         uri.setParam('restrictToRequestBBOX', '1')
 
         return uri.uri(True)
-
-    def get_creds_for_url(self) -> Tuple[Optional[str], Optional[str]]:
-        creds = self.get_creds()
-        if not creds[0] or not creds[1]:
-            return creds
-
-        # It seems we should escape only '&' character, but not other reserved
-        # ones in a password. The use of urllib.parse.quote_plus() on a
-        # password leads to WFS authentication errors when other symbols occur
-        # such as '.', '+', '@'. Understand why. What else and how should we
-        # correcyly replace here? Also this approach does not work in QGIS 2.
-        login = creds[0]
-        password = creds[1].replace('&', '%26')
-        return login, password
 
     def get_layers(self):
         return self._json["wfsserver_service"]["layers"]

@@ -17,14 +17,8 @@
  *                                                                         *
  ***************************************************************************/
 """
-from os import path
-from typing import Tuple
 
 from .ngw_resource import NGWResource
-
-from typing import Optional, Tuple
-
-from ..utils import ICONS_DIR
 
 
 class NGWQGISStyle(NGWResource):
@@ -48,11 +42,6 @@ class NGWQGISStyle(NGWResource):
         url = self.get_relative_api_url()
         connection.put(url, params=params)
         self.update()
-
-    def get_creds_for_qml(self) -> Tuple[Optional[str], Optional[str]]:
-        # do not quot this because it is used as header when downloading
-        # qml style
-        return self.get_creds()
 
 
 class NGWQGISVectorStyle(NGWQGISStyle):

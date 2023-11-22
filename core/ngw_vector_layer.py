@@ -23,10 +23,16 @@ from typing import List
 
 
 from .ngw_abstract_vector_resource import NGWAbstractVectorResource
-from .ngw_resource import API_LAYER_EXTENT, NGWResource
+from qgis.core import QgsProviderRegistry
+
+from .ngw_resource import NGWResource, API_LAYER_EXTENT
 from .ngw_qgis_style import NGWQGISVectorStyle
 from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_feature import NGWFeature
+
+from ..utils import ICONS_DIR
+
+from nextgis_connect.ngw_connection.ngw_connections_manager import NgwConnectionsManager
 
 ADD_FEATURE_URL = "/api/resource/%s/feature/"
 DEL_ALL_FEATURES_URL = "/api/resource/%s/feature/"
@@ -45,9 +51,30 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         return self._json.get(self.type_id, {}).get("srs", {}).get("id")
 
     def get_absolute_geojson_url(self):
-        return "{url}/geojson".format(
-            url=self.get_absolute_api_url_with_auth()
-        )
+        connections_manager = NgwConnectionsManager()
+        connection = connections_manager.connection(self.connection_id)
+
+        uri_config = {
+            'path': f'{self.get_absolute_vsicurl_url()}/geojson',
+            'authcfg': connection.auth_config_id
+        }
+        uri_config = {
+            key: value
+            for key, value in uri_config.items()
+            if value is not None
+        }
+
+        provider_registry = QgsProviderRegistry.instance()
+        assert provider_registry is not None
+        metadata_provider = provider_registry.providerMetadata('ogr')
+        assert metadata_provider is not None
+        resource_uri = metadata_provider.encodeUri(uri_config)
+
+        return resource_uri
+
+    def set_icon(self, geometry_type):
+        icon_filename = self.icons.get(geometry_type, 'vector_layer.svg')
+        self.icon_path = path.join(ICONS_DIR, icon_filename)
 
     def get_feature_adding_url(self):
         return ADD_FEATURE_URL % self.common.id

@@ -21,7 +21,6 @@
  ***************************************************************************/
 """
 from .common_plugin_settings import PluginSettings
-from ..core.ngw_connection_settings import NGWConnectionSettings
 
 
 class NgwPluginSettings(PluginSettings):
@@ -31,50 +30,6 @@ class NgwPluginSettings(PluginSettings):
 
     _company_name = 'NextGIS'
     _product = 'NextGIS WEB API'
-
-    @classmethod
-    def remove_ngw_connection(cls, connection_name):
-        settings = cls.get_settings()
-        key = '/connections/' + connection_name
-        settings.remove(key)
-
-    @classmethod
-    def get_ngw_connection(cls, connection_name):
-        settings = cls.get_settings()
-        key = '/connections/' + connection_name
-
-        return NGWConnectionSettings(
-            connection_name,
-            settings.value(key + '/server_url', '', type=str),
-            settings.value(key + '/username', '', type=str),
-            settings.value(key + '/password', '', type=str)
-        )
-
-    @classmethod
-    def save_ngw_connection(cls, connection_settings):
-        settings = cls.get_settings()
-        key = '/connections/' + connection_settings.connection_name
-        settings.setValue(key + '/server_url', connection_settings.server_url)
-        settings.setValue(key + '/username', connection_settings.username)
-        settings.setValue(key + '/password', connection_settings.password)
-
-    @classmethod
-    def get_selected_ngw_connection_name(cls):
-        settings = cls.get_settings()
-        return settings.value('/ui/selectedConnection', '', type=str)
-
-    @classmethod
-    def set_selected_ngw_connection_name(cls, connection_name):
-        settings = cls.get_settings()
-        settings.setValue('/ui/selectedConnection', connection_name)
-
-    @classmethod
-    def get_ngw_connection_names(cls):
-        settings = cls.get_settings()
-        settings.beginGroup('/connections')
-        connections = settings.childGroups()
-        settings.endGroup()
-        return connections
 
     @classmethod
     def set_sanitize_rename_fields(cls, value):

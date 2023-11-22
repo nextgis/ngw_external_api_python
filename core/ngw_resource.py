@@ -135,15 +135,8 @@ class NGWResource:
         base_url = self._res_factory.connection.server_url
         return urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
 
-    def get_absolute_api_url_with_auth(self) -> str:
-        base_url = self._res_factory.connection.server_url
-        creds = self.get_creds()
-        if creds[0] and creds[1]:
-            login = urllib.parse.quote_plus(creds[0])
-            password = urllib.parse.quote_plus(creds[1])
-            base_url = base_url.replace('://', f'://{login}:{password}@')
-        url = urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
-        return f'/vsicurl/{url}'
+    def get_absolute_vsicurl_url(self) -> str:
+        return f'/vsicurl/{self.get_absolute_api_url()}'
 
     def get_relative_url(self) -> str:
         return RESOURCE_URL(self.common.id)
@@ -151,8 +144,9 @@ class NGWResource:
     def get_relative_api_url(self) -> str:
         return API_RESOURCE_URL(self.common.id)
 
-    def get_creds(self) -> Tuple[Optional[str], Optional[str]]:
-        return self._res_factory.connection.get_auth()
+    @property
+    def connection_id(self) -> str:
+        return self._res_factory.connection.connection_id
 
     @classmethod
     def get_api_collection_url(cls) -> str:

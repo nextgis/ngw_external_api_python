@@ -20,9 +20,8 @@
 import json
 import time
 import urllib.parse
-from typing import Optional, Tuple
 
-from typing import Tuple, Dict, Optional, Any
+from typing import Dict, Optional, Any
 
 from qgis.PyQt.QtCore import (
     QBuffer, QByteArray, QEventLoop, QFile, QIODevice, QObject, QTimer, QUrl
@@ -32,12 +31,15 @@ from qgis.PyQt.QtNetwork import QNetworkRequest
 from qgis.core import QgsNetworkAccessManager
 
 from ..core.ngw_error import NGWError
-from ..core.ngw_connection_settings import NGWConnectionSettings
 
 from ..utils import log
 
 from .compat_qgis import CompatQgis
 from .compat_qgis import CompatQt
+
+from nextgis_connect.ngw_connection.ngw_connections_manager import (
+    NgwConnectionsManager
+)
 
 
 UPLOAD_FILE_URL = '/api/component/file_upload/'
@@ -52,32 +54,29 @@ class QgsNgwConnection(QObject):
     """NextGIS Web API connection"""
     AbilityBaseMap = list(range(1))
 
-    server_url: str
-    __auth: Tuple[str, str]
+    __connection_id: str
+
     __ngw_components: Optional[Dict]
 
     def __init__(
         self,
-        conn_settings: NGWConnectionSettings,
+        connection_id: str,
         parent: Optional[QObject] = None
     ) -> None:
         super().__init__(parent)
-
-        self.set_from_settings(conn_settings)
+        self.__connection_id = connection_id
 
         self.__ngw_components = None
 
-    def set_from_settings(self, conn_settings: NGWConnectionSettings):
-        self.server_url = conn_settings.server_url
-        self.set_auth(conn_settings.username, conn_settings.password)
+    @property
+    def server_url(self) -> str:
+        connections_manager = NgwConnectionsManager()
+        connection = connections_manager.connection(self.__connection_id)
+        return connection.url
 
-    def set_auth(self, username: Optional[str], password: Optional[str]):
-        username = username if username is not None else ""
-        password = password if password is not None else ""
-        self.__auth = (username, password)
-
-    def get_auth(self) -> Tuple[str, str]:
-        return self.__auth
+    @property
+    def connection_id(self) -> str:
+        return self.__connection_id
 
     def _get_json_param(self, j: Dict, key: str, def_val: Any):
         return j.get(key, def_val)
@@ -255,13 +254,12 @@ class QgsNgwConnection(QObject):
 
         req = QNetworkRequest(QUrl(url))
 
-        if all(map(len, self.__auth)):
-            authstr = ('%s:%s' % self.__auth).encode('utf-8')
-            authstr = QByteArray(authstr).toBase64()
-            authstr = QByteArray(('Basic ').encode('utf-8')).append(authstr)
-            req.setRawHeader(("Authorization").encode('utf-8'), authstr)
+        connections_manager = NgwConnectionsManager()
+        connection = connections_manager.connection(self.__connection_id)
+        assert connection is not None
+        connection.update_network_request(req)
 
-        if headers is not None: # add custom headers
+        if headers is not None:  # add custom headers
             for k, v in list(headers.items()):
                 hkey = k.encode('utf-8')
                 hval = v.encode('utf-8')

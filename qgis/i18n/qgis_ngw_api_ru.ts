@@ -2,92 +2,6 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="ru_RU">
 <context>
-    <name>Dialog</name>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="153"/>
-        <source>connection addres (e.g. mygis.nextgis.com)</source>
-        <translation>адрес подключения (например, mygis.nextgis.com)</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="89"/>
-        <source>As guest</source>
-        <translation>Как гость</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="195"/>
-        <source>Connection testing</source>
-        <translation>Проверка подключения</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="82"/>
-        <source>Password</source>
-        <translation>Пароль</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="75"/>
-        <source>administrator</source>
-        <translation>administrator</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="32"/>
-        <source>Create Web GIS connection</source>
-        <translation>Создание подключения к Веб ГИС</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="44"/>
-        <source>User</source>
-        <translation>Пользователь</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="52"/>
-        <source>Login</source>
-        <translation>Логин</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="218"/>
-        <source>&lt;span style=&quot;color:#ff0000;&quot;&gt;This field is required&lt;/span&gt;</source>
-        <translation>&lt;span style=&quot;color:#ff0000;&quot;&gt;Обязательное поле&lt;/span&gt;</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="166"/>
-        <source>URL&lt;span style=&quot;color:#ff0000;&quot;&gt;*&lt;/span&gt;</source>
-        <translation>URL&lt;span style=&quot;color:#ff0000;&quot;&gt;*&lt;/span&gt;</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog_base.ui" line="211"/>
-        <source>Name&lt;span style=&quot; color:#ff0000;&quot;&gt;*&lt;/span&gt;</source>
-        <translation>Название&lt;span style=&quot; color:#ff0000;&quot;&gt;*&lt;/span&gt;</translation>
-    </message>
-</context>
-<context>
-    <name>NGWConnectionEditDialog</name>
-    <message>
-        <location filename="../ngw_connection_edit_dialog.py" line="291"/>
-        <source>Connection test...</source>
-        <translation>Проверка подключения...</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog.py" line="306"/>
-        <source>Specified URL Web GIS not found.</source>
-        <translation>По заданному URL Веб ГИС не найдена.</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog.py" line="297"/>
-        <source>Connection successful!</source>
-        <translation>Успешное подключение!</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog.py" line="102"/>
-        <source>https://docs.nextgis.com/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection</source>
-        <translation>https://docs.nextgis.ru/docs_ngcom/source/ngqgis_connect.html#ngcom-ngqgis-connect-connection</translation>
-    </message>
-    <message>
-        <location filename="../ngw_connection_edit_dialog.py" line="102"/>
-        <source>Where do I get these?</source>
-        <translation>Где взять имя пользователя и пароль?</translation>
-    </message>
-</context>
-<context>
     <name>NGWUpdateVectorLayer</name>
     <message>
         <location filename="../ngw_resource_model_4qgis.py" line="1406"/>
@@ -189,12 +103,12 @@
 <context>
     <name>QgsNgwConnection</name>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="460"/>
+        <location filename="../qgis_ngw_connection.py" line="458"/>
         <source>File is too large for uploading</source>
         <translation>Загружаемый файл слишком большой</translation>
     </message>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="326"/>
+        <location filename="../qgis_ngw_connection.py" line="324"/>
         <source>Connection closed by QGIS. Increase timeout (Settings -&gt; Options -&gt; Network) to 300000 and retry.</source>
         <translation>Соединение прервано QGIS. Увеличьте таймаут для сетевых запросов (Установки -&gt; Параметры -&gt; Сеть) до 300000 и повторите попытку.</translation>
     </message>
