@@ -291,7 +291,10 @@ class QgsNgwConnection(QObject):
         elif method == "POST":
             rep = nam.post(req, iodevice)
         elif method == "DELETE":
-            rep = nam.deleteResource(req)
+            if iodevice is not None:
+                rep = nam.sendCustomRequest(req, 'DELETE'.encode('utf-8'), iodevice)
+            else:
+                rep = nam.deleteResource(req)
         else:
             rep = nam.sendCustomRequest(req, method.encode('utf-8'), iodevice)
 
