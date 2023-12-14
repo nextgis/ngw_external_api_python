@@ -50,6 +50,8 @@ class ResourceCreator():
                 result['id']
             )
         )
+        parent_ngw_resource.common.children = True
+
         return ngw_resource
 
     @staticmethod
@@ -92,6 +94,8 @@ class ResourceCreator():
             result['id']
         )
 
+        parent_ngw_resource.common.children = True
+
         return NGWVectorLayer(parent_ngw_resource._res_factory, ngw_resource)
 
     @staticmethod
@@ -127,6 +131,7 @@ class ResourceCreator():
             connection,
             result['id']
         )
+        parent_ngw_resource.common.children = True
 
         return NGWRasterLayer(parent_ngw_resource._res_factory, ngw_resource)
 
@@ -173,5 +178,41 @@ class ResourceCreator():
             ngw_group_resource._res_factory,
             NGWResource.receive_resource_obj(connection, result['id'])
         )
+        ngw_group_resource.common.children = True
+
+        return ngw_resource
+
+    @staticmethod
+    def create_lookup_table(
+        name: str,
+        items: Dict[str, str],
+        parent_group_resource: NGWGroupResource,
+    ) -> NGWResource:
+        connection = parent_group_resource._res_factory.connection
+        url = parent_group_resource.get_api_collection_url()
+
+        params = dict(
+            resource=dict(
+                cls='lookup_table',
+                display_name=name,
+                parent=dict(
+                    id=parent_group_resource.common.id
+                )
+            ),
+            lookup_table=dict(
+                items=items
+            )
+        )
+
+        result = connection.post(url, params=params)
+
+        ngw_resource = NGWResource(
+            parent_group_resource._res_factory,
+            NGWResource.receive_resource_obj(
+                connection,
+                result['id']
+            )
+        )
+        parent_group_resource.common.children = True
 
         return ngw_resource

@@ -115,10 +115,15 @@ class NGWResourceModelJob(QObject):
             id += 1
         return new_name if new_name_with_space is None else new_name_with_space
 
-    def unique_resource_name(self, resource_name, ngw_group):
-        chd_names = [ch.common.display_name for ch in ngw_group.get_children()]
+    def unique_resource_name(
+        self, resource_name: str, ngw_group: NGWGroupResource
+    ) -> str:
+        children_names = [
+            children.common.display_name
+            for children in ngw_group.get_children()
+        ]
         unique_resource_name = self.generate_unique_name(
-            resource_name, chd_names
+            resource_name, children_names
         )
         return unique_resource_name
 

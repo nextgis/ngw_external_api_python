@@ -244,7 +244,7 @@ class QgsNgwConnection(QObject):
             log(u"Request\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
                     method,
                     url,
-                    #type(json_data),
+                    # type(json_data),
                     json_data.decode('unicode_escape') if json_data is not None else None,
                     headers,
                     filename.encode('utf-8') if filename else '-',

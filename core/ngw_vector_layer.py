@@ -20,6 +20,8 @@
 import datetime
 
 from typing import List
+from os import path
+from typing import List, Dict, Any
 
 
 from .ngw_abstract_vector_resource import NGWAbstractVectorResource
@@ -222,30 +224,22 @@ class NGWVectorLayer(NGWAbstractVectorResource):
 
         return ngw_resource
 
-    def add_aliases(self, aliases):
-        flayer_dict = self._json.get("feature_layer")
-        # if flayer_dict is None:
-        #     raise NGWError('Cannot add alias for resource. There is no feature_layer in Resource JSON')
+    def update_fields_params(self, fields_params: Dict[str, Dict[str, Any]]):
+        flayer_dict = self._json.get('feature_layer')
+        fields_list = flayer_dict.get('fields')
 
-        fields_list = flayer_dict.get("fields")
-        # if fields_list is None:
-        #     raise NGWError('Cannot add alias for resource. There is no feature_layer-fields in Resource JSON')
-
-        aliases_keynames = list(aliases.keys())
-
-        for field_index in range(len(fields_list)):
-            field_keyname = fields_list[field_index]["keyname"]
-            if field_keyname in aliases_keynames:
-                flayer_dict["fields"][field_index]["display_name"] = aliases[
-                    field_keyname
-                ]
+        for field in fields_list:
+            field_keyname = field['keyname']
+            if field_keyname not in fields_params:
+                continue
+            field.update(fields_params[field_keyname])
 
         connection = self._res_factory.connection
         url = self.get_relative_api_url()
 
         params = dict(feature_layer=flayer_dict)
 
-        res = connection.put(url, params=params)
+        connection.put(url, params=params)
 
         self.update()
 
