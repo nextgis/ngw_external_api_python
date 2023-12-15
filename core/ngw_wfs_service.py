@@ -49,7 +49,7 @@ class NGWWfsService(NGWResource):
         uri.setParam('url', self.get_absolute_api_url() + '/wfs')
         uri.setParam('restrictToRequestBBOX', '1')
 
-        return uri.uri(True)
+        return uri.uri(False)
 
     def get_layers(self):
         return self._json["wfsserver_service"]["layers"]
