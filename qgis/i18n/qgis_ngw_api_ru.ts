@@ -4,12 +4,12 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1406"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1540"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1418"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1552"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -17,7 +17,7 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1182"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1321"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
@@ -25,79 +25,87 @@
 <context>
     <name>QGISResourceJob</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="500"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="513"/>
         <source>We&apos;ve renamed fields {0} for layer &apos;{1}&apos;. Style for this layer may become invalid.</source>
-        <translation>Следующие поля переименованы {0} для слоя '{1}'. Стиль для этого слоя может стать некорректным.</translation>
+        <translation>Следующие поля переименованы {0} для слоя &apos;{1}&apos;. Стиль для этого слоя может стать некорректным.</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="574"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="587"/>
         <source>We&apos;ve excluded features with id {0} for layer &apos;{1}&apos;. Reason: invalid geometry.</source>
-        <translation>Объекты с id {0} слоя '{1}' были исключены. Причина: неправильная геометрия.</translation>
+        <translation>Объекты с id {0} слоя &apos;{1}&apos; были исключены. Причина: неправильная геометрия.</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="223"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="212"/>
         <source>create WMS connection</source>
         <translation>создание соединения WMS</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="257"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="246"/>
         <source>creating WMS layer</source>
         <translation>создание слоя WMS</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="317"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="312"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="361"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="369"/>
         <source>adding aliases</source>
         <translation>добавление псевдонимов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="364"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="374"/>
         <source>finishing</source>
         <translation>завершение</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="371"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="380"/>
         <source>preparing</source>
         <translation>подготовка</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="724"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="719"/>
         <source>Style for &quot;{}&quot;</source>
         <translation>Стиль для &quot;{}&quot;</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="836"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="831"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="781"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="776"/>
         <source>uploading ({}%)</source>
         <translation>загрузка ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="408"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="421"/>
         <source>checking geometry ({}%)</source>
         <translation>проверка геометрии ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="567"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="580"/>
         <source>preparing layer ({}%)</source>
         <translation>подготовка слоя ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="659"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="672"/>
         <source>Feature {} haven&apos;t been added. Please check geometry</source>
         <translation>Объект {} не был добавлен. Пожалуйста, проверьте геометрию</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="848"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="843"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
+    </message>
+</context>
+<context>
+    <name>QGISResourcesUploader</name>
+    <message>
+        <location filename="../ngw_resource_model_4qgis.py" line="1068"/>
+        <source>A group tree is being created</source>
+        <translation>Создаётся дерево ресурсов</translation>
     </message>
 </context>
 <context>
