@@ -103,7 +103,7 @@ def get_wkt(qgis_geometry):
     return wkt
 
 
-def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer) -> Qgis.WkbType:
+def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer):
     MAPINFO_DRIVER = 'MapInfo File'
     if qgs_vector_layer.storageType() != MAPINFO_DRIVER:
         return qgs_vector_layer.wkbType()
@@ -139,7 +139,7 @@ def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer) -> Qgis.WkbType:
     if has_z:
         wkb_type |= ogr.wkb25DBit
 
-    return Qgis.WkbType(wkb_type)
+    return wkb_type
 
 
 class QGISResourceJob(NGWResourceModelJob):
