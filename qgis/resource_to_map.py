@@ -61,7 +61,8 @@ def _add_lookup_tables(
     lookup_table_id_for_field: Dict[str, int] = {}
 
     for field_name, field_def in list(ngw_vector_layer.field_defs.items()):
-        if (lookup_table := field_def.get('lookup_table')) is None:
+        lookup_table = field_def.get('lookup_table')
+        if lookup_table is None:
             continue
         lookup_table_id_for_field[field_name] = lookup_table['id']
 
@@ -78,7 +79,8 @@ def _add_lookup_tables(
         except Exception:
             continue
 
-        if (lookup_table := result.get('lookup_table')) is None:
+        lookup_table = result.get('lookup_table')
+        if lookup_table is None:
             continue
 
         lookup_tables[lookup_table_id] = [
