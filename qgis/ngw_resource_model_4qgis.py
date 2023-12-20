@@ -31,13 +31,15 @@ except Exception:
 from collections import Counter
 from typing import Optional, List, cast
 
+from osgeo import ogr
+
 from qgis.PyQt.QtCore import QCoreApplication
 
 from qgis.core import (
     QgsProject, QgsMapLayer, QgsVectorLayer, QgsRasterLayer, QgsFeature,
     QgsLayerTreeLayer, QgsLayerTreeGroup, QgsVectorFileWriter,
     QgsLayerTreeNode, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
-    QgsProviderRegistry, QgsPluginLayer
+    QgsProviderRegistry, QgsPluginLayer, Qgis
 )
 from qgis.gui import QgsFileWidget
 
@@ -99,6 +101,45 @@ def get_wkt(qgis_geometry):
         wkt = wkt.replace(*wkt_fixes[wkb_type])
 
     return wkt
+
+
+def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer) -> Qgis.WkbType:
+    MAPINFO_DRIVER = 'MapInfo File'
+    if qgs_vector_layer.storageType() != MAPINFO_DRIVER:
+        return qgs_vector_layer.wkbType()
+
+    layer_path = qgs_vector_layer.source().split('|')[0]
+    driver: ogr.Driver = ogr.GetDriverByName(MAPINFO_DRIVER)
+    datasource: Optional[ogr.DataSource] = driver.Open(layer_path)
+    assert datasource is not None
+    layer: Optional[ogr.Layer] = datasource.GetLayer()
+    assert layer is not None
+
+    wkb_type: int = layer.GetGeomType()
+    wkb_type_2d: int = (wkb_type & ~ogr.wkb25DBit) % 1000
+
+    is_multi = False
+    has_z = False
+
+    for feature in layer:
+        geometry: Optional[ogr.Geometry] = feature.GetGeometryRef()
+        if geometry is None:
+            continue
+
+        feature_wkb_type = geometry.GetGeometryType()
+        feature_wkb_type_2d = (feature_wkb_type & ~ogr.wkb25DBit) % 1000
+        is_multi = is_multi or wkb_type_2d + 3 == feature_wkb_type_2d
+        has_z = has_z or bool(feature_wkb_type & ogr.wkb25DBit)
+
+        if is_multi and has_z:
+            break
+
+    if is_multi:
+        wkb_type += 3
+    if has_z:
+        wkb_type |= ogr.wkb25DBit
+
+    return Qgis.WkbType(wkb_type)
 
 
 class QGISResourceJob(NGWResourceModelJob):
@@ -591,7 +632,7 @@ class QGISResourceJob(NGWResourceModelJob):
             vectorFileName=tmp_gpkg_path,
             fileEncoding='UTF-8',
             fields=qgs_vector_layer.fields(),
-            geometryType=qgs_vector_layer.wkbType(),
+            geometryType=get_real_wkb_type(qgs_vector_layer),
             srs=destination_srs,
             driverName='GPKG',
             layerOptions=(

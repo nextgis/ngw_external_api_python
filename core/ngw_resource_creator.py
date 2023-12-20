@@ -50,9 +50,13 @@ class ResourceCreator():
         return ngw_resource
 
     @staticmethod
-    def create_vector_layer(parent_ngw_resource, filename, layer_name,
-        upload_callback, create_callback,
-        geom_type=None, geom_is_multi=None, geom_has_z=None):
+    def create_vector_layer(
+        parent_ngw_resource,
+        filename,
+        layer_name,
+        upload_callback,
+        create_callback
+    ) -> NGWVectorLayer:
         connection = parent_ngw_resource._res_factory.connection
 
         # Use tus uploading for files by default.
@@ -69,19 +73,12 @@ class ResourceCreator():
             vector_layer=dict(
                 srs=dict(id=3857),
                 source=vector_file_desc,
-
-                # Should force geometry type in case of 0 features: NGW defines geom type by first feature.
-                # Force only for QGIS >= 3 because QGIS 2 defines geometry type of Shapefile incorrectly.
-                # TODO: check that for NGW < 3.8.0 it is ok to pass these parameters.
-                cast_geometry_type=geom_type,
-                cast_is_multi=geom_is_multi,
-                cast_has_z=geom_has_z,
                 fix_errors='LOSSY',
                 skip_errors=True
             )
         )
 
-        create_callback() # show "Create" status
+        create_callback()  # show "Create" status
 
         # Use "lunkwill" layer creation request (specific type of long request) by default.
         #result = connection.post(url, params=params)
