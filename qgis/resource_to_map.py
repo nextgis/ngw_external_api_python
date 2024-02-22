@@ -33,6 +33,7 @@ from ..core.ngw_resource import API_RESOURCE_URL
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_wfs_service import NGWWfsService
+from ..core.ngw_ogcf_service import NGWOgcfService
 from ..core.ngw_qgis_style import NGWQGISStyle
 from .qgis_ngw_connection import QgsNgwConnection
 
@@ -232,31 +233,17 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
 
         ngw_vector_layer = wfs_resource.get_source_layer(wfs_layer.resource_id)
 
-        # Add vector style. Select the first QGIS style if several.
-        ngw_style_res = None
+        # # Add vector style. Select the first QGIS style if several.
         vec_layer_children = ngw_vector_layer.get_children()
         for child in vec_layer_children:
             if isinstance(child, NGWQGISStyle):
-                ngw_style_res = child
+                _apply_style(child, qgs_wfs_layer)
                 break
-        if ngw_style_res is not None:
-            loop = QEventLoop()
-            nam = QNetworkAccessManager()
-            nam.finished.connect(loop.quit)
-            reply = nam.get(QNetworkRequest(
-                QUrl(ngw_style_res.download_qml_url())
-            ))
-            loop.exec_()
-            tmpfile = QTemporaryFile()
-            if tmpfile.open(QIODevice.OpenModeFlag.WriteOnly):
-                tmpfile.write(reply.readAll())
-                tmpfile.close()
-                qgs_wfs_layer.loadNamedStyle(tmpfile.fileName())
 
         _add_aliases(qgs_wfs_layer, ngw_vector_layer)
         _add_lookup_tables(qgs_wfs_layer, ngw_vector_layer)
 
-        #summarize extent
+        # summarize extent
         if return_extent:
             _summ_extent(summary_extent, qgs_wfs_layer)
 
@@ -269,12 +256,42 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
         return summary_extent
 
 
+def add_ogcf_resource(ogcf_resource: NGWOgcfService):
+    if not isinstance(ogcf_resource, NGWOgcfService):
+        raise NGWError('Resource type is not OGCService!')
+
+    project = QgsProject.instance()
+    assert project is not None
+    layer_tree_root = project.layerTreeRoot()
+    assert layer_tree_root is not None
+    layers_group = \
+        layer_tree_root.insertGroup(0, ogcf_resource.common.display_name)
+    assert layers_group is not None
+
+    # Add layers
+    for ogc_layer in ogcf_resource.ogcf.layers:
+        url = ogcf_resource.get_ogcf_url(ogc_layer.keyname)
+        qgis_ogc_layer = QgsVectorLayer(url, ogc_layer.display_name, 'OAPIF')
+
+        layer_resource = ogcf_resource._res_factory.get_resource(ogc_layer.resource_id)
+
+        # # Add vector style. Select the first QGIS style if several.
+        vec_layer_children = layer_resource.get_children()
+        for child in vec_layer_children:
+            if isinstance(child, NGWQGISStyle):
+                _apply_style(child, qgis_ogc_layer)
+                break
+
+        _add_aliases(qgis_ogc_layer, layer_resource)
+        _add_lookup_tables(qgis_ogc_layer, layer_resource)
+
+        project.addMapLayer(qgis_ogc_layer, addToLegend=False)
+        layers_group.addLayer(qgis_ogc_layer)
+
+
 def _summ_extent(self, summary_extent, layer):
     layer_extent = layer.extent()
 
     if layer_extent.isEmpty() and layer.type() == QgsMapLayer.VectorLayer:
         layer.updateExtents()
         layer_extent = layer.extent()
-
-    if layer_extent.isNull():
-        return

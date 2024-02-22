@@ -1302,7 +1302,7 @@ class NGWCreateWMSForVector(QGISResourceJob):
                 self.ngw_style_id = ngw_style.common.id
 
         ngw_wms_service_name = self.unique_resource_name(
-            self.ngw_layer.common.display_name + "-wms-service",
+            self.ngw_layer.common.display_name + " — WMS service",
             self.ngw_group_resource)
 
         ngw_wfs_resource = NGWWmsService.create_in_group(

@@ -30,6 +30,7 @@ from qgis.PyQt.QtCore import (
 
 from ..core.ngw_error import NGWError
 from ..core.ngw_resource import NGWResource
+from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_group_resource import NGWGroupResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
@@ -278,26 +279,62 @@ class NGWResourceDelete(NGWResourceModelJob):
         self.putDeletedResourceToResult(self.ngw_resource)
 
 
-class NGWCreateWFSForVector(NGWResourceModelJob):
-    def __init__(self, ngw_vector_layer, ngw_group_resource, ret_obj_num):
-        NGWResourceModelJob.__init__(self)
+class NGWCreateWfsOrOgcfService(NGWResourceModelJob):
+    def __init__(
+        self,
+        service_type: str,
+        ngw_vector_layer: NGWVectorLayer,
+        ngw_group_resource: NGWGroupResource,
+        max_features: int
+    ):
+        super().__init__()
+        assert service_type in ('WFS', 'OGC API - Features')
+        self.service_type = service_type
         self.ngw_vector_layer = ngw_vector_layer
         self.ngw_group_resource = ngw_group_resource
-        self.ret_obj_num = ret_obj_num
+        self.ret_obj_num = max_features
 
     def _do(self):
+        service_name: str = self.ngw_vector_layer.common.display_name
+        service_name += f' — {self.service_type} service'
         ngw_wfs_service_name = self.unique_resource_name(
-            self.ngw_vector_layer.common.display_name + "-wfs-service",
-            self.ngw_group_resource)
+            service_name,
+            self.ngw_group_resource
+        )
 
-        ngw_wfs_resource = ResourceCreator.create_wfs_service(
+        service_resource = ResourceCreator.create_wfs_or_ogcf_service(
+            self.service_type,
             ngw_wfs_service_name,
             self.ngw_group_resource,
             [self.ngw_vector_layer],
             self.ret_obj_num
         )
 
-        self.putAddedResourceToResult(ngw_wfs_resource, is_main=True)
+        self.putAddedResourceToResult(service_resource, is_main=True)
+
+
+class NGWCreateWfsService(NGWCreateWfsOrOgcfService):
+    def __init__(
+        self,
+        ngw_vector_layer: NGWVectorLayer,
+        ngw_group_resource: NGWGroupResource,
+        max_features: int
+    ):
+        super().__init__(
+            'WFS', ngw_vector_layer, ngw_group_resource, max_features
+        )
+
+
+class NGWCreateOgcfService(NGWCreateWfsOrOgcfService):
+    def __init__(
+        self,
+        ngw_vector_layer: NGWVectorLayer,
+        ngw_group_resource: NGWGroupResource,
+        max_features: int
+    ):
+        super().__init__(
+            'OGC API - Features', ngw_vector_layer, ngw_group_resource, max_features
+        )
 
 
 class NGWCreateMapForStyle(NGWResourceModelJob):

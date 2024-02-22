@@ -17,11 +17,14 @@
  *                                                                         *
  ***************************************************************************/
 """
+from typing import Any, Dict, Iterable
+
 from .ngw_resource import NGWResource
 from .ngw_group_resource import NGWGroupResource
 from .ngw_vector_layer import NGWVectorLayer
 from .ngw_raster_layer import NGWRasterLayer
 from .ngw_wfs_service import NGWWfsService
+from .ngw_ogcf_service import NGWOgcfService
 
 
 class ResourceCreator():
@@ -128,7 +131,15 @@ class ResourceCreator():
         return NGWRasterLayer(parent_ngw_resource._res_factory, ngw_resource)
 
     @staticmethod
-    def create_wfs_service(name, ngw_group_resource, ngw_layers, ret_obj_num):
+    def create_wfs_or_ogcf_service(
+        service_type: str,
+        service_name: str,
+        ngw_group_resource: NGWGroupResource,
+        ngw_layers: Iterable[NGWVectorLayer],
+        max_features: int = 1000
+    ):
+        assert service_type in ('WFS', 'OGC API - Features')
+
         connection = ngw_group_resource._res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
 
@@ -138,31 +149,29 @@ class ResourceCreator():
                 display_name=ngw_layer.common.display_name,
                 keyname="ngw_id_%d" % ngw_layer.common.id,
                 resource_id=ngw_layer.common.id,
-                maxfeatures=ret_obj_num
+                maxfeatures=max_features
             )
             params_layers.append(params_layer)
 
-        params = dict(
+        ngw_type = NGWWfsService if service_type == 'WFS' else NGWOgcfService
+
+        params: Dict[str, Any] = dict(
             resource=dict(
-                cls=NGWWfsService.type_id,
-                display_name=name,
+                cls=ngw_type.type_id,
+                display_name=service_name,
                 parent=dict(
                     id=ngw_group_resource.common.id
                 )
-            ),
-            wfsserver_service=dict(
-                layers=params_layers
             )
         )
+        params_key = 'layers' if service_type == 'WFS' else 'collections'
+        params[ngw_type.type_id] = {params_key: params_layers}
 
         result = connection.post(url, params=params)
 
-        ngw_resource = NGWWfsService(
+        ngw_resource = ngw_type(
             ngw_group_resource._res_factory,
-            NGWResource.receive_resource_obj(
-                connection,
-                result['id']
-            )
+            NGWResource.receive_resource_obj(connection, result['id'])
         )
 
         return ngw_resource

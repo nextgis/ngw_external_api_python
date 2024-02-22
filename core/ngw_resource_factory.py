@@ -32,6 +32,7 @@ from .ngw_raster_layer import NGWRasterLayer
 from .ngw_raster_style import NGWRasterStyle
 from .ngw_group_resource import NGWGroupResource
 from .ngw_wfs_service import NGWWfsService
+from .ngw_ogcf_service import NGWOgcfService
 from .ngw_resource import NGWResource
 from .ngw_base_map import NGWBaseMap
 
@@ -49,6 +50,7 @@ class NGWResourceFactory:
         self.__res_types_register = {
             NGWResource.type_id: NGWResource,
             NGWWfsService.type_id: NGWWfsService,
+            NGWOgcfService.type_id: NGWOgcfService,
             NGWWmsService.type_id: NGWWmsService,
             NGWGroupResource.type_id: NGWGroupResource,
             NGWVectorLayer.type_id: NGWVectorLayer,
