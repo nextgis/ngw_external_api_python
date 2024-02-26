@@ -35,10 +35,11 @@ from .ngw_wfs_service import NGWWfsService
 from .ngw_ogcf_service import NGWOgcfService
 from .ngw_resource import NGWResource
 from .ngw_base_map import NGWBaseMap
+from .ngw_postgis_layer import NGWPostgisLayer
 
 from ..qgis.qgis_ngw_connection import QgsNgwConnection
 
-API_NGW_VERSION = '/api/component/pyramid/pkg_version'
+API_NGW_VERSION = "/api/component/pyramid/pkg_version"
 
 
 class NGWResourceFactory:
@@ -63,6 +64,7 @@ class NGWResourceFactory:
             NGWWmsConnection.type_id: NGWWmsConnection,
             NGWWmsLayer.type_id: NGWWmsLayer,
             NGWBaseMap.type_id: NGWBaseMap,
+            NGWPostgisLayer.type_id: NGWPostgisLayer,
         }
         self.__default_type = NGWResource.type_id
         self.__conn = ngw_connection
@@ -77,9 +79,10 @@ class NGWResourceFactory:
 
     def get_resource_by_json(self, res_json) -> NGWResource:
         resource_type: Type[NGWResource]
-        if res_json['resource']['cls'] in self.__res_types_register:
-            resource_type = \
-                self.__res_types_register[res_json['resource']['cls']]
+        if res_json["resource"]["cls"] in self.__res_types_register:
+            resource_type = self.__res_types_register[
+                res_json["resource"]["cls"]
+            ]
         else:
             resource_type = self.__res_types_register[self.__default_type]
         return resource_type(self, res_json)

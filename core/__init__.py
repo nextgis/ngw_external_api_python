@@ -13,6 +13,7 @@ from .ngw_ogcf_service import NGWOgcfService
 from .ngw_wms_connection import NGWWmsConnection
 from .ngw_wms_layer import NGWWmsLayer
 from .ngw_wms_service import NGWWmsService
+from .ngw_postgis_layer import NGWPostgisLayer
 
 from .ngw_error import NGWError
 
@@ -32,8 +33,7 @@ __all__ = [
     "NGWOgcfService",
     "NGWWmsLayer",
     "NGWWmsService",
-
+    "NGWPostgisLayer",
     "NGWAttachment",
-
     "NGWError",
 ]
