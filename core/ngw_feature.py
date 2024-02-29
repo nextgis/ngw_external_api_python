@@ -17,8 +17,14 @@
  *                                                                         *
  ***************************************************************************/
 """
-FEATURE_URL = lambda res_id, feature_id: '/api/resource/%d/feature/%d' % (res_id, feature_id)
-FEATURE_ATTACHMENTS_URL = lambda res_id, feature_id: '/api/resource/%d/feature/%d/attachment/' % (res_id, feature_id)
+
+
+def FEATURE_URL(res_id, feature_id):
+    return "/api/resource/%d/feature/%d" % (res_id, feature_id)
+
+
+def FEATURE_ATTACHMENTS_URL(res_id, feature_id):
+    return "/api/resource/%d/feature/%d/attachment/" % (res_id, feature_id)
 
 
 # Need refactoring!
@@ -32,21 +38,27 @@ class NGWFeature:
 
     def get_feature_url(self):
         return FEATURE_URL(self.ngw_vector_layer.common.id, self.id)
-    
+
     def get_feature_attachmets_url(self):
-        return FEATURE_ATTACHMENTS_URL(self.ngw_vector_layer.common.id, self.id)
-    
+        return FEATURE_ATTACHMENTS_URL(
+            self.ngw_vector_layer.common.id, self.id
+        )
+
     def get_attachments(self):
-        return self.ngw_vector_layer._res_factory.connection.get(self.get_feature_attachmets_url())
-    
+        return self.ngw_vector_layer._res_factory.connection.get(
+            self.get_feature_attachmets_url()
+        )
+
     def link_attachment(self, uploaded_file_info):
-        json_data= dict(file_upload = uploaded_file_info)
-        res = self.ngw_vector_layer._res_factory.connection.post(self.get_feature_attachmets_url(), json=json_data)
-        return res['id']
+        json_data = dict(file_upload=uploaded_file_info)
+        res = self.ngw_vector_layer._res_factory.connection.post(
+            self.get_feature_attachmets_url(), json=json_data
+        )
+        return res["id"]
 
     def asDict(self):
         feature_dict = {}
-        
+
         if self.id is not None:
             feature_dict["id"] = self.id
 

@@ -59,8 +59,8 @@ class NGWConnectionSettings:
     def equalWoProtocol(self, other):
         if other is None:
             return False
-        url1 = self.server_url.replace('https://', '').replace('http://', '')
-        url2 = other.server_url.replace('https://', '').replace('http://', '')
+        url1 = self.server_url.replace("https://", "").replace("http://", "")
+        url2 = other.server_url.replace("https://", "").replace("http://", "")
         if url1 != url2:
             return False
         if self.username != other.username:

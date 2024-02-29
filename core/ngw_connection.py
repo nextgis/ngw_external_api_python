@@ -17,22 +17,22 @@
  *                                                                         *
  ***************************************************************************/
 """
-import os
-from io import FileIO
 import json
-import requests
+import os
 import urllib.parse
 from base64 import b64encode
-from requests.utils import to_native_string
-from typing import Tuple, Optional
+from io import FileIO
+from typing import Optional, Tuple
 
+import requests
+from requests.utils import to_native_string
+
+from ..utils import log
 from .ngw_connection_settings import NGWConnectionSettings
 from .ngw_error import NGWError
 
-from ..utils import log
-
-UPLOAD_FILE_URL = '/api/component/file_upload/upload'
-GET_VERSION_URL = '/api/component/pyramid/pkg_version'
+UPLOAD_FILE_URL = "/api/component/file_upload/upload"
+GET_VERSION_URL = "/api/component/pyramid/pkg_version"
 
 
 class File2Upload(FileIO):
@@ -57,15 +57,14 @@ class File2Upload(FileIO):
 def _basic_auth_str(username, password):
     """Returns a Basic Auth string."""
 
-    authstr = 'Basic ' + to_native_string(
-        b64encode(('%s:%s' % (username, password)).encode('utf-8')).strip()
+    authstr = "Basic " + to_native_string(
+        b64encode((f"{username}:{password}").encode()).strip()
     )
 
     return authstr
 
 
 class NGWConnection:
-
     AbilityBaseMap = list(range(1))
     __auth: Tuple[Optional[str], Optional[str]]
 
@@ -87,15 +86,13 @@ class NGWConnection:
             if conn_settings.proxy_port != "":
                 proxy_url = "%s:%s" % (proxy_url, conn_settings.proxy_port)
             if conn_settings.proxy_user != "":
-                proxy_url = "%s:%s@%s" % (
+                proxy_url = "{}:{}@{}".format(
                     conn_settings.proxy_user,
                     conn_settings.proxy_password,
-                    proxy_url
+                    proxy_url,
                 )
 
-            self.__proxy = {
-                "http": proxy_url
-            }
+            self.__proxy = {"http": proxy_url}
 
     @property
     def server_url(self):
@@ -104,7 +101,7 @@ class NGWConnection:
     @server_url.setter
     def server_url(self, value):
         if isinstance(value, str):
-            self.__server_url = value.strip().rstrip(r'\\/')
+            self.__server_url = value.strip().rstrip(r"\\/")
         else:
             self.__server_url = value
 
@@ -119,19 +116,18 @@ class NGWConnection:
         if params:
             payload = json.dumps(params)
 
-        if 'data' in kwargs:
-            payload = kwargs['data']
+        if "data" in kwargs:
+            payload = kwargs["data"]
 
         json_data = None
-        if 'json' in kwargs:
-            json_data = kwargs['json']
+        if "json" in kwargs:
+            json_data = kwargs["json"]
 
         log(
             "Request\nmethod: {}\nurl: {}\ndata: {}\njson:".format(
                 method,
                 urllib.parse.urljoin(self.server_url, sub_url),
                 payload,
-                json_data
             )
         )
 
@@ -139,48 +135,60 @@ class NGWConnection:
         req = requests.Request(method, url, data=payload, json=json_data)
 
         if all(map(len, self.__auth)):
-            req.headers['Authorization'] = _basic_auth_str(self.__auth[0], self.__auth[1])
+            req.headers["Authorization"] = _basic_auth_str(
+                self.__auth[0], self.__auth[1]
+            )
 
         prep = self.__session.prepare_request(req)
 
         try:
             resp = self.__session.send(prep, proxies=self.__proxy)
-        except requests.exceptions.ConnectionError:
-            raise NGWError(NGWError.TypeRequestError, "Connection error", req.url)
-        except requests.exceptions.RequestException as e:
-            log( "Response\nerror {}: {}".format(type(e), e) )
-            raise NGWError(NGWError.TypeRequestError, "%s" % type(e), req.url)
+        except requests.exceptions.ConnectionError as error:
+            raise NGWError(
+                NGWError.TypeRequestError, "Connection error", req.url
+            ) from error
+        except requests.exceptions.RequestException as error:
+            log(f"Response\nerror {type(error)}: {error}")
+            raise NGWError(
+                NGWError.TypeRequestError, "%s" % type(error), req.url
+            ) from error
 
         if resp.status_code == 502:
-            log( "Response\nerror status_code 502" )
-            raise NGWError(NGWError.TypeRequestError, "Response status code is 502", req.url)
+            log("Response\nerror status_code 502")
+            raise NGWError(
+                NGWError.TypeRequestError,
+                "Response status code is 502",
+                req.url,
+            )
 
         if resp.status_code // 100 != 2:
-            log("Response\nerror status_code {}\nmsg: {!r}".format(resp.status_code, resp.content.decode()))
+            log(
+                f"Response\nerror status_code {resp.status_code}\nmsg: {resp.content.decode()!r}"
+            )
             raise NGWError(NGWError.TypeNGWError, resp.content, req.url)
 
         try:
             json_response = resp.json()
-        except:
+        except Exception as error:
             log("Response\nerror response JSON parse")
-            raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url)
+            raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url) from error
 
         return json_response
 
     def get(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'GET', params, **kwargs)
+        return self.__request(sub_url, "GET", params, **kwargs)
 
     def post(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'POST', params, **kwargs)
+        return self.__request(sub_url, "POST", params, **kwargs)
 
     def put(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'PUT', params, **kwargs)
+        return self.__request(sub_url, "PUT", params, **kwargs)
 
     def patch(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'PATCH', params, **kwargs)
+        return self.__request(sub_url, "PATCH", params, **kwargs)
 
     def delete(self, sub_url, params=None, **kwargs):
-        return self.__request(sub_url, 'DELETE', params, **kwargs)
+        return self.__request(sub_url, "DELETE", params, **kwargs)
 
     def get_upload_file_url(self):
         return UPLOAD_FILE_URL
@@ -190,21 +198,31 @@ class NGWConnection:
             with File2Upload(filename, callback) as fd:
                 upload_info = self.put(self.get_upload_file_url(), data=fd)
                 return upload_info
-        except requests.exceptions.RequestException as e:
-            raise NGWError(NGWError.TypeRequestError, e.message.args[0], self.get_upload_file_url())
+        except requests.exceptions.RequestException as error:
+            raise NGWError(
+                NGWError.TypeRequestError,
+                error.message.args[0],
+                self.get_upload_file_url(),
+            ) from error
 
     def download_file(self, url):
-        req = requests.Request('GET', urllib.parse.urljoin(self.server_url, url))
+        req = requests.Request(
+            "GET", urllib.parse.urljoin(self.server_url, url)
+        )
 
         if all(map(len, self.__auth)):
-            req.headers['Authorization'] = _basic_auth_str(self.__auth[0], self.__auth[1])
+            req.headers["Authorization"] = _basic_auth_str(
+                self.__auth[0], self.__auth[1]
+            )
 
         prep = self.__session.prepare_request(req)
 
         try:
             resp = self.__session.send(prep, stream=True)
-        except requests.exceptions.RequestException as e:
-            raise NGWError(NGWError.TypeRequestError, e.message.args[0], req.url)
+        except requests.exceptions.RequestException as error:
+            raise NGWError(
+                NGWError.TypeRequestError, error.message.args[0], req.url
+            ) from error
 
         if resp.status_code / 100 != 2:
             raise NGWError(NGWError.TypeNGWError, resp.content, req.url)
@@ -215,7 +233,7 @@ class NGWConnection:
         if self.__ngw_components is None:
             try:
                 self.__ngw_components = self.get(GET_VERSION_URL)
-            except requests.exceptions.RequestException as e:
+            except requests.exceptions.RequestException:
                 self.__ngw_components = {}
 
         return self.__ngw_components

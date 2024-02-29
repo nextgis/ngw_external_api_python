@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
  Common Plugins settings
@@ -22,61 +21,78 @@
 """
 import os
 import tempfile
+
 try:
     from packaging import version
+
     parse_version = version.parse
 except Exception:
     import pkg_resources
+
     parse_version = pkg_resources.parse_version
 from collections import Counter
-from typing import Optional, List, cast, Dict, Any, Set
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Set, cast
 
 from osgeo import ogr
-
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsFeature,
+    QgsFeatureRequest,
+    QgsGeometry,
+    QgsLayerTree,
+    QgsLayerTreeGroup,
+    QgsLayerTreeLayer,
+    QgsLayerTreeNode,
+    QgsMapLayer,
+    QgsPluginLayer,
+    QgsProject,
+    QgsProviderRegistry,
+    QgsRasterLayer,
+    QgsVectorFileWriter,
+    QgsVectorLayer,
+    QgsWkbTypes,
+)
+from qgis.gui import QgisInterface, QgsFileWidget
 from qgis.PyQt.QtCore import QCoreApplication
 
-from qgis.core import (
-    QgsProject, QgsMapLayer, QgsVectorLayer, QgsRasterLayer, QgsFeature,
-    QgsLayerTreeLayer, QgsLayerTreeGroup, QgsVectorFileWriter,
-    QgsLayerTreeNode, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
-    QgsProviderRegistry, QgsPluginLayer, QgsLayerTree, QgsFeatureRequest
+from ..core.ngw_base_map import NGWBaseMap, NGWBaseMapExtSettings
+from ..core.ngw_feature import NGWFeature
+from ..core.ngw_group_resource import NGWGroupResource
+from ..core.ngw_qgis_style import (
+    NGWQGISStyle,
+    NGWQGISVectorStyle,
 )
-from qgis.gui import QgsFileWidget, QgisInterface
-
-from ..qt.qt_ngw_resource_model_job import *
-from ..qt.qt_ngw_resource_model_job import NGWResourceModelJob
-from ..qt.qt_ngw_resource_model_job_error import *
-from ..qt.qt_ngw_resource_model_job_error import JobError
-
-from ..core.ngw_webmap import NGWWebMapLayer, NGWWebMapGroup, NGWWebMapRoot
+from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_vector_layer import NGWVectorLayer
-from ..core.ngw_qgis_style import (
-    NGWQGISStyle, NGWQGISVectorStyle, NGWQGISRasterStyle
+from ..core.ngw_webmap import (
+    NGWWebMap,
+    NGWWebMapGroup,
+    NGWWebMapLayer,
+    NGWWebMapRoot,
 )
-from ..core.ngw_feature import NGWFeature
-from ..core.ngw_raster_layer import NGWRasterLayer
-from ..core.ngw_wms_service import NGWWmsService
 from ..core.ngw_wms_connection import NGWWmsConnection
 from ..core.ngw_wms_layer import NGWWmsLayer
 from ..core.ngw_webmap import NGWWebMap
 from ..core.ngw_base_map import NGWBaseMap, NGWBaseMapExtSettings
 from ..core.ngw_resource import NGWResource
 from ..core.ngw_group_resource import NGWGroupResource
+from ..core.ngw_wms_service import NGWWmsService
+from ..qt.qt_ngw_resource_model_job import *
+from ..qt.qt_ngw_resource_model_job import NGWResourceModelJob
+from ..qt.qt_ngw_resource_model_job_error import JobError, JobWarning
 from ..utils import log
-
-from ..utils import ngw_version_compare
-
+from .compat_qgis import (
+    CompatQgis,
+    CompatQgisGeometryType,
+    CompatQgisWkbType,
+    CompatQt,
+)
 from .ngw_plugin_settings import NgwPluginSettings
 
-from .compat_qgis import QgsWkbTypes
-from .compat_qgis import CompatQgis
-from .compat_qgis import CompatQt
-from .compat_qgis import CompatQgisGeometryType, CompatQgisWkbType
-
-
-NGW_AUTORENAME_FIELDS_VERS = '4.1.0.dev5'
+NGW_AUTORENAME_FIELDS_VERS = "4.1.0.dev5"
 
 
 def getQgsMapLayerEPSG(qgs_map_layer):
@@ -90,18 +106,24 @@ def yOriginTopFromQgisTmsUrl(qgs_tms_url):
     return qgs_tms_url.find("{-y}")
 
 
-def get_wkt(qgis_geometry):
-    wkt = CompatQgis.wkt_geometry(qgis_geometry)
+def get_wkt(qgis_geometry: QgsGeometry):
+    wkt = qgis_geometry.asWkt()
 
-    #if qgis_geometry.wkbType() < 0: # TODO: why this check was made?
-    wkb_type = CompatQgis.get_wkb_type(qgis_geometry.wkbType())
+    # if qgis_geometry.wkbType() < 0: # TODO: why this check was made?
+    wkb_type = qgis_geometry.wkbType()
     wkt_fixes = {
-        CompatQgisWkbType.WKBPoint25D: ('PointZ', 'Point Z'),
-        CompatQgisWkbType.WKBLineString25D: ('LineStringZ', 'LineString Z'),
-        CompatQgisWkbType.WKBPolygon25D: ('PolygonZ', 'Polygon Z'),
-        CompatQgisWkbType.WKBMultiPoint25D: ('MultiPointZ', 'MultiPoint Z'),
-        CompatQgisWkbType.WKBMultiLineString25D: ('MultiLineStringZ', 'MultiLineString Z'),
-        CompatQgisWkbType.WKBMultiPolygon25D: ('MultiPolygonZ', 'MultiPolygon Z'),
+        CompatQgisWkbType.WKBPoint25D: ("PointZ", "Point Z"),
+        CompatQgisWkbType.WKBLineString25D: ("LineStringZ", "LineString Z"),
+        CompatQgisWkbType.WKBPolygon25D: ("PolygonZ", "Polygon Z"),
+        CompatQgisWkbType.WKBMultiPoint25D: ("MultiPointZ", "MultiPoint Z"),
+        CompatQgisWkbType.WKBMultiLineString25D: (
+            "MultiLineStringZ",
+            "MultiLineString Z",
+        ),
+        CompatQgisWkbType.WKBMultiPolygon25D: (
+            "MultiPolygonZ",
+            "MultiPolygon Z",
+        ),
     }
 
     if wkb_type in wkt_fixes:
@@ -111,11 +133,11 @@ def get_wkt(qgis_geometry):
 
 
 def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer):
-    MAPINFO_DRIVER = 'MapInfo File'
+    MAPINFO_DRIVER = "MapInfo File"
     if qgs_vector_layer.storageType() != MAPINFO_DRIVER:
         return qgs_vector_layer.wkbType()
 
-    layer_path = qgs_vector_layer.source().split('|')[0]
+    layer_path = qgs_vector_layer.source().split("|")[0]
     driver: ogr.Driver = ogr.GetDriverByName(MAPINFO_DRIVER)
     datasource: Optional[ogr.DataSource] = driver.Open(layer_path)
     assert datasource is not None
@@ -147,6 +169,8 @@ def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer):
         wkb_type |= ogr.wkb25DBit
 
     return wkb_type
+
+
 @dataclass(frozen=True)
 class ValueRelation:
     layer_id: str
@@ -155,12 +179,12 @@ class ValueRelation:
     filter_expression: str
 
     @staticmethod
-    def from_config(config: Dict[str, Any]) -> 'ValueRelation':
+    def from_config(config: Dict[str, Any]) -> "ValueRelation":
         return ValueRelation(
-            config['Layer'],
-            config['Key'],
-            config['Value'],
-            config['FilterExpression'].strip()
+            config["Layer"],
+            config["Key"],
+            config["Value"],
+            config["FilterExpression"].strip(),
         )
 
 
@@ -186,11 +210,14 @@ class QGISResourceJob(NGWResourceModelJob):
     def _layer_status(self, layer_name, status):
         self.statusChanged.emit(f""""{layer_name}" - {status}""")
 
-    def isSuitableLayer(self, qgs_map_layer):
+    def isSuitableLayer(self, qgs_map_layer: QgsVectorLayer):
         layer_type = qgs_map_layer.type()
 
         if layer_type == qgs_map_layer.VectorLayer:
-            if qgs_map_layer.geometryType() in [CompatQgisGeometryType.NoGeometry, CompatQgisGeometryType.UnknownGeometry]:
+            if qgs_map_layer.geometryType() in [
+                CompatQgisGeometryType.NoGeometry,
+                CompatQgisGeometryType.UnknownGeometry,
+            ]:
                 return self.SUITABLE_LAYER_BAD_GEOMETRY
 
         return self.SUITABLE_LAYER
@@ -201,18 +228,28 @@ class QGISResourceJob(NGWResourceModelJob):
         layer_type = qgs_map_layer.type()
 
         if layer_type == qgs_map_layer.VectorLayer:
-            return [self.importQgsVectorLayer(qgs_map_layer, ngw_parent_resource)]
+            return [
+                self.importQgsVectorLayer(qgs_map_layer, ngw_parent_resource)
+            ]
 
         elif layer_type == QgsMapLayer.RasterLayer:
             layer_data_provider = qgs_map_layer.dataProvider().name()
             if layer_data_provider == "gdal":
-                return [self.importQgsRasterLayer(qgs_map_layer, ngw_parent_resource)]
+                return [
+                    self.importQgsRasterLayer(
+                        qgs_map_layer, ngw_parent_resource
+                    )
+                ]
 
             elif layer_data_provider == "wms":
-                return self.importQgsWMSLayer(qgs_map_layer, ngw_parent_resource)
+                return self.importQgsWMSLayer(
+                    qgs_map_layer, ngw_parent_resource
+                )
 
         elif layer_type == QgsMapLayer.PluginLayer:
-            return self.importQgsPluginLayer(qgs_map_layer, ngw_parent_resource)
+            return self.importQgsPluginLayer(
+                qgs_map_layer, ngw_parent_resource
+            )
 
         return []
 
@@ -222,13 +259,19 @@ class QGISResourceJob(NGWResourceModelJob):
 
     def importQgsPluginLayer(self, qgs_plugin_layer, ngw_group):
         # Look for QMS plugin layer
-        if qgs_plugin_layer.pluginLayerType() == 'PyTiledLayer' and hasattr(qgs_plugin_layer, "layerDef") and hasattr(qgs_plugin_layer.layerDef, "serviceUrl"):
-            #log(u'>>> Uploading plugin layer "{}"'.format(qgs_plugin_layer.name()))
+        if (
+            qgs_plugin_layer.pluginLayerType() == "PyTiledLayer"
+            and hasattr(qgs_plugin_layer, "layerDef")
+            and hasattr(qgs_plugin_layer.layerDef, "serviceUrl")
+        ):
+            # log(u'>>> Uploading plugin layer "{}"'.format(qgs_plugin_layer.name()))
 
             # if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
             #     raise JobError(self.tr("Your web GIS can't create base maps."))
 
-            new_layer_name = self.unique_resource_name(qgs_plugin_layer.name(), ngw_group)
+            new_layer_name = self.unique_resource_name(
+                qgs_plugin_layer.name(), ngw_group
+            )
 
             epsg = getattr(qgs_plugin_layer.layerDef, "epsg_crs_id", None)
             if epsg is None:
@@ -239,24 +282,32 @@ class QGISResourceJob(NGWResourceModelJob):
                 epsg,
                 getattr(qgs_plugin_layer.layerDef, "zmin", None),
                 getattr(qgs_plugin_layer.layerDef, "zmax", None),
-                getattr(qgs_plugin_layer.layerDef, "yOriginTop", None)
+                getattr(qgs_plugin_layer.layerDef, "yOriginTop", None),
             )
 
-            ngw_basemap = NGWBaseMap.create_in_group(new_layer_name, ngw_group, qgs_plugin_layer.layerDef.serviceUrl, basemap_ext_settings)
+            ngw_basemap = NGWBaseMap.create_in_group(
+                new_layer_name,
+                ngw_group,
+                qgs_plugin_layer.layerDef.serviceUrl,
+                basemap_ext_settings,
+            )
 
             return [ngw_basemap]
 
     def importQgsWMSLayer(self, qgs_wms_layer, ngw_group):
         # log(u'>>> Uploading WMS layer "{}"'.format(qgs_wms_layer.name()))
 
-        self._layer_status(qgs_wms_layer.name(), self.tr("create WMS connection"))
+        self._layer_status(
+            qgs_wms_layer.name(), self.tr("create WMS connection")
+        )
 
         layer_source = qgs_wms_layer.source()
-        provider_metadata = QgsProviderRegistry.instance().providerMetadata('wms')
+        provider_metadata = QgsProviderRegistry.instance().providerMetadata(
+            "wms"
+        )
         parameters = provider_metadata.decodeUri(layer_source)
 
         if parameters.get("type", "") == "xyz":
-
             # if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
             #     raise JobError(self.tr("Your web GIS can't create base maps."))
 
@@ -267,27 +318,37 @@ class QGISResourceJob(NGWResourceModelJob):
                 epsg,
                 parameters.get("zmin"),
                 parameters.get("zmax"),
-                yOriginTopFromQgisTmsUrl(parameters.get("url", ""))
+                yOriginTopFromQgisTmsUrl(parameters.get("url", "")),
             )
 
-            ngw_basemap_name = self.unique_resource_name(qgs_wms_layer.name(), ngw_group)
-            ngw_basemap = NGWBaseMap.create_in_group(ngw_basemap_name, ngw_group, parameters.get("url", ""), basemap_ext_settings)
+            ngw_basemap_name = self.unique_resource_name(
+                qgs_wms_layer.name(), ngw_group
+            )
+            ngw_basemap = NGWBaseMap.create_in_group(
+                ngw_basemap_name,
+                ngw_group,
+                parameters.get("url", ""),
+                basemap_ext_settings,
+            )
             return [ngw_basemap]
         else:
-            ngw_wms_connection_name = self.unique_resource_name(qgs_wms_layer.name(), ngw_group)
+            ngw_wms_connection_name = self.unique_resource_name(
+                qgs_wms_layer.name(), ngw_group
+            )
             wms_connection = NGWWmsConnection.create_in_group(
                 ngw_wms_connection_name,
                 ngw_group,
                 parameters.get("url", ""),
                 parameters.get("version", "1.1.1"),
-                (parameters.get("username"), parameters.get("password"))
+                (parameters.get("username"), parameters.get("password")),
             )
 
-            self._layer_status(qgs_wms_layer.name(), self.tr("creating WMS layer"))
+            self._layer_status(
+                qgs_wms_layer.name(), self.tr("creating WMS layer")
+            )
 
             ngw_wms_layer_name = self.unique_resource_name(
-                wms_connection.common.display_name + "_layer",
-                ngw_group
+                wms_connection.common.display_name + "_layer", ngw_group
             )
 
             layer_ids = parameters.get("layers", wms_connection.layers())
@@ -304,22 +365,26 @@ class QGISResourceJob(NGWResourceModelJob):
             return [wms_connection, wms_layer]
 
     def importQgsRasterLayer(self, qgs_raster_layer, ngw_parent_resource):
-        new_layer_name = self.unique_resource_name(qgs_raster_layer.name(), ngw_parent_resource)
-        log(u'>>> Uploading raster layer "{}" (with the name "{}")'.format(qgs_raster_layer.name(), new_layer_name))
+        new_layer_name = self.unique_resource_name(
+            qgs_raster_layer.name(), ngw_parent_resource
+        )
+        log(
+            f'>>> Uploading raster layer "{qgs_raster_layer.name()}" (with the name "{new_layer_name}")'
+        )
 
         def uploadFileCallback(total_size, readed_size, value=None):
             if value is None:
                 value = round(readed_size * 100 / total_size)
             self._layer_status(
                 qgs_raster_layer.name(),
-                self.tr("uploading ({}%)").format(value)
+                self.tr("uploading ({}%)").format(value),
             )
 
         def createLayerCallback():
             self._layer_status(qgs_raster_layer.name(), self.tr("creating"))
 
         layer_provider = qgs_raster_layer.providerType()
-        if layer_provider == 'gdal':
+        if layer_provider == "gdal":
             filepath = qgs_raster_layer.source()
             ngw_raster_layer = ResourceCreator.create_raster_layer(
                 ngw_parent_resource,
@@ -327,7 +392,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 new_layer_name,
                 NgwPluginSettings.get_upload_cog_rasters(),
                 uploadFileCallback,
-                createLayerCallback
+                createLayerCallback,
             )
 
             return ngw_raster_layer
@@ -335,18 +400,26 @@ class QGISResourceJob(NGWResourceModelJob):
     def importQgsVectorLayer(
         self,
         qgs_vector_layer: QgsVectorLayer,
-        ngw_parent_resource: NGWGroupResource
+        ngw_parent_resource: NGWGroupResource,
     ) -> Optional[NGWVectorLayer]:
         new_layer_name = self.unique_resource_name(
             qgs_vector_layer.name(), ngw_parent_resource
         )
-        log('>>> Uploading vector layer "{}" (with the name "{}")'.format(qgs_vector_layer.name(), new_layer_name))
+        log(
+            f'>>> Uploading vector layer "{qgs_vector_layer.name()}" (with the name "{new_layer_name}")'
+        )
 
         def uploadFileCallback(total_size, readed_size, value=None):
             self._layer_status(
                 qgs_vector_layer.name(),
                 self.tr("uploading ({}%)").format(
-                    int(readed_size * 100 / total_size if value is None else value)))
+                    int(
+                        readed_size * 100 / total_size
+                        if value is None
+                        else value
+                    )
+                ),
+            )
 
         def createLayerCallback():
             self._layer_status(qgs_vector_layer.name(), self.tr("creating"))
@@ -357,16 +430,20 @@ class QGISResourceJob(NGWResourceModelJob):
         ):
             self.errorOccurred.emit(
                 JobError(
-                    "Vector layer '%s' has no suitable geometry" % qgs_vector_layer.name()
+                    "Vector layer '%s' has no suitable geometry"
+                    % qgs_vector_layer.name()
                 )
             )
             return None
 
-        filepath, tgt_qgs_layer, rename_fields_map = self.prepareImportFile(qgs_vector_layer)
+        filepath, tgt_qgs_layer, rename_fields_map = self.prepareImportFile(
+            qgs_vector_layer
+        )
         if filepath is None:
             self.errorOccurred.emit(
                 JobError(
-                    "Can't prepare layer '%s'. Skipped!" % qgs_vector_layer.name()
+                    "Can't prepare layer '%s'. Skipped!"
+                    % qgs_vector_layer.name()
                 )
             )
             return None
@@ -384,7 +461,7 @@ class QGISResourceJob(NGWResourceModelJob):
             alias = field.alias()
             lookup_table = None
             editor_widget_setup = field.editorWidgetSetup()
-            if editor_widget_setup.type() == 'ValueRelation':
+            if editor_widget_setup.type() == "ValueRelation":
                 config = editor_widget_setup.config()
                 value_relation = ValueRelation.from_config(config)
                 lookup_table = self._lookup_tables_id[value_relation]
@@ -394,9 +471,9 @@ class QGISResourceJob(NGWResourceModelJob):
 
             field_params: Dict[str, Any] = {}
             if len(alias) > 0:
-                field_params['display_name'] = alias
+                field_params["display_name"] = alias
             if lookup_table is not None:
-                field_params['lookup_table'] = dict(id=lookup_table)
+                field_params["lookup_table"] = dict(id=lookup_table)
 
             field_name = rename_fields_map.get(field.name(), field.name())
             fields_params[field_name] = field_params
@@ -420,7 +497,7 @@ class QGISResourceJob(NGWResourceModelJob):
         fids_with_notvalid_geom = []
 
         # Do not check geometries (rely on NGW):
-        #if NgwPluginSettings.get_sanitize_fix_geometry():
+        # if NgwPluginSettings.get_sanitize_fix_geometry():
         #    layer_has_mixed_geoms, fids_with_notvalid_geom = self.checkGeometry(qgs_vector_layer)
 
         # Check specific fields.
@@ -429,14 +506,25 @@ class QGISResourceJob(NGWResourceModelJob):
             and self.hasBadFields(qgs_vector_layer)
             and not self.ngwSupportsAutoRenameFields()
         ):
-            log('Incorrect fields of layer will be renamed by NextGIS Connect')
+            log("Incorrect fields of layer will be renamed by NextGIS Connect")
             layer_has_bad_fields = True
         else:
-            log('Incorrect fields of layer will NOT be renamed by NextGIS Connect')
+            log(
+                "Incorrect fields of layer will NOT be renamed by NextGIS Connect"
+            )
 
         rename_fields_map = {}
-        if layer_has_mixed_geoms or layer_has_bad_fields or (len(fids_with_notvalid_geom) > 0):
-            layer, rename_fields_map = self.createLayer4Upload(qgs_vector_layer, fids_with_notvalid_geom, layer_has_mixed_geoms, layer_has_bad_fields)
+        if (
+            layer_has_mixed_geoms
+            or layer_has_bad_fields
+            or (len(fids_with_notvalid_geom) > 0)
+        ):
+            layer, rename_fields_map = self.createLayer4Upload(
+                qgs_vector_layer,
+                fids_with_notvalid_geom,
+                layer_has_mixed_geoms,
+                layer_has_bad_fields,
+            )
         else:
             layer = qgs_vector_layer
 
@@ -450,13 +538,16 @@ class QGISResourceJob(NGWResourceModelJob):
 
         features_count = qgs_vector_layer.featureCount()
         progress = 0
-        for features_counter, feature in enumerate(qgs_vector_layer.getFeatures(), start=1):
+        for features_counter, feature in enumerate(
+            qgs_vector_layer.getFeatures(), start=1
+        ):
             v = round(features_counter * 100 / features_count)
             if progress < v:
                 progress = v
                 self._layer_status(
                     qgs_vector_layer.name(),
-                    self.tr("checking geometry ({}%)").format(progress))
+                    self.tr("checking geometry ({}%)").format(progress),
+                )
 
             fid, geom = feature.geometry(), feature.id()
 
@@ -480,13 +571,19 @@ class QGISResourceJob(NGWResourceModelJob):
                     for polygon in geom.asMultiPolygon():
                         for polyline in polygon:
                             if len(polyline) < 4:
-                                log("Feature %s has not valid geometry (less then 4 points)" % str(fid))
+                                log(
+                                    "Feature %s has not valid geometry (less then 4 points)"
+                                    % str(fid)
+                                )
                                 fids_with_not_valid_geom.append(fid)
                                 break
                 else:
                     for polyline in geom.asPolygon():
                         if len(polyline) < 4:
-                            log("Feature %s has not valid geometry (less then 4 points)" % str(fid))
+                            log(
+                                "Feature %s has not valid geometry (less then 4 points)"
+                                % str(fid)
+                            )
                             fids_with_not_valid_geom.append(fid)
                             break
 
@@ -503,12 +600,16 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return (
             has_multipart_geometries and has_simple_geometries,
-            fids_with_not_valid_geom
+            fids_with_not_valid_geom,
         )
 
     def hasBadFields(self, qgs_vector_layer):
-        exist_fields_names = [field.name().lower() for field in qgs_vector_layer.fields()]
-        common_fields = list(set(exist_fields_names).intersection(self.sanitize_fields_names))
+        exist_fields_names = [
+            field.name().lower() for field in qgs_vector_layer.fields()
+        ]
+        common_fields = list(
+            set(exist_fields_names).intersection(self.sanitize_fields_names)
+        )
 
         return len(common_fields) > 0
 
@@ -516,30 +617,32 @@ class QGISResourceJob(NGWResourceModelJob):
         if self.ngw_version is None:
             return False
 
-        if CompatQgis.is_qgis_2():
-            # A simple comparing, does not include all PEP440 checks.
-            vers_ok = ngw_version_compare(self.ngw_version, NGW_AUTORENAME_FIELDS_VERS)
-            if vers_ok == 1 or vers_ok == 0:
-                vers_ok = True
-            elif vers_ok == -1:
-                vers_ok = False
-        else:
-            # A full PEP 440 comparing.
-            current_ngw_version = parse_version(self.ngw_version)
-            ngw_version_with_support = parse_version(
-                NGW_AUTORENAME_FIELDS_VERS
-            )
-            vers_ok = current_ngw_version >= ngw_version_with_support
+        # A full PEP 440 comparing.
+        current_ngw_version = parse_version(self.ngw_version)
+        ngw_version_with_support = parse_version(NGW_AUTORENAME_FIELDS_VERS)
+        vers_ok = current_ngw_version >= ngw_version_with_support
 
         if vers_ok:
-            log('Assume that NGW of version "{}" supports auto-renaming fields'.format(self.ngw_version))
+            log(
+                f'Assume that NGW of version "{self.ngw_version}" supports auto-renaming fields'
+            )
             return True
-        log('Assume that NGW of version "{}" does NOT support auto-renaming fields'.format(self.ngw_version))
+        log(
+            f'Assume that NGW of version "{self.ngw_version}" does NOT support auto-renaming fields'
+        )
 
         return False
 
-    def createLayer4Upload(self, qgs_vector_layer_src, fids_with_notvalid_geom, has_mixed_geoms, has_bad_fields):
-        geometry_type = self.determineGeometry4MemoryLayer(qgs_vector_layer_src, has_mixed_geoms)
+    def createLayer4Upload(
+        self,
+        qgs_vector_layer_src,
+        fids_with_notvalid_geom,
+        has_mixed_geoms,
+        has_bad_fields,
+    ):
+        geometry_type = self.determineGeometry4MemoryLayer(
+            qgs_vector_layer_src, has_mixed_geoms
+        )
 
         field_name_map = {}
         if has_bad_fields:
@@ -548,27 +651,26 @@ class QGISResourceJob(NGWResourceModelJob):
             if len(field_name_map) != 0:
                 msg = QCoreApplication.translate(
                     "QGISResourceJob",
-                    "We've renamed fields {0} for layer '{1}'. Style for this layer may become invalid."
+                    "We've renamed fields {0} for layer '{1}'. Style for this layer may become invalid.",
                 ).format(
-                    list(field_name_map.keys()),
-                    qgs_vector_layer_src.name()
+                    list(field_name_map.keys()), qgs_vector_layer_src.name()
                 )
 
-                self.warningOccurred.emit(
-                    JobWarning(msg)
-                )
+                self.warningOccurred.emit(JobWarning(msg))
 
-        import_crs = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId)
+        import_crs = QgsCoordinateReferenceSystem(
+            4326, QgsCoordinateReferenceSystem.EpsgCrsId
+        )
         qgs_vector_layer_dst = QgsVectorLayer(
-            "%s?crs=%s" % (geometry_type, import_crs.authid()),
+            f"{geometry_type}?crs={import_crs.authid()}",
             "temp",
-            "memory"
+            "memory",
         )
 
         qgs_vector_layer_dst.startEditing()
 
         for field in qgs_vector_layer_src.fields():
-            field.setName( # TODO: does it work? At least qgs_vector_layer_src is not in edit mode now. Also we obviously don't want to change source layer names here
+            field.setName(  # TODO: does it work? At least qgs_vector_layer_src is not in edit mode now. Also we obviously don't want to change source layer names here
                 field_name_map.get(field.name(), field.name())
             )
             qgs_vector_layer_dst.addAttribute(field)
@@ -578,24 +680,28 @@ class QGISResourceJob(NGWResourceModelJob):
         features_count = qgs_vector_layer_src.featureCount()
 
         progress = 0
-        for features_counter, feature in enumerate(qgs_vector_layer_src.getFeatures(), start=1):
+        for features_counter, feature in enumerate(
+            qgs_vector_layer_src.getFeatures(), start=1
+        ):
             if feature.id() in fids_with_notvalid_geom:
                 continue
 
             # Additional checks for geom correctness.
             # TODO: this was done in self.checkGeometry() but we've remove using of this method. Maybe return using this method back.
             if CompatQgis.is_geom_empty(feature.geometry()):
-                log('Skip feature {}: empty geometry'.format(feature.id()))
+                log(f"Skip feature {feature.id()}: empty geometry")
                 continue
 
-            new_geometry = feature.geometry()
-            CompatQgis.get_inner_geometry(new_geometry).convertTo(
-                QgsWkbTypes.dropZ(
-                    CompatQgis.get_inner_geometry(new_geometry).wkbType() # for QGIS 2 new QgsWKBTypes::Type is returned here
-                )
+            new_geometry: QgsGeometry = feature.geometry()
+            new_geometry.get().convertTo(
+                QgsWkbTypes.dropZ(new_geometry.wkbType())
             )
             new_geometry.transform(
-                CompatQgis.coordinate_transform_obj(qgs_vector_layer_src.crs(), import_crs, QgsProject.instance())
+                CompatQgis.coordinate_transform_obj(
+                    qgs_vector_layer_src.crs(),
+                    import_crs,
+                    QgsProject.instance(),
+                )
             )
             if has_mixed_geoms:
                 new_geometry.convertToMultiType()
@@ -615,22 +721,23 @@ class QGISResourceJob(NGWResourceModelJob):
                 progress = v
                 self._layer_status(
                     qgs_vector_layer_src.name(),
-                    self.tr("preparing layer ({}%)").format(progress))
+                    self.tr("preparing layer ({}%)").format(progress),
+                )
 
         qgs_vector_layer_dst.commitChanges()
 
         if len(fids_with_notvalid_geom) != 0:
-                msg = QCoreApplication.translate(
-                    "QGISResourceJob",
-                    "We've excluded features with id {0} for layer '{1}'. Reason: invalid geometry."
-                ).format(
-                    "[" + ", ".join(str(fid) for fid in fids_with_notvalid_geom) + "]",
-                    qgs_vector_layer_src.name()
-                )
+            msg = QCoreApplication.translate(
+                "QGISResourceJob",
+                "We've excluded features with id {0} for layer '{1}'. Reason: invalid geometry.",
+            ).format(
+                "["
+                + ", ".join(str(fid) for fid in fids_with_notvalid_geom)
+                + "]",
+                qgs_vector_layer_src.name(),
+            )
 
-                self.warningOccurred.emit(
-                    JobWarning(msg)
-                )
+            self.warningOccurred.emit(JobWarning(msg))
 
         return qgs_vector_layer_dst, field_name_map
 
@@ -650,7 +757,7 @@ class QGISResourceJob(NGWResourceModelJob):
             for feature in qgs_vector_layer.getFeatures():
                 g = feature.geometry()
                 if CompatQgis.is_geom_empty(g):
-                    continue # cannot detect geom type because of empty geom
+                    continue  # cannot detect geom type because of empty geom
                 if g.isMultipart():
                     geometry_type = "multi" + geometry_type
                 break
@@ -660,7 +767,9 @@ class QGISResourceJob(NGWResourceModelJob):
     def getFieldsForRename(self, qgs_vector_layer):
         field_name_map = {}
 
-        exist_fields_names = [field.name() for field in qgs_vector_layer.fields()]
+        exist_fields_names = [
+            field.name() for field in qgs_vector_layer.fields()
+        ]
         for field in qgs_vector_layer.fields():
             if field.name().lower() in self.sanitize_fields_names:
                 new_field_name = field.name()
@@ -673,22 +782,22 @@ class QGISResourceJob(NGWResourceModelJob):
         return field_name_map
 
     def prepareAsGPKG(self, qgs_vector_layer: QgsVectorLayer):
-        tmp_gpkg_path = tempfile.mktemp('.gpkg')
+        tmp_gpkg_path = tempfile.mktemp(".gpkg")
 
         source_srs = qgs_vector_layer.sourceCrs()
         destination_srs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
 
         writer = QgsVectorFileWriter(
             vectorFileName=tmp_gpkg_path,
-            fileEncoding='UTF-8',
+            fileEncoding="UTF-8",
             fields=qgs_vector_layer.fields(),
             geometryType=get_real_wkb_type(qgs_vector_layer),
             srs=destination_srs,
-            driverName='GPKG',
+            driverName="GPKG",
             layerOptions=(
-                QgsVectorFileWriter.defaultDatasetOptions('GPKG')
-                + ['SPATIAL_INDEX=NO']
-            )
+                QgsVectorFileWriter.defaultDatasetOptions("GPKG")
+                + ["SPATIAL_INDEX=NO"]
+            ),
         )
 
         transform = None
@@ -706,9 +815,11 @@ class QGISResourceJob(NGWResourceModelJob):
                 writer.addFeature(feature)
             except Exception:
                 self.warningOccurred.emit(
-                    JobWarning(self.tr(
-                        "Feature {} haven't been added. Please check geometry"
-                    ).format(feature.id()))
+                    JobWarning(
+                        self.tr(
+                            "Feature {} haven't been added. Please check geometry"
+                        ).format(feature.id())
+                    )
                 )
                 continue
 
@@ -719,9 +830,13 @@ class QGISResourceJob(NGWResourceModelJob):
     def upload_qml_file(self, ngw_layer_resource, qml_filename, style_name):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name)
+                self.tr('Style for "{}"').format(
+                    ngw_layer_resource.common.display_name
+                )
                 + " - "
-                + self.tr("uploading ({}%)").format(int(readed_size * 100 / total_size))
+                + self.tr("uploading ({}%)").format(
+                    int(readed_size * 100 / total_size)
+                )
             )
 
         ngw_style = ngw_layer_resource.create_qml_style(
@@ -771,36 +886,31 @@ class QGISResourceJob(NGWResourceModelJob):
     def updateQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name)
+                self.tr('Style for "{}"').format(
+                    ngw_layer_resource.common.display_name
+                )
                 + " - "
-                + self.tr("uploading ({}%)").format(int(readed_size * 100 / total_size))
+                + self.tr("uploading ({}%)").format(
+                    int(readed_size * 100 / total_size)
+                )
             )
 
-        ngw_layer_resource.update_qml(
-            qml,
-            uploadFileCallback
-        )
+        ngw_layer_resource.update_qml(qml, uploadFileCallback)
 
     def getQMLDefaultStyle(self):
         gtype = self.ngw_layer._json[self.ngw_layer.type_id]["geometry_type"]
 
         if gtype in ["LINESTRING", "MULTILINESTRING"]:
             return os.path.join(
-                os.path.dirname(__file__),
-                "qgis_styles",
-                "line_style.qml"
+                os.path.dirname(__file__), "qgis_styles", "line_style.qml"
             )
         if gtype in ["POINT", "MULTIPOINT"]:
             return os.path.join(
-                os.path.dirname(__file__),
-                "qgis_styles",
-                "point_style.qml"
+                os.path.dirname(__file__), "qgis_styles", "point_style.qml"
             )
         if gtype in ["POLYGON", "MULTIPOLYGON"]:
             return os.path.join(
-                os.path.dirname(__file__),
-                "qgis_styles",
-                "polygon_style.qml"
+                os.path.dirname(__file__), "qgis_styles", "polygon_style.qml"
             )
 
         return None
@@ -809,7 +919,9 @@ class QGISResourceJob(NGWResourceModelJob):
         qml = self.getQMLDefaultStyle()
 
         if qml is None:
-            self.errorOccurred.emit("There is no defalut style description for create new style.")
+            self.errorOccurred.emit(
+                "There is no defalut style description for create new style."
+            )
             return
 
         ngw_style = self.upload_qml_file(ngw_layer, qml)
@@ -820,17 +932,26 @@ class QGISResourceJob(NGWResourceModelJob):
         ngw_style = ngw_layer.create_style()
         return ngw_style
 
-    def importAttachments(self, qgs_vector_layer: QgsVectorLayer, ngw_resource: NGWVectorLayer):
-        ''' Checks if the layer attributes have widgets
-            of type "Attachment" and "Storage Type"
-            matches "existing file" and then tries
-            to import the attachment
-        '''
+    def importAttachments(
+        self, qgs_vector_layer: QgsVectorLayer, ngw_resource: NGWVectorLayer
+    ):
+        """Checks if the layer attributes have widgets
+        of type "Attachment" and "Storage Type"
+        matches "existing file" and then tries
+        to import the attachment
+        """
+
         def uploadFileCallback(total_size, readed_size, value=None):
             self._layer_status(
                 imgf,
                 self.tr("uploading ({}%)").format(
-                    int(readed_size * 100 / total_size if value is None else value)))
+                    int(
+                        readed_size * 100 / total_size
+                        if value is None
+                        else value
+                    )
+                ),
+            )
 
         if ngw_resource.type_id != NGWVectorLayer.type_id:
             return
@@ -838,22 +959,28 @@ class QGISResourceJob(NGWResourceModelJob):
         ngw_ftrs = []
         for attrInx in qgs_vector_layer.attributeList():
             editor_widget = qgs_vector_layer.editorWidgetSetup(attrInx)
-            if editor_widget.type() != 'ExternalResource':
+            if editor_widget.type() != "ExternalResource":
                 continue
 
             editor_config = editor_widget.config()
 
             # storagetype can be str or null qvariant
-            is_local = not editor_config['StorageType']
+            is_local = not editor_config["StorageType"]
             GET_FILE_MODE = QgsFileWidget.StorageMode.GetFile
-            is_file = editor_config['StorageMode'] == GET_FILE_MODE
+            is_file = editor_config["StorageMode"] == GET_FILE_MODE
             if is_local and is_file:
-                root_dir = ''
+                root_dir = ""
 
-                if editor_config['RelativeStorage'] == QgsFileWidget.RelativeStorage.RelativeProject:
+                if (
+                    editor_config["RelativeStorage"]
+                    == QgsFileWidget.RelativeStorage.RelativeProject
+                ):
                     root_dir = QgsProject.instance().homePath()
-                if editor_config['RelativeStorage'] == QgsFileWidget.RelativeStorage.RelativeDefaultPath:
-                    root_dir = editor_config['DefaultRoot']
+                if (
+                    editor_config["RelativeStorage"]
+                    == QgsFileWidget.RelativeStorage.RelativeDefaultPath
+                ):
+                    root_dir = editor_config["DefaultRoot"]
 
                 for finx, ftr in enumerate(qgs_vector_layer.getFeatures()):
                     imgf = f"{root_dir}/{ftr.attributes()[attrInx]}"
@@ -863,18 +990,21 @@ class QGISResourceJob(NGWResourceModelJob):
                             ngw_ftrs = ngw_resource.get_features()
 
                         log(f"Load file: {imgf}")
-                        uploaded_file_info = ngw_ftrs[finx].ngw_vector_layer._res_factory.connection.upload_file(
+                        uploaded_file_info = ngw_ftrs[
+                            finx
+                        ].ngw_vector_layer._res_factory.connection.upload_file(
                             imgf, uploadFileCallback
                         )
                         log(f"Uploaded file info: {uploaded_file_info}")
-                        id = ngw_ftrs[finx].link_attachment(uploaded_file_info)
-
+                        ngw_ftrs[finx].link_attachment(uploaded_file_info)
 
     def overwriteQGISMapLayer(self, qgs_map_layer, ngw_layer_resource):
         layer_type = qgs_map_layer.type()
 
         if layer_type == qgs_map_layer.VectorLayer:
-            return self.overwriteQgsVectorLayer(qgs_map_layer, ngw_layer_resource)
+            return self.overwriteQgsVectorLayer(
+                qgs_map_layer, ngw_layer_resource
+            )
 
         return None
 
@@ -882,12 +1012,17 @@ class QGISResourceJob(NGWResourceModelJob):
         block_size = 10
         total_count = qgs_map_layer.featureCount()
 
-        self._layer_status(ngw_layer_resource.common.display_name, self.tr("removing all features"))
+        self._layer_status(
+            ngw_layer_resource.common.display_name,
+            self.tr("removing all features"),
+        )
         ngw_layer_resource.delete_all_features()
 
         features_counter = 0
         progress = 0
-        for features in self.getFeaturesPart(qgs_map_layer, ngw_layer_resource, block_size):
+        for features in self.getFeaturesPart(
+            qgs_map_layer, ngw_layer_resource, block_size
+        ):
             ngw_layer_resource.patch_features(features)
 
             features_counter += len(features)
@@ -896,13 +1031,19 @@ class QGISResourceJob(NGWResourceModelJob):
                 progress = v
                 self._layer_status(
                     ngw_layer_resource.common.display_name,
-                    self.tr("adding features ({}%)").format(progress))
+                    self.tr("adding features ({}%)").format(progress),
+                )
 
     def getFeaturesPart(self, qgs_map_layer, ngw_layer_resource, pack_size):
-        ngw_features=[]
+        ngw_features = []
         for qgsFeature in qgs_map_layer.getFeatures():
             ngw_features.append(
-                NGWFeature(self.createNGWFeatureDictFromQGSFeature(ngw_layer_resource, qgsFeature, qgs_map_layer), ngw_layer_resource)
+                NGWFeature(
+                    self.createNGWFeatureDictFromQGSFeature(
+                        ngw_layer_resource, qgsFeature, qgs_map_layer
+                    ),
+                    ngw_layer_resource,
+                )
             )
 
             if len(ngw_features) == pack_size:
@@ -910,9 +1051,11 @@ class QGISResourceJob(NGWResourceModelJob):
                 ngw_features = []
 
         if len(ngw_features) > 0:
-                yield ngw_features
+            yield ngw_features
 
-    def createNGWFeatureDictFromQGSFeature(self, ngw_layer_resource, qgs_feature, qgs_map_layer):
+    def createNGWFeatureDictFromQGSFeature(
+        self, ngw_layer_resource, qgs_feature, qgs_map_layer
+    ):
         feature_dict = {}
 
         # id need only for update not for create
@@ -921,8 +1064,11 @@ class QGISResourceJob(NGWResourceModelJob):
         g.transform(
             CompatQgis.coordinate_transform_obj(
                 qgs_map_layer.crs(),
-                QgsCoordinateReferenceSystem(ngw_layer_resource.srs(), QgsCoordinateReferenceSystem.EpsgCrsId),
-                QgsProject.instance()
+                QgsCoordinateReferenceSystem(
+                    ngw_layer_resource.srs(),
+                    QgsCoordinateReferenceSystem.EpsgCrsId,
+                ),
+                QgsProject.instance(),
             )
         )
         if ngw_layer_resource.is_geom_multy():
@@ -932,9 +1078,13 @@ class QGISResourceJob(NGWResourceModelJob):
         attributes = {}
         for qgsField in qgs_feature.fields().toList():
             value = qgs_feature.attribute(qgsField.name())
-            attributes[qgsField.name()] = CompatQt.get_clean_python_value(value)
+            attributes[qgsField.name()] = CompatQt.get_clean_python_value(
+                value
+            )
 
-        feature_dict["fields"] = ngw_layer_resource.construct_ngw_feature_as_json(attributes)
+        feature_dict[
+            "fields"
+        ] = ngw_layer_resource.construct_ngw_feature_as_json(attributes)
 
         return feature_dict
 
@@ -945,7 +1095,7 @@ class QGISResourcesUploader(QGISResourceJob):
         qgs_layer_tree_nodes: List[QgsLayerTreeNode],
         parent_group_resource: NGWGroupResource,
         iface: QgisInterface,
-        ngw_version=None
+        ngw_version=None,
     ):
         super().__init__(ngw_version)
         self.qgs_layer_tree_nodes = qgs_layer_tree_nodes
@@ -965,7 +1115,7 @@ class QGISResourcesUploader(QGISResourceJob):
             self.qgs_layer_tree_nodes,
             self.parent_group_resource,
             ngw_webmap_root_group,
-            ngw_webmap_basemaps
+            ngw_webmap_basemaps,
         )
 
         # The group was attached resources,  therefore, it is necessary to upgrade for get children flag
@@ -975,26 +1125,26 @@ class QGISResourcesUploader(QGISResourceJob):
         def resource_type_for_layer(node: QgsLayerTreeNode) -> Optional[str]:
             layer = cast(QgsLayerTreeLayer, node).layer()
             if isinstance(layer, QgsVectorLayer):
-                return 'vector_layer'
+                return "vector_layer"
             if isinstance(layer, QgsRasterLayer):
                 data_provider = layer.dataProvider().name()  # type: ignore
-                if data_provider == 'gdal':
-                    return 'raster_layer'
-                if data_provider == 'wms':
+                if data_provider == "gdal":
+                    return "raster_layer"
+                if data_provider == "wms":
                     registry = QgsProviderRegistry.instance()
-                    provider_metadata = registry.providerMetadata('wms')
+                    provider_metadata = registry.providerMetadata("wms")
                     parameters = provider_metadata.decodeUri(layer.source())
                     return (
-                        'basemap_layer'
-                        if parameters.get('type') == 'xyz'
-                        else 'wmsclient_layer'
+                        "basemap_layer"
+                        if parameters.get("type") == "xyz"
+                        else "wmsclient_layer"
                     )
             if isinstance(layer, QgsPluginLayer):
-                return 'basemap_layer'
+                return "basemap_layer"
             return None
 
         def resource_type_for_node(
-            node: QgsLayerTreeNode
+            node: QgsLayerTreeNode,
         ) -> List[Optional[str]]:
             if node.nodeType() == QgsLayerTreeNode.NodeType.NodeLayer:
                 return [resource_type_for_layer(node)]
@@ -1012,16 +1162,16 @@ class QGISResourcesUploader(QGISResourceJob):
             resources_type.extend(resource_type_for_node(node))
 
         counter = Counter(resources_type)
-        counter['lookup_table'] = len(self._value_relations)
+        counter["lookup_table"] = len(self._value_relations)
         if add_map:
-            counter['webmap'] = 1
+            counter["webmap"] = 1
         del counter[None]
 
         result = self.parent_group_resource._res_factory.connection.post(
-            '/api/component/resource/check_quota', counter
+            "/api/component/resource/check_quota", counter
         )
-        if not result['success']:
-            raise JobError(result['message'])
+        if not result["success"]:
+            raise JobError(result["message"])
 
     def _find_lookup_tables(self) -> None:
         def collect_value_relations(layer_node: QgsLayerTreeNode) -> None:
@@ -1033,7 +1183,7 @@ class QGISResourcesUploader(QGISResourceJob):
 
             for attribute_index in layer.attributeList():
                 editor_widget_setup = layer.editorWidgetSetup(attribute_index)
-                if editor_widget_setup.type() != 'ValueRelation':
+                if editor_widget_setup.type() != "ValueRelation":
                     continue
                 self._value_relations.add(
                     ValueRelation.from_config(editor_widget_setup.config())
@@ -1052,7 +1202,7 @@ class QGISResourcesUploader(QGISResourceJob):
         qgs_layer_tree_nodes,
         ngw_resource_group,
         ngw_webmap_item,
-        ngw_webmap_basemaps
+        ngw_webmap_basemaps,
     ):
         for node in qgs_layer_tree_nodes:
             if isinstance(node, QgsLayerTreeLayer):
@@ -1064,14 +1214,14 @@ class QGISResourcesUploader(QGISResourceJob):
                     ngw_resource_group,
                     node,
                     ngw_webmap_item,
-                    ngw_webmap_basemaps
+                    ngw_webmap_basemaps,
                 )
             else:
                 self.add_group(
                     ngw_resource_group,
                     node,
                     ngw_webmap_item,
-                    ngw_webmap_basemaps
+                    ngw_webmap_basemaps,
                 )
 
     def _add_group_tree(self) -> None:
@@ -1086,7 +1236,7 @@ class QGISResourcesUploader(QGISResourceJob):
     def __add_group_level(
         self,
         parent_group_resource: NGWGroupResource,
-        group_node: QgsLayerTreeGroup
+        group_node: QgsLayerTreeGroup,
     ) -> None:
         group_name = self.unique_resource_name(
             group_node.name(), parent_group_resource
@@ -1134,7 +1284,8 @@ class QGISResourcesUploader(QGISResourceJob):
                 Optional[QgsLayerTreeGroup], layer_node.parent()
             )
             parent_group_resource = self._groups.get(
-                parent_node, self.parent_group_resource  # type: ignore
+                parent_node,
+                self.parent_group_resource,  # type: ignore
             )
 
             lookup_table_name = self.unique_resource_name(
@@ -1143,7 +1294,7 @@ class QGISResourcesUploader(QGISResourceJob):
             lookup_table = ResourceCreator.create_lookup_table(
                 lookup_table_name,
                 extract_items(layer_node, value_relation),
-                parent_group_resource
+                parent_group_resource,
             )
             self._lookup_tables_id[value_relation] = lookup_table.common.id
             self.putAddedResourceToResult(lookup_table)
@@ -1151,31 +1302,29 @@ class QGISResourcesUploader(QGISResourceJob):
     def add_layer(
         self,
         ngw_resource_group,
-        qgsLayerTreeItem: QgsLayerTreeLayer,
+        layer_tree_item: QgsLayerTreeLayer,
         ngw_webmap_item,
-        ngw_webmap_basemaps
+        ngw_webmap_basemaps,
     ):
         try:
             ngw_resources = self.importQGISMapLayer(
-                qgsLayerTreeItem.layer(), ngw_resource_group
+                layer_tree_item.layer(), ngw_resource_group
             )
         except Exception as e:
-            log('Exception during adding layer')
+            log("Exception during adding layer")
 
             has_several_elements = len(self.qgs_layer_tree_nodes) > 1
-            group_selected = (
-                len(self.qgs_layer_tree_nodes) == 1
-                and isinstance(
-                    self.qgs_layer_tree_nodes[0],
-                    QgsLayerTreeGroup
-                )
+            group_selected = len(
+                self.qgs_layer_tree_nodes
+            ) == 1 and isinstance(
+                self.qgs_layer_tree_nodes[0], QgsLayerTreeGroup
             )
 
             if has_several_elements or group_selected:
                 self.warningOccurred.emit(
                     JobError(
-                        "Uploading layer \"{}\" failed. Skipped.".format(qgsLayerTreeItem.layer().name()),
-                        e
+                        f'Uploading layer "{layer_tree_item.layer().name()}" failed. Skipped.',
+                        e,
                     )
                 )
                 return
@@ -1185,7 +1334,10 @@ class QGISResourcesUploader(QGISResourceJob):
         for ngw_resource in ngw_resources:
             self.putAddedResourceToResult(ngw_resource)
 
-            if ngw_resource.type_id in [NGWVectorLayer.type_id, NGWRasterLayer.type_id]:
+            if ngw_resource.type_id in [
+                NGWVectorLayer.type_id,
+                NGWRasterLayer.type_id
+            ]:
                 qgs_map_layer = qgsLayerTreeItem.layer()
                 assert qgs_map_layer is not None
                 style_manager = qgs_map_layer.styleManager()
@@ -1219,20 +1371,25 @@ class QGISResourcesUploader(QGISResourceJob):
 
                 # check and import attachments
                 if ngw_resource.type_id == NGWVectorLayer.type_id:
-                    self.importAttachments(qgsLayerTreeItem.layer(), ngw_resource)
+                    self.importAttachments(
+                        layer_tree_item.layer(), ngw_resource
+                    )
 
             elif ngw_resource.type_id == NGWWmsLayer.type_id:
                 transparency = None
-                if qgsLayerTreeItem.layer().type() == QgsMapLayer.RasterLayer:
-                    transparency = 100 - 100 * qgsLayerTreeItem.layer().renderer().opacity()
+                if layer_tree_item.layer().type() == QgsMapLayer.RasterLayer:
+                    transparency = (
+                        100
+                        - 100 * layer_tree_item.layer().renderer().opacity()
+                    )
 
                 ngw_webmap_item.appendChild(
                     NGWWebMapLayer(
                         ngw_resource.common.id,
                         ngw_resource.common.display_name,
-                        CompatQgis.is_layer_checked(qgsLayerTreeItem),
+                        layer_tree_item.itemVisibilityChecked(),
                         transparency,
-                        legend=qgsLayerTreeItem.isExpanded(),
+                        legend=layer_tree_item.isExpanded(),
                     )
                 )
 
@@ -1252,48 +1409,47 @@ class QGISResourcesUploader(QGISResourceJob):
         ngw_resource_group,
         qgsLayerTreeGroup,
         ngw_webmap_item,
-        ngw_webmap_basemaps
+        ngw_webmap_basemaps,
     ) -> None:
         ngw_resource_child_group = self._groups[qgsLayerTreeGroup]
 
         ngw_webmap_child_group = NGWWebMapGroup(
             ngw_resource_child_group.common.display_name,
-            qgsLayerTreeGroup.isExpanded()
+            qgsLayerTreeGroup.isExpanded(),
         )
-        ngw_webmap_item.appendChild(
-            ngw_webmap_child_group
-        )
+        ngw_webmap_item.appendChild(ngw_webmap_child_group)
 
         self.process_one_level_of_layers_tree(
             qgsLayerTreeGroup.children(),
             ngw_resource_child_group,
             ngw_webmap_child_group,
-            ngw_webmap_basemaps
+            ngw_webmap_basemaps,
         )
 
-        ngw_resource_child_group.update() # in order to update group items: if they have children items they should become expandable
+        ngw_resource_child_group.update()  # in order to update group items: if they have children items they should become expandable
 
 
 class QGISProjectUploader(QGISResourcesUploader):
     """
-        if new_group_name is None  -- Update mode
+    if new_group_name is None  -- Update mode
 
-        Update:
-        1. Add new
-        2. Rewrite current (vector only)
-        3. Remove
-        4. Update map
+    Update:
+    1. Add new
+    2. Rewrite current (vector only)
+    3. Remove
+    4. Update map
 
-        Update Ext (future):
-        Calculate mapping of qgislayer to ngw resource
-        Show map for user to edit anf cofirm it
+    Update Ext (future):
+    Calculate mapping of qgislayer to ngw resource
+    Show map for user to edit anf cofirm it
     """
+
     def __init__(
         self,
         new_group_name: str,
         parent_group_resource: NGWGroupResource,
         iface: QgisInterface,
-        ngw_version
+        ngw_version,
     ) -> None:
         qgs_layer_tree_nodes = QgsProject.instance().layerTreeRoot().children()
         super().__init__(
@@ -1309,8 +1465,7 @@ class QGISProjectUploader(QGISResourcesUploader):
             self.new_group_name, self.parent_group_resource
         )
         ngw_group_resource = ResourceCreator.create_group(
-            self.parent_group_resource,
-            new_group_name
+            self.parent_group_resource, new_group_name
         )
         self.putAddedResourceToResult(ngw_group_resource)
         self.parent_group_resource = ngw_group_resource
@@ -1331,7 +1486,7 @@ class QGISProjectUploader(QGISResourcesUploader):
             ngw_group_resource,
             self.new_group_name + " — webmap",
             ngw_webmap_root_group.children,
-            ngw_webmap_basemaps
+            ngw_webmap_basemaps,
         )
         self.putAddedResourceToResult(ngw_webmap, is_main=True)
 
@@ -1339,18 +1494,28 @@ class QGISProjectUploader(QGISResourcesUploader):
         ngw_group_resource.update()
         self.parent_group_resource.update()
 
-    def create_webmap(self, ngw_resource, ngw_webmap_name, ngw_webmap_items, ngw_webmap_basemaps):
+    def create_webmap(
+        self,
+        ngw_resource,
+        ngw_webmap_name,
+        ngw_webmap_items,
+        ngw_webmap_basemaps,
+    ):
         self._layer_status(ngw_webmap_name, self.tr("creating"))
 
         rectangle = self.iface.mapCanvas().extent()
         ct = CompatQgis.coordinate_transform_obj(
             self.iface.mapCanvas().mapSettings().destinationCrs(),
-            QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId),
-            QgsProject.instance()
+            QgsCoordinateReferenceSystem(
+                4326, QgsCoordinateReferenceSystem.EpsgCrsId
+            ),
+            QgsProject.instance(),
         )
         rectangle = ct.transform(rectangle)
         # log(">>> rectangle 2: " + str(rectangle.asPolygon()))
-        ngw_webmap_items_as_dicts = [item.toDict() for item in ngw_webmap_items]
+        ngw_webmap_items_as_dicts = [
+            item.toDict() for item in ngw_webmap_items
+        ]
         ngw_resource = NGWWebMap.create_in_group(
             ngw_webmap_name,
             ngw_resource,
@@ -1398,22 +1563,21 @@ class MapForLayerCreater(QGISResourceJob):
                 self.ngw_layer.common.display_name,
                 True,
                 0,
-                legend=True
+                legend=True,
             )
         )
 
         ngw_group = self.ngw_layer.get_parent()
 
         ngw_map_name = self.unique_resource_name(
-            self.ngw_layer.common.display_name + "-map",
-            ngw_group
+            self.ngw_layer.common.display_name + "-map", ngw_group
         )
         ngw_resource = NGWWebMap.create_in_group(
             ngw_map_name,
             ngw_group,
             [item.toDict() for item in ngw_webmap_root_group.children],
             [],
-            bbox=self.ngw_layer.extent()
+            bbox=self.ngw_layer.extent(),
         )
 
         self.putAddedResourceToResult(ngw_resource, is_main=True)
@@ -1428,15 +1592,14 @@ class MapForLayerCreater(QGISResourceJob):
                 self.ngw_layer.common.display_name,
                 True,
                 0,
-                legend=True
+                legend=True,
             )
         )
 
         ngw_group = self.ngw_layer.get_parent()
 
         ngw_map_name = self.unique_resource_name(
-            self.ngw_layer.common.display_name + "-map",
-            ngw_group
+            self.ngw_layer.common.display_name + "-map", ngw_group
         )
 
         ngw_resource = NGWWebMap.create_in_group(
@@ -1456,7 +1619,7 @@ class QGISStyleUpdater(QGISResourceJob):
         self.ngw_resource = ngw_resource
 
     def _do(self):
-        #if self.ngw_resource.type_id == NGWVectorLayer.type_id:
+        # if self.ngw_resource.type_id == NGWVectorLayer.type_id:
         self.updateStyle(self.qgs_map_layer, self.ngw_resource)
         self.putEditedResourceToResult(self.ngw_resource)
 
@@ -1500,7 +1663,8 @@ class NGWCreateWMSForVector(QGISResourceJob):
 
         ngw_wms_service_name = self.unique_resource_name(
             self.ngw_layer.common.display_name + " — WMS service",
-            self.ngw_group_resource)
+            self.ngw_group_resource,
+        )
 
         ngw_wfs_resource = NGWWmsService.create_in_group(
             ngw_wms_service_name,
@@ -1522,12 +1686,18 @@ class NGWUpdateVectorLayer(QGISResourceJob):
 
         # id need only for update not for create
         # feature_dict["id"] = qgs_feature.id() + 1 # Fix NGW behavior
-        import_crs = QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId)
+        import_crs = QgsCoordinateReferenceSystem(
+            3857, QgsCoordinateReferenceSystem.EpsgCrsId
+        )
 
         g = qgs_feature.geometry()
         if CompatQgis.is_geom_empty(g):
             return None
-        g.transform(CompatQgis.coordinate_transform_obj(self.qgis_layer.crs(), import_crs, QgsProject.instance()))
+        g.transform(
+            CompatQgis.coordinate_transform_obj(
+                self.qgis_layer.crs(), import_crs, QgsProject.instance()
+            )
+        )
         if self.ngw_layer.is_geom_multy():
             g.convertToMultiType()
 
@@ -1536,19 +1706,25 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         attributes = {}
         for qgsField in qgs_feature.fields().toList():
             value = qgs_feature.attribute(qgsField.name())
-            attributes[qgsField.name()] = CompatQt.get_clean_python_value(value)
+            attributes[qgsField.name()] = CompatQt.get_clean_python_value(
+                value
+            )
 
-        feature_dict["fields"] = self.ngw_layer.construct_ngw_feature_as_json(attributes)
+        feature_dict["fields"] = self.ngw_layer.construct_ngw_feature_as_json(
+            attributes
+        )
 
         return feature_dict
 
     def getFeaturesPart(self, pack_size):
         ngw_features = []
         for qgsFeature in self.qgis_layer.getFeatures():
-            ngw_feature_dict = self.createNGWFeatureDictFromQGSFeature(qgsFeature)
+            ngw_feature_dict = self.createNGWFeatureDictFromQGSFeature(
+                qgsFeature
+            )
             if ngw_feature_dict is None:
                 # TODO: somehow warn user about skipped features?
-                log('WARN: Feature skipped')
+                log("WARN: Feature skipped")
                 continue
             ngw_features.append(NGWFeature(ngw_feature_dict, self.ngw_layer))
 
@@ -1564,7 +1740,9 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         block_size = 10
         total_count = self.qgis_layer.featureCount()
 
-        self._layer_status(self.qgis_layer.name(), self.tr("removing all features"))
+        self._layer_status(
+            self.qgis_layer.name(), self.tr("removing all features")
+        )
         self.ngw_layer.delete_all_features()
 
         features_counter = 0
@@ -1578,4 +1756,5 @@ class NGWUpdateVectorLayer(QGISResourceJob):
                 progress = v
                 self._layer_status(
                     self.qgis_layer.name(),
-                    self.tr("adding features ({}%)").format(progress))
+                    self.tr("adding features ({}%)").format(progress),
+                )

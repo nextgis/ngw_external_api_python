@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -24,25 +23,23 @@ import sys
 import traceback
 from typing import List, Union
 
-from qgis.PyQt.QtCore import (
-    QObject, pyqtSignal
-)
+from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 from ..core.ngw_error import NGWError
-from ..core.ngw_resource import NGWResource
-from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_group_resource import NGWGroupResource
+from ..core.ngw_resource import NGWResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
+from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_webmap import NGWWebMap, NGWWebMapLayer, NGWWebMapRoot
-
 from ..qgis.qgis_ngw_connection import QgsNgwConnection
-
 from ..utils import log
-
 from .qt_ngw_resource_model_job_error import (
-    JobNGWError, JobAuthorizationError, NGWResourceModelJobError, JobInternalError,
-    JobServerRequestError
+    JobAuthorizationError,
+    JobInternalError,
+    JobNGWError,
+    JobServerRequestError,
+    NGWResourceModelJobError,
 )
 
 
@@ -102,7 +99,7 @@ class NGWResourceModelJob(QObject):
         if name not in present_names:
             return name
 
-        if re.search(r'\(\d\)$', name):
+        if re.search(r"\(\d\)$", name):
             name = name[:-3]
         new_name = name
         new_name_with_space = None
@@ -110,8 +107,8 @@ class NGWResourceModelJob(QObject):
         while (
             new_name in present_names or new_name_with_space in present_names
         ):
-            new_name = f'{name}({id})'
-            new_name_with_space = f'{name} ({id})'
+            new_name = f"{name}({id})"
+            new_name_with_space = f"{name} ({id})"
             id += 1
         return new_name if new_name_with_space is None else new_name_with_space
 
@@ -158,33 +155,43 @@ class NGWResourceModelJob(QObject):
         except NGWError as e:
             if e.type == NGWError.TypeNGWError:
                 ngw_exeption_dict = json.loads(e.message)
-                if ngw_exeption_dict.get("status_code") == 403:
-                    self.errorOccurred.emit(JobAuthorizationError(e.url))
-                elif ngw_exeption_dict.get("status_code") == 401:
+                if (
+                    ngw_exeption_dict.get("status_code") == 403
+                    or ngw_exeption_dict.get("status_code") == 401
+                ):
                     self.errorOccurred.emit(JobAuthorizationError(e.url))
                 else:
-                    self.errorOccurred.emit(JobNGWError(
-                        str(ngw_exeption_dict.get("message", "No message")),
-                        e.url
-                    ))
+                    self.errorOccurred.emit(
+                        JobNGWError(
+                            str(
+                                ngw_exeption_dict.get("message", "No message")
+                            ),
+                            e.url,
+                        )
+                    )
 
             elif e.type == NGWError.TypeRequestError:
-                self.errorOccurred.emit(JobServerRequestError(
-                    self.tr("Bad http comunication.") + str(e),
-                    e.url,
-                    e.user_msg,
-                    e.need_reconnect
-                ))
+                self.errorOccurred.emit(
+                    JobServerRequestError(
+                        self.tr("Bad http comunication.") + str(e),
+                        e.url,
+                        e.user_msg,
+                        e.need_reconnect,
+                    )
+                )
 
             elif e.type == NGWError.TypeNGWUnexpectedAnswer:
-                self.errorOccurred.emit(JobNGWError(
-                    self.tr("Can't parse server answer"), e.url
-                ))
+                self.errorOccurred.emit(
+                    JobNGWError(self.tr("Can't parse server answer"), e.url)
+                )
 
             else:
-                self.errorOccurred.emit(JobServerRequestError(
-                    self.tr("Something wrong with request to server"), e.url
-                ))
+                self.errorOccurred.emit(
+                    JobServerRequestError(
+                        self.tr("Something wrong with request to server"),
+                        e.url,
+                    )
+                )
 
         except NGWResourceModelJobError as e:
             self.errorOccurred.emit(e)
@@ -196,10 +203,10 @@ class NGWResourceModelJob(QObject):
                 (f.split("\\")[-1], l, func, text)
                 for f, l, func, text in extracted_list
             ]
-            log('ERROR: \n{}'.format(traceback.format_exc()))
-            self.errorOccurred.emit(JobInternalError(
-                str(e), traceback.format_list(extracted_list)
-            ))
+            log(f"ERROR: \n{traceback.format_exc()}")
+            self.errorOccurred.emit(
+                JobInternalError(str(e), traceback.format_list(extracted_list))
+            )
 
         self.dataReceived.emit(self.result)
         self.finished.emit()
@@ -227,7 +234,7 @@ class NGWResourceUpdater(NGWResourceModelJob):
         self,
         ngw_resources: Union[NGWResource, List[NGWResource]],
         *,
-        recursive: bool = False
+        recursive: bool = False,
     ) -> None:
         super().__init__()
         if isinstance(ngw_resources, list):
@@ -245,9 +252,8 @@ class NGWResourceUpdater(NGWResourceModelJob):
         ngw_resource_children = ngw_resource.get_children()
         for ngw_resource_child in ngw_resource_children:
             self.putAddedResourceToResult(ngw_resource_child)
-            if (
-                self.recursive
-                and isinstance(ngw_resource_child, NGWGroupResource)
+            if self.recursive and isinstance(
+                ngw_resource_child, NGWGroupResource
             ):
                 self.__get_children(ngw_resource_child)
 
@@ -290,10 +296,10 @@ class NGWCreateWfsOrOgcfService(NGWResourceModelJob):
         service_type: str,
         ngw_vector_layer: NGWVectorLayer,
         ngw_group_resource: NGWGroupResource,
-        max_features: int
+        max_features: int,
     ):
         super().__init__()
-        assert service_type in ('WFS', 'OGC API - Features')
+        assert service_type in ("WFS", "OGC API - Features")
         self.service_type = service_type
         self.ngw_vector_layer = ngw_vector_layer
         self.ngw_group_resource = ngw_group_resource
@@ -301,10 +307,9 @@ class NGWCreateWfsOrOgcfService(NGWResourceModelJob):
 
     def _do(self):
         service_name: str = self.ngw_vector_layer.common.display_name
-        service_name += f' — {self.service_type} service'
+        service_name += f" — {self.service_type} service"
         ngw_wfs_service_name = self.unique_resource_name(
-            service_name,
-            self.ngw_group_resource
+            service_name, self.ngw_group_resource
         )
 
         service_resource = ResourceCreator.create_wfs_or_ogcf_service(
@@ -312,7 +317,7 @@ class NGWCreateWfsOrOgcfService(NGWResourceModelJob):
             ngw_wfs_service_name,
             self.ngw_group_resource,
             [self.ngw_vector_layer],
-            self.ret_obj_num
+            self.ret_obj_num,
         )
 
         self.putAddedResourceToResult(service_resource, is_main=True)
@@ -323,10 +328,10 @@ class NGWCreateWfsService(NGWCreateWfsOrOgcfService):
         self,
         ngw_vector_layer: NGWVectorLayer,
         ngw_group_resource: NGWGroupResource,
-        max_features: int
+        max_features: int,
     ):
         super().__init__(
-            'WFS', ngw_vector_layer, ngw_group_resource, max_features
+            "WFS", ngw_vector_layer, ngw_group_resource, max_features
         )
 
 
@@ -335,10 +340,13 @@ class NGWCreateOgcfService(NGWCreateWfsOrOgcfService):
         self,
         ngw_vector_layer: NGWVectorLayer,
         ngw_group_resource: NGWGroupResource,
-        max_features: int
+        max_features: int,
     ):
         super().__init__(
-            'OGC API - Features', ngw_vector_layer, ngw_group_resource, max_features
+            "OGC API - Features",
+            ngw_vector_layer,
+            ngw_group_resource,
+            max_features,
         )
 
 
@@ -352,8 +360,7 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
         ngw_group = ngw_layer.get_parent()
 
         ngw_map_name = self.unique_resource_name(
-            self.ngw_style.common.display_name + "-map",
-            ngw_group
+            self.ngw_style.common.display_name + "-map", ngw_group
         )
 
         ngw_webmap_root_group = NGWWebMapRoot()
@@ -363,7 +370,7 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
                 ngw_layer.common.display_name,
                 True,
                 None,
-                legend=True
+                legend=True,
             )
         )
 
@@ -371,7 +378,7 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
             ngw_map_name,
             ngw_group,
             [item.toDict() for item in ngw_webmap_root_group.children],
-            bbox=ngw_layer.extent()
+            bbox=ngw_layer.extent(),
         )
 
         self.putAddedResourceToResult(ngw_resource, is_main=True)

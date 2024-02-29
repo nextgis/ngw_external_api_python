@@ -17,22 +17,15 @@
  *                                                                         *
  ***************************************************************************/
 """
-from os import path
 from .ngw_resource import NGWResource
-
-from ..utils import ICONS_DIR
 
 
 class NGWWmsService(NGWResource):
-
-    type_id = 'wmsserver_service'
-    type_title = 'NGW WMS Service'
+    type_id = "wmsserver_service"
+    type_title = "NGW WMS Service"
 
     def get_url(self):
-        return '%s%s' % (
-            self.get_absolute_api_url(),
-            '/wms'
-        )
+        return "%s%s" % (self.get_absolute_api_url(), "/wms")
 
     def get_layer_keys(self):
         layer_keys = []
@@ -60,24 +53,17 @@ class NGWWmsService(NGWResource):
             resource=dict(
                 cls=cls.type_id,
                 display_name=name,
-                parent=dict(
-                    id=ngw_group_resource.common.id
-                )
+                parent=dict(id=ngw_group_resource.common.id),
             )
         )
 
-        params[cls.type_id] = dict(
-            layers=params_layers
-        )
+        params[cls.type_id] = dict(layers=params_layers)
 
         result = connection.post(url, params=params)
 
         ngw_resource = cls(
             ngw_group_resource._res_factory,
-            NGWResource.receive_resource_obj(
-                connection,
-                result['id']
-            )
+            NGWResource.receive_resource_obj(connection, result["id"]),
         )
 
         return ngw_resource

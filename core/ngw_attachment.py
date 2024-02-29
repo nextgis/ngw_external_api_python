@@ -20,8 +20,14 @@
 
 import urllib.parse
 
-FEATURE_ATTACHMENT_URL = lambda res_id, feature_id, attachment_id: '/api/resource/%d/feature/%d/attachment/%d' % (res_id, feature_id, attachment_id)
-IMAGE_URL = lambda res_id, feature_id, image_id: '/api/resource/%s/feature/%d/attachment/%d/image' % (res_id, feature_id, image_id)
+
+def FEATURE_ATTACHMENT_URL(res_id, feature_id, attachment_id):
+    return f"/api/resource/{res_id}/feature/{feature_id}/attachment/{attachment_id}"
+
+
+def IMAGE_URL(res_id, feature_id, image_id):
+    return f"{FEATURE_ATTACHMENT_URL(res_id, feature_id, image_id)}/image"
+
 
 class NGWAttachment:
     def __init__(self, attachment_id, ngw_feature):
@@ -29,30 +35,46 @@ class NGWAttachment:
         self.ngw_feature = ngw_feature
 
     def get_attachmet_url(self):
-        return FEATURE_ATTACHMENT_URL(self.ngw_feature.ngw_vector_layer.common.id, self.ngw_feature.id, self.id)
+        return FEATURE_ATTACHMENT_URL(
+            self.ngw_feature.ngw_vector_layer.common.id,
+            self.ngw_feature.id,
+            self.id,
+        )
 
     def unlink(self):
-        self.ngw_feature.ngw_vector_layer._res_factory.connection.delete(self.get_attachmet_url())
+        self.ngw_feature.ngw_vector_layer._res_factory.connection.delete(
+            self.get_attachmet_url()
+        )
 
     def get_image_url(self):
-        return IMAGE_URL(self.ngw_feature.ngw_vector_layer.common.id, self.ngw_feature.id, self.id)
+        return IMAGE_URL(
+            self.ngw_feature.ngw_vector_layer.common.id,
+            self.ngw_feature.id,
+            self.id,
+        )
 
     def get_image_full_url(self):
         base_url = self.ngw_feature.ngw_vector_layer._res_factory.connection.server_url
         return urllib.parse.urljoin(base_url, self.get_image_url())
 
     def get_image(self):
-        attachment_info = self.ngw_feature.ngw_vector_layer._res_factory.connection.get( self.get_attachmet_url() )
-        name = attachment_info['name']
+        attachment_info = (
+            self.ngw_feature.ngw_vector_layer._res_factory.connection.get(
+                self.get_attachmet_url()
+            )
+        )
+        name = attachment_info["name"]
         if name is None:
-             name = "image_%d"%attachment_info['id']
+            name = "image_%d" % attachment_info["id"]
 
-        format = attachment_info['mime_type'].split('/')
+        format = attachment_info["mime_type"].split("/")
         if len(format) == 2:
             format = format[1]
         else:
             format = "jpeg"
 
-        file_contetnt = self.ngw_feature.ngw_vector_layer._res_factory.connection.download_file( self.get_image_url() )
+        file_contetnt = self.ngw_feature.ngw_vector_layer._res_factory.connection.download_file(
+            self.get_image_url()
+        )
 
         return [name, format, file_contetnt]

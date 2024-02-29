@@ -18,18 +18,26 @@
  ***************************************************************************/
 """
 import re
-from os import path
-from typing import Any, Tuple, Optional, List, TYPE_CHECKING
-
 import urllib.parse
+from os import path
+from typing import TYPE_CHECKING, Any, List
 
 from ..utils import ICONS_DIR
 
-API_RESOURCE_URL = lambda res_id: '/api/resource/%d' % res_id
-API_COLLECTION_URL = '/api/resource/'
-RESOURCE_URL = lambda res_id: '/resource/%d' % res_id
 
-API_LAYER_EXTENT = lambda res_id: '/api/resource/%d/extent' % res_id
+def API_RESOURCE_URL(res_id):
+    return "/api/resource/%d" % res_id
+
+
+API_COLLECTION_URL = "/api/resource/"
+
+
+def RESOURCE_URL(res_id):
+    return "/resource/%d" % res_id
+
+
+def API_LAYER_EXTENT(res_id):
+    return "/api/resource/%d/extent" % res_id
 
 
 class Wrapper:
@@ -37,19 +45,26 @@ class Wrapper:
         self.__dict__.update(params)
 
     if TYPE_CHECKING:
-        def __setattr__(self, __name: str, __value: Any) -> None: ...
-        def __getattr__(self, __name: str) -> Any: ...
+
+        def __setattr__(self, __name: str, __value: Any) -> None:
+            ...
+
+        def __getattr__(self, __name: str) -> Any:
+            ...
 
 
-DICT_TO_OBJ = lambda d: Wrapper(**d)
-LIST_DICT_TO_LIST_OBJ = lambda l: [Wrapper(**el) for el in l]
+def dict_to_object(d):
+    return Wrapper(**d)
+
+
+def list_dict_to_list_object(list_dict):
+    return [Wrapper(**el) for el in list_dict]
 
 
 class NGWResource:
-
-    type_id = 'resource'
-    icon_path = path.join(ICONS_DIR, 'resource.svg')
-    type_title = 'NGW Resource'
+    type_id = "resource"
+    icon_path = path.join(ICONS_DIR, "resource.svg")
+    type_title = "NGW Resource"
 
     _res_factory: Any  # NGWResourceFactory
 
@@ -66,7 +81,7 @@ class NGWResource:
         """
         :rtype : json obj
         """
-        return ngw_con.get("%s?parent=%s" % (API_COLLECTION_URL, res_id))
+        return ngw_con.get(f"{API_COLLECTION_URL}?parent={res_id}")
 
     @classmethod
     def delete_resource(cls, ngw_resource):
@@ -85,7 +100,7 @@ class NGWResource:
         self._construct()
         self.children_count = None
 
-        icon_path = path.join(ICONS_DIR, f'{self.common.cls}.svg')
+        icon_path = path.join(ICONS_DIR, f"{self.common.cls}.svg")
         if path.exists(icon_path):
             self.icon_path = icon_path
 
@@ -98,14 +113,14 @@ class NGWResource:
         Can be overridden in a derived class
         """
         # resource
-        self.common = DICT_TO_OBJ(self._json['resource'])
+        self.common = dict_to_object(self._json["resource"])
         if self.common.parent:
-            self.common.parent = DICT_TO_OBJ(self.common.parent)
+            self.common.parent = dict_to_object(self.common.parent)
         if self.common.owner_user:
-            self.common.owner_user = DICT_TO_OBJ(self.common.owner_user)
+            self.common.owner_user = dict_to_object(self.common.owner_user)
         # resmeta
-        if 'resmeta' in self._json:
-            self.metadata = DICT_TO_OBJ(self._json['resmeta'])
+        if "resmeta" in self._json:
+            self.metadata = dict_to_object(self._json["resmeta"])
 
     def get_parent(self):
         if self.common.parent:
@@ -113,7 +128,7 @@ class NGWResource:
         else:
             return None
 
-    def get_children(self) -> List['NGWResource']:
+    def get_children(self) -> List["NGWResource"]:
         if not self.common.children:
             return []
 
@@ -122,9 +137,7 @@ class NGWResource:
         )
         children: List[NGWResource] = []
         for child_json in children_json:
-            children.append(
-                self._res_factory.get_resource_by_json(child_json)
-            )
+            children.append(self._res_factory.get_resource_by_json(child_json))
         return children
 
     def get_absolute_url(self) -> str:
@@ -136,7 +149,7 @@ class NGWResource:
         return urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
 
     def get_absolute_vsicurl_url(self) -> str:
-        return f'/vsicurl/{self.get_absolute_api_url()}'
+        return f"/vsicurl/{self.get_absolute_api_url()}"
 
     def get_relative_url(self) -> str:
         return RESOURCE_URL(self.common.id)
@@ -179,8 +192,7 @@ class NGWResource:
 
     def update(self):
         self._json = self.receive_resource_obj(
-            self._res_factory.connection,
-            self.common.id
+            self._res_factory.connection, self.common.id
         )
 
         self._construct()
@@ -193,13 +205,13 @@ class NGWResource:
         if name not in chd_names:
             return name
 
-        if re.search(r'\(\d\)$', name):
+        if re.search(r"\(\d\)$", name):
             name = name[:-3]
         new_name = name
         new_name_with_space = None
         id = 1
-        while (new_name in chd_names or new_name_with_space in chd_names):
-            new_name = f'{name}({id})'
-            new_name_with_space = f'{name} ({id})'
+        while new_name in chd_names or new_name_with_space in chd_names:
+            new_name = f"{name}({id})"
+            new_name_with_space = f"{name} ({id})"
             id += 1
         return new_name if new_name_with_space is None else new_name_with_space

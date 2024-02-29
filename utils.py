@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -21,11 +20,7 @@
 import os
 import sys
 
-
-ICONS_DIR = os.path.join(
-    os.path.dirname(__file__),
-    'icons'
-)
+ICONS_DIR = os.path.join(os.path.dirname(__file__), "icons")
 
 ngw_api_logger = None
 debug = False
@@ -42,9 +37,12 @@ Enable debuging
         from nextgis_connect.ngw_api.utils import setDebugEnabled
         setDebugEnabled(True)
 """
+
+
 def setDebugEnabled(flag):
     global debug
     debug = flag
+
 
 def log(msg):
     if debug is False:
@@ -55,19 +53,20 @@ def log(msg):
 
 
 def ngw_version_parts(version):
-    strs = version.split('.')
-    ints = [0, 0, 0, sys.maxsize] # sys.maxsize is present for python 2/3 both
+    strs = version.split(".")
+    ints = [0, 0, 0, sys.maxsize]  # sys.maxsize is present for python 2/3 both
     for i in range(4):
         if i >= len(strs):
             continue
-        if strs[i].startswith('dev'):
-            ints[3] = int(strs[i].replace('dev', ''))
+        if strs[i].startswith("dev"):
+            ints[3] = int(strs[i].replace("dev", ""))
             continue
         ints[i] = int(strs[i])
     return ints
 
-# Note: this method does not include all PEP 440 features. Supports either X.Y.Z or X.Y.Z.devN (all parts
-# are not obligatory).
+
+# Note: this method does not include all PEP 440 features. Supports either
+# X.Y.Z or X.Y.Z.devN (all parts are not obligatory).
 def ngw_version_compare(lversion, rversion):
     try:
         lints = ngw_version_parts(lversion)
@@ -79,5 +78,5 @@ def ngw_version_compare(lversion, rversion):
             elif rints[i] > lints[i]:
                 return -1
         return 0
-    except:
+    except Exception:
         return None

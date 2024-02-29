@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
  NGW Plugins settings
@@ -24,41 +23,41 @@ from .common_plugin_settings import PluginSettings
 
 
 class NgwPluginSettings(PluginSettings):
-    '''
+    """
     Settings class for working with ngw connection settings
-    '''
+    """
 
-    _company_name = 'NextGIS'
-    _product = 'NextGIS WEB API'
+    _company_name = "NextGIS"
+    _product = "NextGIS WEB API"
 
     @classmethod
     def set_sanitize_rename_fields(cls, value):
         settings = cls.get_settings()
-        settings.setValue('/sanitize_rename_fields', int(value))
+        settings.setValue("/sanitize_rename_fields", int(value))
 
     @classmethod
     def get_sanitize_rename_fields(cls):
         settings = cls.get_settings()
-        option = settings.value('/sanitize_rename_fields', 1, type=int)
+        option = settings.value("/sanitize_rename_fields", 1, type=int)
         return bool(option)
 
     @classmethod
     def set_sanitize_fix_geometry(cls, value):
         settings = cls.get_settings()
-        settings.setValue('/sanitize_fix_geometry', int(value))
+        settings.setValue("/sanitize_fix_geometry", int(value))
 
     @classmethod
     def get_sanitize_fix_geometry(cls):
         settings = cls.get_settings()
-        option = settings.value('/sanitize_fix_geometry', 1, type=int)
+        option = settings.value("/sanitize_fix_geometry", 1, type=int)
         return bool(option)
 
     @classmethod
     def set_upload_cog_rasters(cls, val):
         settings = cls.get_settings()
-        settings.setValue('/upload_cog_rasters', val)
+        settings.setValue("/upload_cog_rasters", val)
 
     @classmethod
     def get_upload_cog_rasters(cls):
         settings = cls.get_settings()
-        return settings.value('/upload_cog_rasters', True, type=bool)
+        return settings.value("/upload_cog_rasters", True, type=bool)

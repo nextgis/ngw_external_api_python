@@ -1,4 +1,5 @@
 from abc import ABC
+
 from .ngw_resource import NGWResource
 
 

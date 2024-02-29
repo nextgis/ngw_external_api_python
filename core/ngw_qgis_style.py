@@ -35,9 +35,7 @@ class NGWQGISStyle(NGWResource):
                 display_name=self.common.display_name,
             ),
         )
-        params[self.type_id] = dict(
-            file_upload=style_file_desc
-        )
+        params[self.type_id] = dict(file_upload=style_file_desc)
 
         url = self.get_relative_api_url()
         connection.put(url, params=params)
@@ -45,10 +43,10 @@ class NGWQGISStyle(NGWResource):
 
 
 class NGWQGISVectorStyle(NGWQGISStyle):
-    type_id = 'qgis_vector_style'
-    type_title = 'NGW QGIS Vector Style'
+    type_id = "qgis_vector_style"
+    type_title = "NGW QGIS Vector Style"
 
 
 class NGWQGISRasterStyle(NGWQGISStyle):
-    type_id = 'qgis_raster_style'
-    type_title = 'NGW QGIS Raster Style'
+    type_id = "qgis_raster_style"
+    type_title = "NGW QGIS Raster Style"

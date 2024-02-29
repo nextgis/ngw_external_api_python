@@ -17,13 +17,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-from os import path
 from .ngw_resource import NGWResource
-
-from ..utils import ICONS_DIR
 
 
 class NGWGroupResource(NGWResource):
-
-    type_id = 'resource_group'
-    type_title = 'NGW Group resource'
+    type_id = "resource_group"
+    type_title = "NGW Group resource"

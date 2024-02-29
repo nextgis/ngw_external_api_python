@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
     NextGIS WEB API
@@ -20,27 +19,23 @@
 """
 import json
 
-from os import path
 from .ngw_resource import NGWResource
-
-from ..utils import ICONS_DIR
 
 
 class NGWBaseMap(NGWResource):
-
-    type_id = 'basemap_layer'
-    type_title = 'NGW Base Map layer'
+    type_id = "basemap_layer"
+    type_title = "NGW Base Map layer"
 
     @classmethod
-    def create_in_group(cls, name, ngw_group_resource, base_map_url, qms_ext_settings=None):
+    def create_in_group(
+        cls, name, ngw_group_resource, base_map_url, qms_ext_settings=None
+    ):
         connection = ngw_group_resource._res_factory.connection
         params = dict(
             resource=dict(
                 cls=cls.type_id,
                 display_name=name,
-                parent=dict(
-                    id=ngw_group_resource.common.id
-                )
+                parent=dict(id=ngw_group_resource.common.id),
             )
         )
 
@@ -48,18 +43,14 @@ class NGWBaseMap(NGWResource):
         if qms_ext_settings is not None:
             qms_parameters = qms_ext_settings.toJSON()
 
-        params[cls.type_id] = dict(
-            url=base_map_url,
-            qms=qms_parameters
+        params[cls.type_id] = dict(url=base_map_url, qms=qms_parameters)
+        result = connection.post(
+            ngw_group_resource.get_api_collection_url(), params=params
         )
-        result = connection.post(ngw_group_resource.get_api_collection_url(), params=params)
 
         ngw_resource = cls(
             ngw_group_resource._res_factory,
-            NGWResource.receive_resource_obj(
-                connection,
-                result['id']
-            )
+            NGWResource.receive_resource_obj(connection, result["id"]),
         )
 
         return ngw_resource

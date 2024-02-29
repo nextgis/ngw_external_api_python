@@ -20,24 +20,22 @@
 
 from typing import Dict, Type
 
-from .ngw_webmap import NGWWebMap
+from ..qgis.qgis_ngw_connection import QgsNgwConnection
+from .ngw_base_map import NGWBaseMap
+from .ngw_group_resource import NGWGroupResource
 from .ngw_mapserver_style import NGWMapServerStyle
-from .ngw_qgis_style import NGWQGISVectorStyle
-from .ngw_qgis_style import NGWQGISRasterStyle
-from .ngw_wms_service import NGWWmsService
-from .ngw_wms_connection import NGWWmsConnection
-from .ngw_wms_layer import NGWWmsLayer
-from .ngw_vector_layer import NGWVectorLayer
+from .ngw_ogcf_service import NGWOgcfService
+from .ngw_postgis_layer import NGWPostgisLayer
+from .ngw_qgis_style import NGWQGISRasterStyle, NGWQGISVectorStyle
 from .ngw_raster_layer import NGWRasterLayer
 from .ngw_raster_style import NGWRasterStyle
-from .ngw_group_resource import NGWGroupResource
-from .ngw_wfs_service import NGWWfsService
-from .ngw_ogcf_service import NGWOgcfService
 from .ngw_resource import NGWResource
-from .ngw_base_map import NGWBaseMap
-from .ngw_postgis_layer import NGWPostgisLayer
-
-from ..qgis.qgis_ngw_connection import QgsNgwConnection
+from .ngw_vector_layer import NGWVectorLayer
+from .ngw_webmap import NGWWebMap
+from .ngw_wfs_service import NGWWfsService
+from .ngw_wms_connection import NGWWmsConnection
+from .ngw_wms_layer import NGWWmsLayer
+from .ngw_wms_service import NGWWmsService
 
 API_NGW_VERSION = "/api/component/pyramid/pkg_version"
 

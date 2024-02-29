@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
  Common Plugins settings
@@ -23,13 +22,13 @@
 from qgis.PyQt.QtCore import QSettings
 
 
-class PluginSettings():
-    '''
+class PluginSettings:
+    """
     Common settings class
-    '''
+    """
 
-    _company_name = 'AnyCompany'
-    _product = 'AnyProduct'
+    _company_name = "AnyCompany"
+    _product = "AnyProduct"
 
     @classmethod
     def get_settings(cls):

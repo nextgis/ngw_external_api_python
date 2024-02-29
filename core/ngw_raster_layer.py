@@ -17,51 +17,46 @@
  *                                                                         *
  ***************************************************************************/
 """
-from os import path
 
-from .ngw_resource import NGWResource, API_LAYER_EXTENT
 from .ngw_qgis_style import NGWQGISRasterStyle
-
-from ..utils import ICONS_DIR
+from .ngw_resource import API_LAYER_EXTENT, NGWResource
 
 
 class NGWRasterLayer(NGWResource):
-
-    type_id = 'raster_layer'
-    type_title = 'NGW Raster Layer'
+    type_id = "raster_layer"
+    type_title = "NGW Raster Layer"
 
     def __init__(self, resource_factory, resource_json):
         super().__init__(resource_factory, resource_json)
-        self.is_cog = resource_json['raster_layer'].get('cog', False)
+        self.is_cog = resource_json["raster_layer"].get("cog", False)
 
     def extent(self):
         result = self._res_factory.connection.get(
             API_LAYER_EXTENT(self.common.id)
         )
-        extent = result.get('extent')
+        extent = result.get("extent")
         if extent is None:
             return (-180, 180, -90, 90)
 
         return (
-            extent.get('minLon', -180),
-            extent.get('maxLon', 180),
-            extent.get('minLat', -90),
-            extent.get('maxLat', 90),
+            extent.get("minLon", -180),
+            extent.get("maxLon", 180),
+            extent.get("minLat", -90),
+            extent.get("maxLat", 90),
         )
 
     def create_style(self):
-        """Create default style for this layer
-        """
+        """Create default style for this layer"""
         connection = self._res_factory.connection
         style_name = self.generate_unique_child_name(
-            self.common.display_name + ''
+            self.common.display_name + ""
         )
 
         params = dict(
             resource=dict(
                 cls="raster_style",
                 parent=dict(id=self.common.id),
-                display_name=style_name
+                display_name=style_name,
             ),
         )
 
@@ -69,15 +64,14 @@ class NGWRasterLayer(NGWResource):
         result = connection.post(url, params=params)
         ngw_resource = NGWResource(
             self._res_factory,
-            NGWResource.receive_resource_obj(
-                connection,
-                result['id']
-            )
+            NGWResource.receive_resource_obj(connection, result["id"]),
         )
 
         return ngw_resource
 
-    def create_qml_style(self, qml, callback, style_name=None) -> NGWQGISRasterStyle:
+    def create_qml_style(
+        self, qml, callback, style_name=None
+    ) -> NGWQGISRasterStyle:
         """Create QML style for this layer
 
         qml - full path to qml file
@@ -94,21 +88,16 @@ class NGWRasterLayer(NGWResource):
             resource=dict(
                 cls=NGWQGISRasterStyle.type_id,
                 parent=dict(id=self.common.id),
-                display_name=style_name
+                display_name=style_name,
             ),
         )
-        params[NGWQGISRasterStyle.type_id] = dict(
-            file_upload=style_file_desc
-        )
+        params[NGWQGISRasterStyle.type_id] = dict(file_upload=style_file_desc)
 
         url = self.get_api_collection_url()
         result = connection.post(url, params=params)
         ngw_resource = NGWQGISRasterStyle(
             self._res_factory,
-            NGWResource.receive_resource_obj(
-                connection,
-                result['id']
-            )
+            NGWResource.receive_resource_obj(connection, result["id"]),
         )
 
         return ngw_resource

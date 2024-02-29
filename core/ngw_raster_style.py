@@ -17,13 +17,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-from os import path
 from .ngw_resource import NGWResource
-
-from ..utils import ICONS_DIR
 
 
 class NGWRasterStyle(NGWResource):
-
-    type_id = 'raster_style'
-    type_title = 'NGW Raster Style'
+    type_id = "raster_style"
+    type_title = "NGW Raster Style"

@@ -17,13 +17,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-from os import path
 from .ngw_resource import NGWResource
-
-from ..utils import ICONS_DIR
 
 
 class NGWMapServerStyle(NGWResource):
-
-    type_id = 'mapserver_style'
-    type_title = 'NGW MapServer Style'
+    type_id = "mapserver_style"
+    type_title = "NGW MapServer Style"

@@ -18,23 +18,21 @@
  ***************************************************************************/
 """
 import datetime
-
-from typing import List
 from os import path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 
-from .ngw_abstract_vector_resource import NGWAbstractVectorResource
+from nextgis_connect.ngw_connection.ngw_connections_manager import (
+    NgwConnectionsManager,
+)
 from qgis.core import QgsProviderRegistry
 
-from .ngw_resource import NGWResource, API_LAYER_EXTENT
-from .ngw_qgis_style import NGWQGISVectorStyle
-from .ngw_mapserver_style import NGWMapServerStyle
-from .ngw_feature import NGWFeature
-
 from ..utils import ICONS_DIR
-
-from nextgis_connect.ngw_connection.ngw_connections_manager import NgwConnectionsManager
+from .ngw_abstract_vector_resource import NGWAbstractVectorResource
+from .ngw_feature import NGWFeature
+from .ngw_mapserver_style import NGWMapServerStyle
+from .ngw_qgis_style import NGWQGISVectorStyle
+from .ngw_resource import API_LAYER_EXTENT, NGWResource
 
 ADD_FEATURE_URL = "/api/resource/%s/feature/"
 DEL_ALL_FEATURES_URL = "/api/resource/%s/feature/"
@@ -57,8 +55,8 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         connection = connections_manager.connection(self.connection_id)
 
         uri_config = {
-            'path': f'{self.get_absolute_vsicurl_url()}/geojson',
-            'authcfg': connection.auth_config_id
+            "path": f"{self.get_absolute_vsicurl_url()}/geojson",
+            "authcfg": connection.auth_config_id,
         }
         uri_config = {
             key: value
@@ -68,14 +66,14 @@ class NGWVectorLayer(NGWAbstractVectorResource):
 
         provider_registry = QgsProviderRegistry.instance()
         assert provider_registry is not None
-        metadata_provider = provider_registry.providerMetadata('ogr')
+        metadata_provider = provider_registry.providerMetadata("ogr")
         assert metadata_provider is not None
         resource_uri = metadata_provider.encodeUri(uri_config)
 
         return resource_uri
 
     def set_icon(self, geometry_type):
-        icon_filename = self.icons.get(geometry_type, 'vector_layer.svg')
+        icon_filename = self.icons.get(geometry_type, "vector_layer.svg")
         self.icon_path = path.join(ICONS_DIR, icon_filename)
 
     def get_feature_adding_url(self):
@@ -93,7 +91,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         connection = self._res_factory.connection
 
         url = self.get_feature_adding_url()
-        result = connection.patch(url, params=features_dict_list)
+        connection.patch(url, params=features_dict_list)
 
     def construct_ngw_feature_as_json(self, attributes):
         json_feature = {}
@@ -225,11 +223,11 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         return ngw_resource
 
     def update_fields_params(self, fields_params: Dict[str, Dict[str, Any]]):
-        flayer_dict = self._json.get('feature_layer')
-        fields_list = flayer_dict.get('fields')
+        flayer_dict = self._json.get("feature_layer")
+        fields_list = flayer_dict.get("fields")
 
         for field in fields_list:
-            field_keyname = field['keyname']
+            field_keyname = field["keyname"]
             if field_keyname not in fields_params:
                 continue
             field.update(fields_params[field_keyname])

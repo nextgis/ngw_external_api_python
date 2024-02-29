@@ -17,25 +17,24 @@
  *                                                                         *
  ***************************************************************************/
 """
-from typing import Tuple, Optional
 
+from nextgis_connect.ngw_connection.ngw_connections_manager import (
+    NgwConnectionsManager,
+)
 from qgis.core import QgsDataSourceUri
 
-from .ngw_resource import NGWResource, DICT_TO_OBJ, LIST_DICT_TO_LIST_OBJ
-
-from nextgis_connect.ngw_connection.ngw_connections_manager import NgwConnectionsManager
+from .ngw_resource import NGWResource, dict_to_object, list_dict_to_list_object
 
 
 class NGWWfsService(NGWResource):
-
-    type_id = 'wfsserver_service'
+    type_id = "wfsserver_service"
 
     def _construct(self):
         super()._construct()
         # wfsserver_service
-        self.wfs = DICT_TO_OBJ(self._json[self.type_id])
+        self.wfs = dict_to_object(self._json[self.type_id])
         if hasattr(self.wfs, "layers"):
-            self.wfs.layers = LIST_DICT_TO_LIST_OBJ(self.wfs.layers)
+            self.wfs.layers = list_dict_to_list_object(self.wfs.layers)
 
     def get_wfs_url(self, layer_keyname):
         connections_manager = NgwConnectionsManager()
@@ -43,11 +42,11 @@ class NGWWfsService(NGWResource):
 
         uri = QgsDataSourceUri()
         uri.setAuthConfigId(connection.auth_config_id)
-        uri.setParam('typename', layer_keyname)
-        uri.setParam('srsname', 'EPSG:3857')
-        uri.setParam('version', 'auto')
-        uri.setParam('url', self.get_absolute_api_url() + '/wfs')
-        uri.setParam('restrictToRequestBBOX', '1')
+        uri.setParam("typename", layer_keyname)
+        uri.setParam("srsname", "EPSG:3857")
+        uri.setParam("version", "auto")
+        uri.setParam("url", self.get_absolute_api_url() + "/wfs")
+        uri.setParam("restrictToRequestBBOX", "1")
 
         return uri.uri(False)
 
