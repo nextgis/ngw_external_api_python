@@ -17,6 +17,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 import json
 import os
 import urllib.parse
@@ -171,7 +172,9 @@ class NGWConnection:
             json_response = resp.json()
         except Exception as error:
             log("Response\nerror response JSON parse")
-            raise NGWError(NGWError.TypeNGWUnexpectedAnswer, "", req.url) from error
+            raise NGWError(
+                NGWError.TypeNGWUnexpectedAnswer, "", req.url
+            ) from error
 
         return json_response
 

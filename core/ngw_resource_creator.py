@@ -17,6 +17,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 from typing import Any, Dict, Iterable
 
 from .ngw_group_resource import NGWGroupResource

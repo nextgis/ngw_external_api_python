@@ -17,6 +17,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 import json
 import re
 import sys
@@ -201,7 +202,7 @@ class NGWResourceModelJob(QObject):
             extracted_list = traceback.extract_tb(exc_traceback)
             extracted_list = [
                 (f.split("\\")[-1], l, func, text)
-                for f, l, func, text in extracted_list
+                for f, l, func, text in extracted_list  # noqa: E741
             ]
             log(f"ERROR: \n{traceback.format_exc()}")
             self.errorOccurred.emit(

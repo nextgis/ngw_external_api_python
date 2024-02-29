@@ -19,6 +19,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 from .common_plugin_settings import PluginSettings
 
 

@@ -17,6 +17,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 import re
 import urllib.parse
 from os import path
@@ -46,11 +47,9 @@ class Wrapper:
 
     if TYPE_CHECKING:
 
-        def __setattr__(self, __name: str, __value: Any) -> None:
-            ...
+        def __setattr__(self, __name: str, __value: Any) -> None: ...
 
-        def __getattr__(self, __name: str) -> Any:
-            ...
+        def __getattr__(self, __name: str) -> Any: ...
 
 
 def dict_to_object(d):

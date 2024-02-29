@@ -19,6 +19,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 import os
 import tempfile
 
@@ -75,12 +76,8 @@ from ..core.ngw_webmap import (
 )
 from ..core.ngw_wms_connection import NGWWmsConnection
 from ..core.ngw_wms_layer import NGWWmsLayer
-from ..core.ngw_webmap import NGWWebMap
-from ..core.ngw_base_map import NGWBaseMap, NGWBaseMapExtSettings
 from ..core.ngw_resource import NGWResource
-from ..core.ngw_group_resource import NGWGroupResource
 from ..core.ngw_wms_service import NGWWmsService
-from ..qt.qt_ngw_resource_model_job import *
 from ..qt.qt_ngw_resource_model_job import NGWResourceModelJob
 from ..qt.qt_ngw_resource_model_job_error import JobError, JobWarning
 from ..utils import log
@@ -840,28 +837,30 @@ class QGISResourceJob(NGWResourceModelJob):
             )
 
         ngw_style = ngw_layer_resource.create_qml_style(
-            qml_filename,
-            uploadFileCallback,
-            style_name
+            qml_filename, uploadFileCallback, style_name
         )
         return ngw_style
 
-    def addStyle(self, ngw_layer_resource, qgs_map_layer, style_name) -> Optional[NGWQGISStyle]:
+    def addStyle(
+        self, ngw_layer_resource, qgs_map_layer, style_name
+    ) -> Optional[NGWQGISStyle]:
         if not isinstance(qgs_map_layer, (QgsVectorLayer, QgsRasterLayer)):
             return None
 
         style_manager = qgs_map_layer.styleManager()
         assert style_manager is not None
 
-        temp_filename = tempfile.mktemp(suffix='.qml')
-        with open(temp_filename, 'w') as qml_file:
+        temp_filename = tempfile.mktemp(suffix=".qml")
+        with open(temp_filename, "w") as qml_file:
             qml_data = style_manager.style(style_name).xmlData()
             qml_file.write(qml_data)
 
         if style_manager.isDefault(style_name):
             style_name = None
 
-        ngw_resource = self.upload_qml_file(ngw_layer_resource, temp_filename, style_name)
+        ngw_resource = self.upload_qml_file(
+            ngw_layer_resource, temp_filename, style_name
+        )
         os.remove(temp_filename)
         return ngw_resource
 
@@ -874,8 +873,8 @@ class QGISResourceJob(NGWResourceModelJob):
 
         current_style = style_manager.currentStyle()
 
-        temp_filename = tempfile.mktemp(suffix='.qml')
-        with open(temp_filename, 'w') as qml_file:
+        temp_filename = tempfile.mktemp(suffix=".qml")
+        with open(temp_filename, "w") as qml_file:
             qml_data = style_manager.style(current_style).xmlData()
             qml_file.write(qml_data)
 
@@ -1082,9 +1081,9 @@ class QGISResourceJob(NGWResourceModelJob):
                 value
             )
 
-        feature_dict[
-            "fields"
-        ] = ngw_layer_resource.construct_ngw_feature_as_json(attributes)
+        feature_dict["fields"] = (
+            ngw_layer_resource.construct_ngw_feature_as_json(attributes)
+        )
 
         return feature_dict
 
@@ -1336,9 +1335,9 @@ class QGISResourcesUploader(QGISResourceJob):
 
             if ngw_resource.type_id in [
                 NGWVectorLayer.type_id,
-                NGWRasterLayer.type_id
+                NGWRasterLayer.type_id,
             ]:
-                qgs_map_layer = qgsLayerTreeItem.layer()
+                qgs_map_layer = layer_tree_item.layer()
                 assert qgs_map_layer is not None
                 style_manager = qgs_map_layer.styleManager()
                 assert style_manager is not None
@@ -1346,9 +1345,7 @@ class QGISResourcesUploader(QGISResourceJob):
 
                 for style_name in style_manager.styles():
                     ngw_style = self.addStyle(
-                        ngw_resource,
-                        qgs_map_layer,
-                        style_name
+                        ngw_resource, qgs_map_layer, style_name
                     )
                     if ngw_style is None:
                         continue
@@ -1359,10 +1356,10 @@ class QGISResourcesUploader(QGISResourceJob):
                         ngw_webmap_item.appendChild(
                             NGWWebMapLayer(
                                 ngw_style.common.id,
-                                qgsLayerTreeItem.layer().name(),
-                                CompatQgis.is_layer_checked(qgsLayerTreeItem),
+                                layer_tree_item.layer().name(),
+                                layer_tree_item.itemVisibilityChecked(),
                                 0,
-                                legend=qgsLayerTreeItem.isExpanded()
+                                legend=layer_tree_item.isExpanded(),
                             )
                         )
 

@@ -46,31 +46,11 @@ from .qgis_ngw_connection import QgsNgwConnection
 
 from ..utils import log
 
-from .compat_qgis import CompatQgis
 
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
-from qgis.core import (
-    QgsEditorWidgetSetup,
-    QgsNetworkAccessManager,
-    QgsProject,
-    QgsProviderRegistry,
-    QgsRasterLayer,
-    QgsVectorLayer,
-)
-from qgis.PyQt.QtCore import QIODevice, QTemporaryFile, QUrl
-from qgis.PyQt.QtNetwork import QNetworkRequest
 
-from ..core.ngw_error import NGWError
-from ..core.ngw_ogcf_service import NGWOgcfService
-from ..core.ngw_qgis_style import NGWQGISStyle
-from ..core.ngw_raster_layer import NGWRasterLayer
-from ..core.ngw_resource import API_RESOURCE_URL
-from ..core.ngw_vector_layer import NGWVectorLayer
-from ..core.ngw_wfs_service import NGWWfsService
-from ..utils import log
-from .qgis_ngw_connection import QgsNgwConnection
 
 
 class UnsupportedRasterTypeException(Exception):

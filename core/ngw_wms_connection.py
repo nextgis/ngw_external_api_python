@@ -17,6 +17,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 from .ngw_resource import NGWResource
 
 
@@ -33,7 +34,9 @@ class NGWWmsConnection(NGWResource):
             .get("capcache", {})
             .get("layers", {})
         )
-        layer_ids = [layer.get("id") for layer in layers if layer.get("id") is not None]
+        layer_ids = [
+            layer.get("id") for layer in layers if layer.get("id") is not None
+        ]
         return layer_ids
 
     @classmethod
