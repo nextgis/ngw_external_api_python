@@ -57,6 +57,7 @@ from ..core.ngw_wms_connection import NGWWmsConnection
 from ..core.ngw_wms_layer import NGWWmsLayer
 from ..core.ngw_webmap import NGWWebMap
 from ..core.ngw_base_map import NGWBaseMap, NGWBaseMapExtSettings
+from ..core.ngw_resource import NGWResource
 from ..utils import log
 
 from ..utils import ngw_version_compare
@@ -666,7 +667,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return tmp_gpkg_path
 
-    def addQMLStyle(self, qml, ngw_layer_resource):
+    def upload_qml_file(self, ngw_layer_resource, qml_filename, style_name):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
                 self.tr("Style for \"{}\"").format(ngw_layer_resource.common.display_name)
@@ -675,30 +676,48 @@ class QGISResourceJob(NGWResourceModelJob):
             )
 
         ngw_style = ngw_layer_resource.create_qml_style(
-            qml,
-            uploadFileCallback
+            qml_filename,
+            uploadFileCallback,
+            style_name
         )
         return ngw_style
 
-    def addStyle(self, qgs_map_layer, ngw_layer_resource) -> Optional[NGWQGISStyle]:
-        if qgs_map_layer.type() in (QgsMapLayer.VectorLayer, QgsMapLayer.RasterLayer):
-            tmp = tempfile.mktemp('.qml')
-            msg, saved = qgs_map_layer.saveNamedStyle(tmp)
-            ngw_resource = self.addQMLStyle(tmp, ngw_layer_resource)
-            os.remove(tmp)
-            return ngw_resource
-        # elif layer_type == QgsMapLayer.RasterLayer:
-        #     layer_provider = qgs_map_layer.providerType()
-        #     if layer_provider == 'gdal':
-        #         ngw_resource = ngw_layer_resource.create_style()
-        #         return ngw_resource
+    def addStyle(self, ngw_layer_resource, qgs_map_layer, style_name) -> Optional[NGWQGISStyle]:
+        if not isinstance(qgs_map_layer, (QgsVectorLayer, QgsRasterLayer)):
+            return None
+
+        style_manager = qgs_map_layer.styleManager()
+        assert style_manager is not None
+
+        temp_filename = tempfile.mktemp(suffix='.qml')
+        with open(temp_filename, 'w') as qml_file:
+            qml_data = style_manager.style(style_name).xmlData()
+            qml_file.write(qml_data)
+
+        if style_manager.isDefault(style_name):
+            style_name = None
+
+        ngw_resource = self.upload_qml_file(ngw_layer_resource, temp_filename, style_name)
+        os.remove(temp_filename)
+        return ngw_resource
 
     def updateStyle(self, qgs_map_layer, ngw_layer_resource):
-        if qgs_map_layer.type() in (QgsMapLayer.VectorLayer, QgsMapLayer.RasterLayer):
-            tmp = tempfile.mktemp('.qml')
-            msg, saved = qgs_map_layer.saveNamedStyle(tmp)
-            self.updateQMLStyle(tmp, ngw_layer_resource)
-            os.remove(tmp)
+        if not isinstance(qgs_map_layer, (QgsVectorLayer, QgsRasterLayer)):
+            return
+
+        style_manager = qgs_map_layer.styleManager()
+        assert style_manager is not None
+
+        current_style = style_manager.currentStyle()
+
+        temp_filename = tempfile.mktemp(suffix='.qml')
+        with open(temp_filename, 'w') as qml_file:
+            qml_data = style_manager.style(current_style).xmlData()
+            qml_file.write(qml_data)
+
+        self.updateQMLStyle(temp_filename, ngw_layer_resource)
+
+        os.remove(temp_filename)
 
     def updateQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
@@ -744,7 +763,7 @@ class QGISResourceJob(NGWResourceModelJob):
             self.errorOccurred.emit("There is no defalut style description for create new style.")
             return
 
-        ngw_style = self.addQMLStyle(qml, ngw_layer)
+        ngw_style = self.upload_qml_file(ngw_layer, qml)
 
         return ngw_style
 
@@ -1005,21 +1024,33 @@ class QGISResourcesUploader(QGISResourceJob):
             self.putAddedResourceToResult(ngw_resource)
 
             if ngw_resource.type_id in [NGWVectorLayer.type_id, NGWRasterLayer.type_id]:
-                ngw_style = self.addStyle(
-                    qgsLayerTreeItem.layer(),
-                    ngw_resource
-                )
-                self.putAddedResourceToResult(ngw_style)
+                qgs_map_layer = qgsLayerTreeItem.layer()
+                assert qgs_map_layer is not None
+                style_manager = qgs_map_layer.styleManager()
+                assert style_manager is not None
+                current_style = style_manager.currentStyle()
 
-                ngw_webmap_item.appendChild(
-                    NGWWebMapLayer(
-                        ngw_style.common.id,
-                        qgsLayerTreeItem.layer().name(),
-                        CompatQgis.is_layer_checked(qgsLayerTreeItem),
-                        0,
-                        legend=qgsLayerTreeItem.isExpanded()
+                for style_name in style_manager.styles():
+                    ngw_style = self.addStyle(
+                        ngw_resource,
+                        qgs_map_layer,
+                        style_name
                     )
-                )
+                    if ngw_style is None:
+                        continue
+
+                    self.putAddedResourceToResult(ngw_style)
+
+                    if style_name == current_style:
+                        ngw_webmap_item.appendChild(
+                            NGWWebMapLayer(
+                                ngw_style.common.id,
+                                qgsLayerTreeItem.layer().name(),
+                                CompatQgis.is_layer_checked(qgsLayerTreeItem),
+                                0,
+                                legend=qgsLayerTreeItem.isExpanded()
+                            )
+                        )
 
                 # Add style to layer, therefore, it is necessary to upgrade layer resource for get children flag
                 ngw_resource.update()
@@ -1270,13 +1301,18 @@ class QGISStyleUpdater(QGISResourceJob):
 
 
 class QGISStyleAdder(QGISResourceJob):
-    def __init__(self, qgs_map_layer, ngw_resource):
+    def __init__(self, qgs_map_layer: QgsMapLayer, ngw_resource: NGWResource):
         super().__init__()
         self.qgs_map_layer = qgs_map_layer
         self.ngw_resource = ngw_resource
 
     def _do(self):
-        ngw_style = self.addStyle(self.qgs_map_layer, self.ngw_resource)
+        style_manager = self.qgs_map_layer.styleManager()
+        assert style_manager is not None
+
+        ngw_style = self.addStyle(
+            self.ngw_resource, self.qgs_map_layer, style_manager.currentStyle()
+        )
         if ngw_style is None:
             return
         self.putAddedResourceToResult(ngw_style)

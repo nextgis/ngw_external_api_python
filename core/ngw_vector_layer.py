@@ -23,7 +23,7 @@ from typing import List
 
 
 from .ngw_abstract_vector_resource import NGWAbstractVectorResource
-from .ngw_resource import API_LAYER_EXTENT
+from .ngw_resource import API_LAYER_EXTENT, NGWResource
 from .ngw_qgis_style import NGWQGISVectorStyle
 from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_feature import NGWFeature
@@ -147,9 +147,8 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         """
         connection = self._res_factory.connection
         if not style_name:
-            style_name = self.generate_unique_child_name(
-                self.common.display_name + ""
-            )
+            style_name = self.common.display_name
+        style_name = self.generate_unique_child_name(style_name)
 
         style_file_desc = connection.upload_file(qml, callback)
 

@@ -18,7 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from typing import Dict, List
+from typing import Dict, List, cast, Optional
 from qgis.PyQt.QtCore import (
     QByteArray, QUrl, QEventLoop, QTemporaryFile, QIODevice
 )
@@ -26,10 +26,10 @@ from qgis.PyQt.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from qgis.core import (
     QgsVectorLayer, QgsRasterLayer, QgsMapLayer, QgsProject, QgsRectangle,
-    QgsEditorWidgetSetup
+    QgsEditorWidgetSetup, QgsMapLayerStyle
 )
 
-from ..core.ngw_resource import API_RESOURCE_URL
+from ..core.ngw_resource import API_RESOURCE_URL, NGWResource
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_wfs_service import NGWWfsService
@@ -133,7 +133,7 @@ def _add_cog_raster_layer(resource):
     return qgs_raster_layer
 
 
-def _apply_style(style_resource, qgs_layer):
+def _add_style_to_layer(style_resource: NGWQGISStyle, qgs_layer: QgsMapLayer):
     ev_loop = QEventLoop()
     qml_url = style_resource.download_qml_url()
     qml_req = QNetworkRequest(QUrl(qml_url))
@@ -142,34 +142,63 @@ def _apply_style(style_resource, qgs_layer):
         creds_str = creds[0] + ':' + creds[1]
         authstr = creds_str.encode('utf-8')
         authstr = QByteArray(authstr).toBase64()
-        authstr = QByteArray(('Basic ').encode('utf-8')).append(authstr)
-        qml_req.setRawHeader(("Authorization").encode('utf-8'), authstr)
+        authstr = QByteArray('Basic '.encode('utf-8')).append(authstr)
+        qml_req.setRawHeader("Authorization".encode('utf-8'), authstr)
     dwn_qml_manager = QNetworkAccessManager()
     dwn_qml_manager.finished.connect(ev_loop.quit)
     reply = dwn_qml_manager.get(qml_req)
     ev_loop.exec_()
 
+    assert reply is not None
+
     if reply.error():
         log('Failed to download QML: {}'.format(reply.errorString()))
         return
 
-    filename = None
-    file = QTemporaryFile()
-    if file.open(QIODevice.OpenModeFlag.WriteOnly):
-        file.write(reply.readAll())
-        filename = file.fileName()
-        file.close()
-    else:
-        # raise NGWError()
-        log('Failed to write QML to file. Unable apply style to the layer')
+    style_xml = reply.readAll().data().decode()
+    style = QgsMapLayerStyle(style_xml)
+    if not style.isValid():
+        log('Unable apply style to the layer')
+        return
 
-    if filename is not None:
-        qgs_layer.loadNamedStyle(filename)
+    style_manager = qgs_layer.styleManager()
+    assert style_manager is not None
+
+    style_manager.addStyle(style_resource.common.display_name, style)
 
 
-def add_resource_as_geojson(resource):
+def _add_all_styles_to_layer(
+    qgs_layer: QgsMapLayer,
+    resources: List[NGWResource],
+    default_style: Optional[NGWResource] = None
+) -> None:
+    styles = filter(
+        lambda resource: isinstance(resource, NGWQGISStyle), resources
+    )
+    styles = sorted(styles, key=lambda resource: resource.common.display_name)
+
+    for style_resource in styles:
+        style_resource = cast(NGWQGISStyle, style_resource)
+        _add_style_to_layer(style_resource, qgs_layer)
+
+    style_manager = qgs_layer.styleManager()
+    assert style_manager is not None
+
+    if len(style_manager.styles()) == 1:
+        return
+
+    current_style_name = style_manager.currentStyle()
+    if style_manager.isDefault(current_style_name):
+        style_manager.removeStyle(current_style_name)
+
+    if default_style is not None:
+        style_manager.setCurrentStyle(default_style.common.display_name)
+
+
+def add_resource_as_geojson(resource, children, default_style=None):
     qgs_geojson_layer = _add_geojson_layer(resource)
 
+    _add_all_styles_to_layer(qgs_geojson_layer, children, default_style)
     _add_aliases(qgs_geojson_layer, resource)
     _add_lookup_tables(qgs_geojson_layer, resource)
 
@@ -178,33 +207,10 @@ def add_resource_as_geojson(resource):
     project.addMapLayer(qgs_geojson_layer)
 
 
-def add_resource_as_geojson_with_style(resource, style_resource):
-    qgs_geojson_layer = _add_geojson_layer(resource)
-
-    _apply_style(style_resource, qgs_geojson_layer)
-
-    _add_aliases(qgs_geojson_layer, resource)
-    _add_lookup_tables(qgs_geojson_layer, resource)
-
-    project = QgsProject.instance()
-    assert project is not None
-    project.addMapLayer(qgs_geojson_layer)
-
-
-def add_resource_as_cog_raster(resource):
+def add_resource_as_cog_raster(resource, children, default_style=None):
     qgs_raster_layer = _add_cog_raster_layer(resource)
 
-    project = QgsProject.instance()
-    assert project is not None
-    map_layer = project.addMapLayer(qgs_raster_layer)
-    if map_layer is None:
-        raise Exception('Failed to add layer to QGIS')
-
-
-def add_resource_as_cog_raster_with_style(resource, style_resource):
-    qgs_raster_layer = _add_cog_raster_layer(resource)
-
-    _apply_style(style_resource, qgs_raster_layer)
+    _add_all_styles_to_layer(qgs_raster_layer, children, default_style)
 
     project = QgsProject.instance()
     assert project is not None
@@ -235,10 +241,7 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
 
         # # Add vector style. Select the first QGIS style if several.
         vec_layer_children = ngw_vector_layer.get_children()
-        for child in vec_layer_children:
-            if isinstance(child, NGWQGISStyle):
-                _apply_style(child, qgs_wfs_layer)
-                break
+        _add_all_styles_to_layer(qgs_wfs_layer, vec_layer_children)
 
         _add_aliases(qgs_wfs_layer, ngw_vector_layer)
         _add_lookup_tables(qgs_wfs_layer, ngw_vector_layer)
@@ -277,10 +280,7 @@ def add_ogcf_resource(ogcf_resource: NGWOgcfService):
 
         # # Add vector style. Select the first QGIS style if several.
         vec_layer_children = layer_resource.get_children()
-        for child in vec_layer_children:
-            if isinstance(child, NGWQGISStyle):
-                _apply_style(child, qgis_ogc_layer)
-                break
+        _add_all_styles_to_layer(qgis_ogc_layer, vec_layer_children)
 
         _add_aliases(qgis_ogc_layer, layer_resource)
         _add_lookup_tables(qgis_ogc_layer, layer_resource)

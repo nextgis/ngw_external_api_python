@@ -6,7 +6,7 @@ from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_raster_layer import NGWRasterLayer
 from .ngw_raster_style import NGWRasterStyle
 from .ngw_vector_layer import NGWVectorLayer
-from .ngw_qgis_style import NGWQGISRasterStyle, NGWQGISVectorStyle
+from .ngw_qgis_style import NGWQGISStyle, NGWQGISRasterStyle, NGWQGISVectorStyle
 from .ngw_webmap import NGWWebMap
 from .ngw_wfs_service import NGWWfsService
 from .ngw_ogcf_service import NGWOgcfService
@@ -25,6 +25,7 @@ __all__ = [
     "NGWRasterLayer",
     "NGWRasterStyle",
     "NGWVectorLayer",
+    "NGWQGISStyle",
     "NGWQGISRasterStyle",
     "NGWQGISVectorStyle",
     "NGWWebMap",
