@@ -184,15 +184,19 @@ def _add_all_styles_to_layer(
     style_manager = qgs_layer.styleManager()
     assert style_manager is not None
 
-    if len(style_manager.styles()) == 1:
-        return
-
+    # Remove default style
     current_style_name = style_manager.currentStyle()
-    if style_manager.isDefault(current_style_name):
-        style_manager.removeStyle(current_style_name)
+    style_manager.removeStyle(current_style_name)
 
+    # Set choosen or the first one
     if default_style is not None:
         style_manager.setCurrentStyle(default_style.common.display_name)
+    else:
+        styles = style_manager.styles()
+        if qgs_layer.name() in styles:
+            style_manager.setCurrentStyle(
+                styles[styles.index(qgs_layer.name())]
+            )
 
 
 def add_resource_as_geojson(resource, children, default_style=None):
