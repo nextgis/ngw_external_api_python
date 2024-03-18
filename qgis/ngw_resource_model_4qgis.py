@@ -66,6 +66,7 @@ from ..core.ngw_qgis_style import (
     NGWQGISVectorStyle,
 )
 from ..core.ngw_raster_layer import NGWRasterLayer
+from ..core.ngw_resource import NGWResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_webmap import (
@@ -76,7 +77,6 @@ from ..core.ngw_webmap import (
 )
 from ..core.ngw_wms_connection import NGWWmsConnection
 from ..core.ngw_wms_layer import NGWWmsLayer
-from ..core.ngw_resource import NGWResource
 from ..core.ngw_wms_service import NGWWmsService
 from ..qt.qt_ngw_resource_model_job import NGWResourceModelJob
 from ..qt.qt_ngw_resource_model_job_error import JobError, JobWarning
@@ -559,9 +559,8 @@ class QGISResourceJob(NGWResourceModelJob):
                         if len(polyline) < 2:
                             fids_with_not_valid_geom.append(fid)
                             break
-                else:
-                    if len(geom.asPolyline()) < 2:
-                        fids_with_not_valid_geom.append(fid)
+                elif len(geom.asPolyline()) < 2:
+                    fids_with_not_valid_geom.append(fid)
 
             elif geom.type() == CompatQgisGeometryType.Polygon:
                 if geom.isMultipart():
@@ -921,7 +920,7 @@ class QGISResourceJob(NGWResourceModelJob):
             self.errorOccurred.emit(
                 "There is no defalut style description for create new style."
             )
-            return
+            return None
 
         ngw_style = self.upload_qml_file(ngw_layer, qml)
 

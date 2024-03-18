@@ -23,9 +23,6 @@ import time
 import urllib.parse
 from typing import Any, Dict, Optional
 
-from nextgis_connect.ngw_connection.ngw_connections_manager import (
-    NgwConnectionsManager,
-)
 from qgis.core import QgsNetworkAccessManager
 from qgis.PyQt.QtCore import (
     QBuffer,
@@ -38,6 +35,10 @@ from qgis.PyQt.QtCore import (
     QUrl,
 )
 from qgis.PyQt.QtNetwork import QNetworkRequest
+
+from nextgis_connect.ngw_connection.ngw_connections_manager import (
+    NgwConnectionsManager,
+)
 
 from ..core.ngw_error import NGWError
 from ..utils import log
@@ -176,7 +177,7 @@ class QgsNgwConnection(QObject):
 
                     else:
                         raise Exception(
-                            f"Lunkwill request failed on server. Reply: {str(j)}"
+                            f"Lunkwill request failed on server. Reply: {j!s}"
                         )
 
         rep.deleteLater()

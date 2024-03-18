@@ -109,7 +109,7 @@ class NGWWebMapItem:
         return struct
 
     def _attributes(self):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class NGWWebMapRoot(NGWWebMapItem):

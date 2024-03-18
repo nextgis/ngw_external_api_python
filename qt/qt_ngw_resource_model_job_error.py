@@ -38,8 +38,6 @@ class JobError(NGWResourceModelJobError):
 class JobWarning(NGWResourceModelJobError):
     """Specific job warning"""
 
-    pass
-
 
 class JobInternalError(NGWResourceModelJobError):
     """Unexpected job error. With trace"""

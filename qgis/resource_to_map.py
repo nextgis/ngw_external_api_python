@@ -18,39 +18,36 @@
  ***************************************************************************/
 """
 
-from typing import Dict, List, cast, Optional
+from typing import Dict, List, Optional, cast
+
+from qgis.core import (
+    QgsEditorWidgetSetup,
+    QgsMapLayer,
+    QgsMapLayerStyle,
+    QgsNetworkAccessManager,
+    QgsProject,
+    QgsProviderRegistry,
+    QgsRasterLayer,
+    QgsVectorLayer,
+)
 from qgis.PyQt.QtCore import (
     QUrl,
 )
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
-from qgis.core import (
-    QgsVectorLayer,
-    QgsRasterLayer,
-    QgsMapLayer,
-    QgsProject,
-    QgsEditorWidgetSetup,
-    QgsMapLayerStyle,
-    QgsProviderRegistry,
-    QgsNetworkAccessManager,
-)
-
-from ..core.ngw_resource import API_RESOURCE_URL, NGWResource
-from ..core.ngw_error import NGWError
-from ..core.ngw_vector_layer import NGWVectorLayer
-from ..core.ngw_raster_layer import NGWRasterLayer
-from ..core.ngw_wfs_service import NGWWfsService
-from ..core.ngw_ogcf_service import NGWOgcfService
-from ..core.ngw_qgis_style import NGWQGISStyle
-from .qgis_ngw_connection import QgsNgwConnection
-
-from ..utils import log
-
-
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
 
+from ..core.ngw_error import NGWError
+from ..core.ngw_ogcf_service import NGWOgcfService
+from ..core.ngw_qgis_style import NGWQGISStyle
+from ..core.ngw_raster_layer import NGWRasterLayer
+from ..core.ngw_resource import API_RESOURCE_URL, NGWResource
+from ..core.ngw_vector_layer import NGWVectorLayer
+from ..core.ngw_wfs_service import NGWWfsService
+from ..utils import log
+from .qgis_ngw_connection import QgsNgwConnection
 
 
 class UnsupportedRasterTypeException(Exception):
@@ -136,7 +133,7 @@ def _add_cog_raster_layer(resource: NGWRasterLayer):
     if not isinstance(resource, NGWRasterLayer):
         raise Exception("Resource type is not raster layer!")
     if not resource.is_cog:
-        raise UnsupportedRasterTypeException()
+        raise UnsupportedRasterTypeException
 
     connections_manager = NgwConnectionsManager()
     connection = connections_manager.connection(resource.connection_id)

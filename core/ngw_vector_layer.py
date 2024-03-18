@@ -22,11 +22,11 @@ import datetime
 from os import path
 from typing import Any, Dict, List
 
+from qgis.core import QgsProviderRegistry
 
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
-from qgis.core import QgsProviderRegistry
 
 from ..utils import ICONS_DIR
 from .ngw_abstract_vector_resource import NGWAbstractVectorResource

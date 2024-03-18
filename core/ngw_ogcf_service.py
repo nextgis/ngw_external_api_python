@@ -1,7 +1,8 @@
+from qgis.core import QgsDataSourceUri
+
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
-from qgis.core import QgsDataSourceUri
 
 from .ngw_resource import NGWResource, dict_to_object, list_dict_to_list_object
 
