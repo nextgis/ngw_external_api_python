@@ -18,39 +18,17 @@
  ***************************************************************************/
 """
 
+import logging
 import os
 import sys
 
+from nextgis_connect.logging import logger
+
 ICONS_DIR = os.path.join(os.path.dirname(__file__), "icons")
 
-ngw_api_logger = None
-debug = False
 
-
-def setLogger(logger):
-    global ngw_api_logger
-    ngw_api_logger = logger
-
-
-"""
-Enable debuging
-    in QGIS use in console:
-        from nextgis_connect.ngw_api.utils import setDebugEnabled
-        setDebugEnabled(True)
-"""
-
-
-def setDebugEnabled(flag):
-    global debug
-    debug = flag
-
-
-def log(msg):
-    if debug is False:
-        return
-
-    if ngw_api_logger is not None:
-        ngw_api_logger(msg)
+def setDebugEnabled(is_debug_enabled: bool):
+    logger.setLevel(logging.DEBUG if is_debug_enabled else logging.INFO)
 
 
 def ngw_version_parts(version):
@@ -76,8 +54,10 @@ def ngw_version_compare(lversion, rversion):
         for i in range(4):
             if lints[i] > rints[i]:
                 return 1
-            elif rints[i] > lints[i]:
+            if rints[i] > lints[i]:
                 return -1
-        return 0
+
     except Exception:
         return None
+    else:
+        return 0

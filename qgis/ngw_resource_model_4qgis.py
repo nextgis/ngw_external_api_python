@@ -58,6 +58,8 @@ from qgis.core import (
 from qgis.gui import QgisInterface, QgsFileWidget
 from qgis.PyQt.QtCore import QCoreApplication
 
+from nextgis_connect.logging import logger
+
 from ..core.ngw_base_map import NGWBaseMap, NGWBaseMapExtSettings
 from ..core.ngw_feature import NGWFeature
 from ..core.ngw_group_resource import NGWGroupResource
@@ -80,7 +82,6 @@ from ..core.ngw_wms_layer import NGWWmsLayer
 from ..core.ngw_wms_service import NGWWmsService
 from ..qt.qt_ngw_resource_model_job import NGWResourceModelJob
 from ..qt.qt_ngw_resource_model_job_error import JobError, JobWarning
-from ..utils import log
 from .compat_qgis import (
     CompatQgis,
     CompatQgisGeometryType,
@@ -261,7 +262,9 @@ class QGISResourceJob(NGWResourceModelJob):
             and hasattr(qgs_plugin_layer, "layerDef")
             and hasattr(qgs_plugin_layer.layerDef, "serviceUrl")
         ):
-            # log(u'>>> Uploading plugin layer "{}"'.format(qgs_plugin_layer.name()))
+            logger.debug(
+                f'>>> Uploading plugin layer "{qgs_plugin_layer.name()}"'
+            )
 
             # if not self.baseMapCreationAvailabilityCheck(ngw_group._res_factory.connection):
             #     raise JobError(self.tr("Your web GIS can't create base maps."))
@@ -291,8 +294,10 @@ class QGISResourceJob(NGWResourceModelJob):
 
             return [ngw_basemap]
 
+        return []
+
     def importQgsWMSLayer(self, qgs_wms_layer, ngw_group):
-        # log(u'>>> Uploading WMS layer "{}"'.format(qgs_wms_layer.name()))
+        logger.debug(f'>>> Uploading WMS layer "{qgs_wms_layer.name()}"')
 
         self._layer_status(
             qgs_wms_layer.name(), self.tr("create WMS connection")
@@ -365,7 +370,7 @@ class QGISResourceJob(NGWResourceModelJob):
         new_layer_name = self.unique_resource_name(
             qgs_raster_layer.name(), ngw_parent_resource
         )
-        log(
+        logger.debug(
             f'>>> Uploading raster layer "{qgs_raster_layer.name()}" (with the name "{new_layer_name}")'
         )
 
@@ -402,7 +407,7 @@ class QGISResourceJob(NGWResourceModelJob):
         new_layer_name = self.unique_resource_name(
             qgs_vector_layer.name(), ngw_parent_resource
         )
-        log(
+        logger.debug(
             f'>>> Uploading vector layer "{qgs_vector_layer.name()}" (with the name "{new_layer_name}")'
         )
 
@@ -503,10 +508,12 @@ class QGISResourceJob(NGWResourceModelJob):
             and self.hasBadFields(qgs_vector_layer)
             and not self.ngwSupportsAutoRenameFields()
         ):
-            log("Incorrect fields of layer will be renamed by NextGIS Connect")
+            logger.warning(
+                "Incorrect fields of layer will be renamed by NextGIS Connect"
+            )
             layer_has_bad_fields = True
         else:
-            log(
+            logger.warning(
                 "Incorrect fields of layer will NOT be renamed by NextGIS Connect"
             )
 
@@ -567,7 +574,7 @@ class QGISResourceJob(NGWResourceModelJob):
                     for polygon in geom.asMultiPolygon():
                         for polyline in polygon:
                             if len(polyline) < 4:
-                                log(
+                                logger.warning(
                                     "Feature %s has not valid geometry (less then 4 points)"
                                     % str(fid)
                                 )
@@ -576,7 +583,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 else:
                     for polyline in geom.asPolygon():
                         if len(polyline) < 4:
-                            log(
+                            logger.warning(
                                 "Feature %s has not valid geometry (less then 4 points)"
                                 % str(fid)
                             )
@@ -619,11 +626,11 @@ class QGISResourceJob(NGWResourceModelJob):
         vers_ok = current_ngw_version >= ngw_version_with_support
 
         if vers_ok:
-            log(
+            logger.debug(
                 f'Assume that NGW of version "{self.ngw_version}" supports auto-renaming fields'
             )
             return True
-        log(
+        logger.debug(
             f'Assume that NGW of version "{self.ngw_version}" does NOT support auto-renaming fields'
         )
 
@@ -685,7 +692,7 @@ class QGISResourceJob(NGWResourceModelJob):
             # Additional checks for geom correctness.
             # TODO: this was done in self.checkGeometry() but we've remove using of this method. Maybe return using this method back.
             if CompatQgis.is_geom_empty(feature.geometry()):
-                log(f"Skip feature {feature.id()}: empty geometry")
+                logger.warning(f"Skip feature {feature.id()}: empty geometry")
                 continue
 
             new_geometry: QgsGeometry = feature.geometry()
@@ -987,13 +994,15 @@ class QGISResourceJob(NGWResourceModelJob):
                             # Lazy loading
                             ngw_ftrs = ngw_resource.get_features()
 
-                        log(f"Load file: {imgf}")
+                        logger.debug(f"Load file: {imgf}")
                         uploaded_file_info = ngw_ftrs[
                             finx
                         ].ngw_vector_layer._res_factory.connection.upload_file(
                             imgf, uploadFileCallback
                         )
-                        log(f"Uploaded file info: {uploaded_file_info}")
+                        logger.debug(
+                            f"Uploaded file info: {uploaded_file_info}"
+                        )
                         ngw_ftrs[finx].link_attachment(uploaded_file_info)
 
     def overwriteQGISMapLayer(self, qgs_map_layer, ngw_layer_resource):
@@ -1309,7 +1318,7 @@ class QGISResourcesUploader(QGISResourceJob):
                 layer_tree_item.layer(), ngw_resource_group
             )
         except Exception as e:
-            log("Exception during adding layer")
+            logger.exception("Exception during adding layer")
 
             has_several_elements = len(self.qgs_layer_tree_nodes) > 1
             group_selected = len(
@@ -1508,7 +1517,6 @@ class QGISProjectUploader(QGISResourcesUploader):
             QgsProject.instance(),
         )
         rectangle = ct.transform(rectangle)
-        # log(">>> rectangle 2: " + str(rectangle.asPolygon()))
         ngw_webmap_items_as_dicts = [
             item.toDict() for item in ngw_webmap_items
         ]
@@ -1720,7 +1728,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
             )
             if ngw_feature_dict is None:
                 # TODO: somehow warn user about skipped features?
-                log("WARN: Feature skipped")
+                logger.warning("Feature skipped")
                 continue
             ngw_features.append(NGWFeature(ngw_feature_dict, self.ngw_layer))
 
@@ -1732,7 +1740,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
             yield ngw_features
 
     def _do(self):
-        log(">>> NGWUpdateVectorLayer _do")
+        logger.debug(">>> NGWUpdateVectorLayer _do")
         block_size = 10
         total_count = self.qgis_layer.featureCount()
 

@@ -28,7 +28,8 @@ from typing import Optional, Tuple
 import requests
 from requests.utils import to_native_string
 
-from ..utils import log
+from nextgis_connect.logging import logger
+
 from .ngw_connection_settings import NGWConnectionSettings
 from .ngw_error import NGWError
 
@@ -87,11 +88,7 @@ class NGWConnection:
             if conn_settings.proxy_port != "":
                 proxy_url = "%s:%s" % (proxy_url, conn_settings.proxy_port)
             if conn_settings.proxy_user != "":
-                proxy_url = "{}:{}@{}".format(
-                    conn_settings.proxy_user,
-                    conn_settings.proxy_password,
-                    proxy_url,
-                )
+                proxy_url = f"{conn_settings.proxy_user}:{conn_settings.proxy_password}@{proxy_url}"
 
             self.__proxy = {"http": proxy_url}
 
@@ -124,12 +121,8 @@ class NGWConnection:
         if "json" in kwargs:
             json_data = kwargs["json"]
 
-        log(
-            "Request\nmethod: {}\nurl: {}\ndata: {}\njson:".format(
-                method,
-                urllib.parse.urljoin(self.server_url, sub_url),
-                payload,
-            )
+        logger.debug(
+            f"\nRequest\nmethod: {method}\nurl: {urllib.parse.urljoin(self.server_url, sub_url)}\ndata: {payload}\njson:"
         )
 
         url = urllib.parse.urljoin(self.server_url, sub_url)
@@ -149,13 +142,13 @@ class NGWConnection:
                 NGWError.TypeRequestError, "Connection error", req.url
             ) from error
         except requests.exceptions.RequestException as error:
-            log(f"Response\nerror {type(error)}: {error}")
+            logger.debug("Response error")
             raise NGWError(
                 NGWError.TypeRequestError, "%s" % type(error), req.url
             ) from error
 
         if resp.status_code == 502:
-            log("Response\nerror status_code 502")
+            logger.debug("Response\nerror status_code 502")
             raise NGWError(
                 NGWError.TypeRequestError,
                 "Response status code is 502",
@@ -163,7 +156,7 @@ class NGWConnection:
             )
 
         if resp.status_code // 100 != 2:
-            log(
+            logger.debug(
                 f"Response\nerror status_code {resp.status_code}\nmsg: {resp.content.decode()!r}"
             )
             raise NGWError(NGWError.TypeNGWError, resp.content, req.url)
@@ -171,7 +164,7 @@ class NGWConnection:
         try:
             json_response = resp.json()
         except Exception as error:
-            log("Response\nerror response JSON parse")
+            logger.debug("Response\nerror response JSON parse")
             raise NGWError(
                 NGWError.TypeNGWUnexpectedAnswer, "", req.url
             ) from error

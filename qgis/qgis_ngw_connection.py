@@ -36,12 +36,12 @@ from qgis.PyQt.QtCore import (
 )
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
+from nextgis_connect.logging import logger
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
 
 from ..core.ngw_error import NGWError
-from ..utils import log
 from .compat_qgis import CompatQt
 
 UPLOAD_FILE_URL = "/api/component/file_upload/"
@@ -127,7 +127,7 @@ class QgsNgwConnection(QObject):
                 request_id = j["id"]
 
                 if not extended_log:
-                    log(
+                    logger.debug(
                         f'Skip lunkwill summary requests logging for id "{request_id}"'
                     )
 
@@ -163,7 +163,7 @@ class QgsNgwConnection(QObject):
                             summary_failed = 0
                         except Exception:
                             if extended_log:
-                                log(
+                                logger.debug(
                                     "Lunkwill summary request failed. Try again"
                                 )
                             summary_failed += 1
@@ -221,7 +221,7 @@ class QgsNgwConnection(QObject):
             request_id = json_response["id"]
 
             if not extended_log:
-                log(
+                logger.debug(
                     f'Skip lunkwill summary requests logging for id "{request_id}"'
                 )
 
@@ -254,7 +254,9 @@ class QgsNgwConnection(QObject):
                         summary_failed = 0
                     except Exception:
                         if extended_log:
-                            log("Lunkwill summary request failed. Try again")
+                            logger.debug(
+                                "Lunkwill summary request failed. Try again"
+                            )
                         summary_failed += 1
 
                 elif status == "ready":
@@ -290,8 +292,8 @@ class QgsNgwConnection(QObject):
         url = urllib.parse.urljoin(self.server_url, sub_url)
 
         if do_log:
-            log(
-                "Request\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
+            logger.debug(
+                "\nRequest\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
                     method,
                     url,
                     # type(json_data),
@@ -375,7 +377,7 @@ class QgsNgwConnection(QObject):
         # Indicate that request has been timed out by QGIS.
         # TODO: maybe use QgsNetworkAccessManager::requestTimedOut()?
         if rep.error() == 5:
-            log(
+            logger.debug(
                 "Connection error qt code: 5 (QNetworkReply::OperationCanceledError)"
             )
             raise NGWError(
@@ -390,7 +392,7 @@ class QgsNgwConnection(QObject):
             )
 
         if rep.error() > 0 and rep.error() < 10:
-            log(f"Connection error qt code: {rep.error()}")
+            logger.debug(f"Connection error qt code: {rep.error()}")
             raise NGWError(
                 NGWError.TypeRequestError,
                 f"Connection error qt code: {rep.error()}",
@@ -420,7 +422,7 @@ class QgsNgwConnection(QObject):
 
         # if  status_code / 100 != 2:
         if status_code is not None and int(str(status_code)[:1]) != 2:
-            log(
+            logger.debug(
                 f"Response\nerror status_code {status_code}\nmsg: {rep_str_log}"
             )
 
@@ -445,7 +447,9 @@ class QgsNgwConnection(QObject):
         try:
             json_response = json.loads(bytes(data).decode("utf-8"))
         except Exception as error:
-            log("Response\nerror response JSON parse\n%s" % rep_str_log)
+            logger.exception(
+                "Response\nerror response JSON parse\n%s" % rep_str_log
+            )
             raise NGWError(
                 NGWError.TypeNGWUnexpectedAnswer, "", req.url().toString()
             ) from error
@@ -481,7 +485,9 @@ class QgsNgwConnection(QObject):
         )
         if status_code is not None and status_code // 100 != 2:
             rep_str = reply_data.data().decode("utf-8")
-            log(f"Response\nerror status_code {status_code}\nmsg: {rep_str}")
+            logger.debug(
+                f"Response\nerror status_code {status_code}\nmsg: {rep_str}"
+            )
 
             ngw_message_present = False
             try:
@@ -596,7 +602,7 @@ class QgsNgwConnection(QObject):
         # Allow to skip logging of PATCH requests. Helpful when a large file is being uploaded.
         # Note: QGIS 3 has a hardcoded limit of log messages.
         if not extended_log:
-            log(
+            logger.debug(
                 f'Skip PATCH requests logging during uploading of file "{file_guid}"'
             )
 
@@ -608,7 +614,7 @@ class QgsNgwConnection(QObject):
             bytes_read = badata.size()
 
             if extended_log:
-                log(
+                logger.debug(
                     "Upload %d from %s"
                     % (
                         bytes_sent,
@@ -641,14 +647,14 @@ class QgsNgwConnection(QObject):
                 if chunk_rep_code == 204:
                     break
                 retries += 1
-                log("Retry chunk upload")
+                logger.debug("Retry chunk upload")
 
             if retries == max_retry_count:
                 break
 
             bytes_sent += bytes_read
             if extended_log:
-                log(
+                logger.debug(
                     f"Tus-uploaded chunk of {bytes_read} bytes. Now "
                     "{bytes_sent} of overall {file_size} bytes are uploaded"
                 )

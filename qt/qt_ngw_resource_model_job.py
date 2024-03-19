@@ -26,6 +26,8 @@ from typing import List, Union
 
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
+from nextgis_connect.logging import logger
+
 from ..core.ngw_error import NGWError
 from ..core.ngw_group_resource import NGWGroupResource
 from ..core.ngw_resource import NGWResource
@@ -34,7 +36,6 @@ from ..core.ngw_resource_factory import NGWResourceFactory
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_webmap import NGWWebMap, NGWWebMapLayer, NGWWebMapRoot
 from ..qgis.qgis_ngw_connection import QgsNgwConnection
-from ..utils import log
 from .qt_ngw_resource_model_job_error import (
     JobAuthorizationError,
     JobInternalError,
@@ -204,7 +205,7 @@ class NGWResourceModelJob(QObject):
                 (f.split("\\")[-1], l, func, text)
                 for f, l, func, text in extracted_list  # noqa: E741
             ]
-            log(f"ERROR: \n{traceback.format_exc()}")
+            logger.error(f"ERROR: \n{traceback.format_exc()}")
             self.errorOccurred.emit(
                 JobInternalError(str(e), traceback.format_list(extracted_list))
             )

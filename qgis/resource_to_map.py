@@ -35,6 +35,7 @@ from qgis.PyQt.QtCore import (
 )
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
+from nextgis_connect.logging import logger
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
@@ -46,7 +47,6 @@ from ..core.ngw_raster_layer import NGWRasterLayer
 from ..core.ngw_resource import API_RESOURCE_URL, NGWResource
 from ..core.ngw_vector_layer import NGWVectorLayer
 from ..core.ngw_wfs_service import NGWWfsService
-from ..utils import log
 from .qgis_ngw_connection import QgsNgwConnection
 
 
@@ -121,9 +121,7 @@ def _add_geojson_layer(resource):
     )
     if not qgs_geojson_layer.isValid():
         raise Exception(
-            'Layer "{}" can\'t be added to the map!'.format(
-                resource.common.display_name
-            )
+            f'Layer "{resource.common.display_name}" can\'t be added to the map!'
         )
     qgs_geojson_layer.dataProvider().setEncoding("UTF-8")
     return qgs_geojson_layer
@@ -156,11 +154,11 @@ def _add_cog_raster_layer(resource: NGWRasterLayer):
         resource_uri, resource.common.display_name, "gdal"
     )
     if not qgs_raster_layer.isValid():
-        log(f"Failed to add raster layer to QGIS. URL: {resource_uri}")
+        logger.error(
+            f"Failed to add raster layer to QGIS. URL: {resource_uri}"
+        )
         raise Exception(
-            'Layer "{}" can\'t be added to the map!'.format(
-                resource.common.display_name
-            )
+            f'Layer "{resource.common.display_name}" can\'t be added to the map!'
         )
     return qgs_raster_layer
 
@@ -177,12 +175,12 @@ def _add_style_to_layer(style_resource: NGWQGISStyle, qgs_layer: QgsMapLayer):
     reply_content = dwn_qml_manager.blockingGet(qml_req)
 
     if reply_content.error():
-        log(f"Failed to download QML: {reply_content.errorString()}")
+        logger.error(f"Failed to download QML: {reply_content.errorString()}")
         return
 
     style = QgsMapLayerStyle(reply_content.content().data().decode())
     if not style.isValid():
-        log("Unable apply style to the layer")
+        logger.error("Unable apply style to the layer")
         return
 
     style_manager = qgs_layer.styleManager()

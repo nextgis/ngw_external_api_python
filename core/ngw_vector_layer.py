@@ -19,7 +19,6 @@
 """
 
 import datetime
-from os import path
 from typing import Any, Dict, List
 
 from qgis.core import QgsProviderRegistry
@@ -28,7 +27,6 @@ from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
 
-from ..utils import ICONS_DIR
 from .ngw_abstract_vector_resource import NGWAbstractVectorResource
 from .ngw_feature import NGWFeature
 from .ngw_mapserver_style import NGWMapServerStyle
@@ -72,10 +70,6 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         resource_uri = metadata_provider.encodeUri(uri_config)
 
         return resource_uri
-
-    def set_icon(self, geometry_type):
-        icon_filename = self.icons.get(geometry_type, "vector_layer.svg")
-        self.icon_path = path.join(ICONS_DIR, icon_filename)
 
     def get_feature_adding_url(self):
         return ADD_FEATURE_URL % self.common.id
