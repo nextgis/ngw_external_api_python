@@ -164,6 +164,14 @@ class NGWResource:
     def get_api_collection_url(cls) -> str:
         return API_COLLECTION_URL
 
+    @property
+    def resource_id(self) -> int:
+        return self.common.id
+
+    @property
+    def display_name(self) -> str:
+        return self.common.display_name
+
     def change_name(self, name):
         new_name = self.generate_unique_child_name(name)
         params = dict(

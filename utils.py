@@ -18,17 +18,10 @@
  ***************************************************************************/
 """
 
-import logging
 import os
 import sys
 
-from nextgis_connect.logging import logger
-
 ICONS_DIR = os.path.join(os.path.dirname(__file__), "icons")
-
-
-def setDebugEnabled(is_debug_enabled: bool):
-    logger.setLevel(logging.DEBUG if is_debug_enabled else logging.INFO)
 
 
 def ngw_version_parts(version):

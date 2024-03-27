@@ -172,7 +172,7 @@ def _add_style_to_layer(style_resource: NGWQGISStyle, qgs_layer: QgsMapLayer):
     connection.update_network_request(qml_req)
 
     dwn_qml_manager = QgsNetworkAccessManager()
-    reply_content = dwn_qml_manager.blockingGet(qml_req)
+    reply_content = dwn_qml_manager.blockingGet(qml_req, forceRefresh=True)
 
     if reply_content.error():
         logger.error(f"Failed to download QML: {reply_content.errorString()}")

@@ -283,15 +283,18 @@ class QgsNgwConnection(QObject):
     ):
         json_data = None
         if params:
-            json_data = json.dumps(params).encode("utf-8")
+            if isinstance(params, str):
+                json_data = params.encode()
+            else:
+                json_data = json.dumps(params).encode()
         if "json" in kwargs:
-            json_data = json.dumps(kwargs["json"]).encode("utf-8")
+            json_data = json.dumps(kwargs["json"]).encode()
 
         filename = kwargs.get("file")
 
         url = urllib.parse.urljoin(self.server_url, sub_url)
 
-        if do_log:
+        if do_log and False:
             logger.debug(
                 "\nRequest\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
                     method,
@@ -307,6 +310,13 @@ class QgsNgwConnection(QObject):
             )
 
         req = QNetworkRequest(QUrl(url))
+        req.setAttribute(
+            QNetworkRequest.Attribute.CacheSaveControlAttribute, False
+        )
+        req.setAttribute(
+            QNetworkRequest.Attribute.CacheLoadControlAttribute,
+            QNetworkRequest.CacheLoadControl.AlwaysNetwork,
+        )
 
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.__connection_id)

@@ -19,7 +19,7 @@
 """
 
 import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from qgis.core import QgsProviderRegistry
 
@@ -46,12 +46,10 @@ class NGWVectorLayer(NGWAbstractVectorResource):
 
     type_id = "vector_layer"
 
-    def srs(self):
-        return self._json.get(self.type_id, {}).get("srs", {}).get("id")
-
     def get_absolute_geojson_url(self):
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.connection_id)
+        assert connection is not None
 
         uri_config = {
             "path": f"{self.get_absolute_vsicurl_url()}/geojson",
@@ -67,9 +65,8 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         assert provider_registry is not None
         metadata_provider = provider_registry.providerMetadata("ogr")
         assert metadata_provider is not None
-        resource_uri = metadata_provider.encodeUri(uri_config)
 
-        return resource_uri
+        return metadata_provider.encodeUri(uri_config)
 
     def get_feature_adding_url(self):
         return ADD_FEATURE_URL % self.common.id
@@ -79,9 +76,9 @@ class NGWVectorLayer(NGWAbstractVectorResource):
 
     # TODO Need refactoring
     def patch_features(self, ngw_feature_list):
-        features_dict_list = []
-        for ngw_feature in ngw_feature_list:
-            features_dict_list.append(ngw_feature.asDict())
+        features_dict_list = [
+            ngw_feature.asDict() for ngw_feature in ngw_feature_list
+        ]
 
         connection = self._res_factory.connection
 
@@ -244,3 +241,24 @@ class NGWVectorLayer(NGWAbstractVectorResource):
 
         connection = self._res_factory.connection
         connection.download(export_url, path)
+
+    @property
+    def is_versioning_enabled(self) -> bool:
+        feature_layer = self._json.get("feature_layer", {})
+        if "versioning" not in feature_layer:
+            return False
+        return feature_layer["versioning"].get("enabled", False)
+
+    @property
+    def epoch(self) -> Optional[int]:
+        feature_layer = self._json.get("feature_layer", {})
+        if "versioning" not in feature_layer:
+            return None
+        return feature_layer["versioning"].get("epoch")
+
+    @property
+    def latest_version(self) -> Optional[int]:
+        feature_layer = self._json.get("feature_layer", {})
+        if "versioning" not in feature_layer:
+            return None
+        return feature_layer["versioning"].get("latest")

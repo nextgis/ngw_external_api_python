@@ -27,15 +27,21 @@ from typing import List, Union
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 from nextgis_connect.logging import logger
+from nextgis_connect.ngw_api.core.ngw_error import NGWError
+from nextgis_connect.ngw_api.core.ngw_group_resource import NGWGroupResource
+from nextgis_connect.ngw_api.core.ngw_resource import NGWResource
+from nextgis_connect.ngw_api.core.ngw_resource_creator import ResourceCreator
+from nextgis_connect.ngw_api.core.ngw_resource_factory import (
+    NGWResourceFactory,
+)
+from nextgis_connect.ngw_api.core.ngw_vector_layer import NGWVectorLayer
+from nextgis_connect.ngw_api.core.ngw_webmap import (
+    NGWWebMap,
+    NGWWebMapLayer,
+    NGWWebMapRoot,
+)
+from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
 
-from ..core.ngw_error import NGWError
-from ..core.ngw_group_resource import NGWGroupResource
-from ..core.ngw_resource import NGWResource
-from ..core.ngw_resource_creator import ResourceCreator
-from ..core.ngw_resource_factory import NGWResourceFactory
-from ..core.ngw_vector_layer import NGWVectorLayer
-from ..core.ngw_webmap import NGWWebMap, NGWWebMapLayer, NGWWebMapRoot
-from ..qgis.qgis_ngw_connection import QgsNgwConnection
 from .qt_ngw_resource_model_job_error import (
     JobAuthorizationError,
     JobInternalError,

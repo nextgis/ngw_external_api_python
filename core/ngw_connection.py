@@ -121,9 +121,9 @@ class NGWConnection:
         if "json" in kwargs:
             json_data = kwargs["json"]
 
-        logger.debug(
-            f"\nRequest\nmethod: {method}\nurl: {urllib.parse.urljoin(self.server_url, sub_url)}\ndata: {payload}\njson:"
-        )
+        # logger.debug(
+        #     f"\nRequest\nmethod: {method}\nurl: {urllib.parse.urljoin(self.server_url, sub_url)}\ndata: {payload}\njson:"
+        # )
 
         url = urllib.parse.urljoin(self.server_url, sub_url)
         req = requests.Request(method, url, data=payload, json=json_data)
