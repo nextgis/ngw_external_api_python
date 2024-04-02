@@ -693,6 +693,7 @@ class QgsNgwConnection(QObject):
         return self.__ngw_components
 
     def get_version(self):
+        logger.debug("Get versions")
         ngw_components = self.get_ngw_components()
         return ngw_components.get("nextgisweb")
 
