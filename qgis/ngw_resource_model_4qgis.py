@@ -59,6 +59,7 @@ from qgis.gui import QgisInterface, QgsFileWidget
 from qgis.PyQt.QtCore import QCoreApplication
 
 from nextgis_connect.logging import logger
+from nextgis_connect.settings import NgConnectSettings
 
 from ..core.ngw_base_map import NGWBaseMap, NGWBaseMapExtSettings
 from ..core.ngw_feature import NGWFeature
@@ -88,7 +89,6 @@ from .compat_qgis import (
     CompatQgisWkbType,
     CompatQt,
 )
-from .ngw_plugin_settings import NgwPluginSettings
 
 NGW_AUTORENAME_FIELDS_VERS = "4.1.0.dev5"
 
@@ -392,12 +392,14 @@ class QGISResourceJob(NGWResourceModelJob):
                 ngw_parent_resource,
                 filepath,
                 new_layer_name,
-                NgwPluginSettings.get_upload_cog_rasters(),
+                NgConnectSettings().upload_raster_as_cog,
                 uploadFileCallback,
                 createLayerCallback,
             )
 
             return ngw_raster_layer
+
+        return None
 
     def importQgsVectorLayer(
         self,
@@ -499,12 +501,12 @@ class QGISResourceJob(NGWResourceModelJob):
         fids_with_notvalid_geom = []
 
         # Do not check geometries (rely on NGW):
-        # if NgwPluginSettings.get_sanitize_fix_geometry():
+        # if NgConnectPlugin.fix_incorrect_geometries
         #    layer_has_mixed_geoms, fids_with_notvalid_geom = self.checkGeometry(qgs_vector_layer)
 
         # Check specific fields.
         if (
-            NgwPluginSettings.get_sanitize_rename_fields()
+            NgConnectSettings().rename_forbidden_fields
             and self.hasBadFields(qgs_vector_layer)
             and not self.ngwSupportsAutoRenameFields()
         ):
