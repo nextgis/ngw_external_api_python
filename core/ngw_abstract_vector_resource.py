@@ -1,8 +1,15 @@
 from abc import ABC
+from typing import List
 
 from osgeo import ogr
-from qgis.core import QgsCoordinateReferenceSystem, QgsField, QgsFields
-from qgis.PyQt.QtCore import QVariant
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsFields,
+    QgsWkbTypes,
+)
+
+from nextgis_connect.compat import WkbType
+from nextgis_connect.resources.ngw_field import NgwField
 
 from .ngw_resource import NGWResource
 
@@ -47,52 +54,35 @@ class NGWAbstractVectorResource(ABC, NGWResource):
         FieldTypeDatetime,
     ) = ["INTEGER", "BIGINT", "REAL", "STRING", "DATE", "TIME", "DATETIME"]
 
-    FieldTypes = [
-        FieldTypeInteger,
-        FieldTypeBigint,
-        FieldTypeReal,
-        FieldTypeString,
-        FieldTypeDate,
-        FieldTypeTime,
-        FieldTypeDatetime,
-    ]
-
     def __init__(self, resource_factory, resource_json):
         super().__init__(resource_factory, resource_json)
 
-        self._field_defs = {}
-        for field_def in self._json.get("feature_layer", {}).get("fields", []):
-            self._field_defs[field_def.get("keyname")] = field_def
+        self.__fields = NgwField.list_from_json(
+            self._json.get("feature_layer", {}).get("fields", [])
+        )
 
     @property
-    def field_defs(self):
-        return self._field_defs
+    def fields(self) -> List[NgwField]:
+        return self.__fields
 
     @property
     def qgs_fields(self) -> QgsFields:
-        field_types = {
-            self.FieldTypeInteger: QVariant.Type.Int,
-            self.FieldTypeBigint: QVariant.Type.LongLong,
-            self.FieldTypeReal: QVariant.Type.Double,
-            self.FieldTypeString: QVariant.Type.String,
-            self.FieldTypeDate: QVariant.Type.Date,
-            self.FieldTypeTime: QVariant.Type.Time,
-            self.FieldTypeDatetime: QVariant.Type.DateTime,
-        }
-
         fields = QgsFields()
-        for field_def in self.field_defs.values():
-            field_type = field_def.get("datatype", self.FieldTypeString)
-            field = QgsField(field_def.get("keyname"), field_types[field_type])
-            fields.append(field)
+        for field in self.fields:
+            fields.append(field.to_qgsfield())
         return fields
 
     def fieldType(self, name):
-        field_def = self._field_defs.get(name, {})
-        datatype = field_def.get("datatype")
-        if datatype in self.FieldTypes:
-            return datatype
-        return None
+        found_field = None
+        for field in self.fields:
+            if field.keyname == name:
+                found_field = field
+                break
+
+        if found_field is None:
+            return None
+
+        return found_field.datatype_name
 
     def geom_type(self):
         if self.type_id in self._json:
@@ -126,21 +116,10 @@ class NGWAbstractVectorResource(ABC, NGWResource):
         return wkb_mapping[self.geom_type()]
 
     def is_geom_multy(self):
-        return self.geom_type() in [
-            self.MULTIPOINT,
-            self.MULTILINESTRING,
-            self.MULTIPOLYGON,
-        ]
+        return QgsWkbTypes.isMultiType(WkbType(self.wkb_geom_type))
 
     def is_geom_with_z(self):
-        return self.geom_type() in [
-            self.POINTZ,
-            self.MULTIPOINTZ,
-            self.LINESTRINGZ,
-            self.MULTILINESTRINGZ,
-            self.POLYGONZ,
-            self.MULTIPOLYGONZ,
-        ]
+        return QgsWkbTypes.hasZ(WkbType(self.wkb_geom_type))
 
     def srs(self):
         return self._json.get(self.type_id, {}).get("srs", {}).get("id")

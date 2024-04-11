@@ -57,12 +57,12 @@ class UnsupportedRasterTypeException(Exception):
 def _add_aliases(
     qgs_vector_layer: QgsVectorLayer, ngw_vector_layer: NGWVectorLayer
 ) -> None:
-    for field_name, field_def in list(ngw_vector_layer.field_defs.items()):
-        field_alias = field_def.get("display_name")
-        if not field_alias:
+    for field in ngw_vector_layer.fields:
+        if field.display_name is None:
             continue
         qgs_vector_layer.setFieldAlias(
-            qgs_vector_layer.fields().indexFromName(field_name), field_alias
+            qgs_vector_layer.fields().indexFromName(field.keyname),
+            field.display_name,
         )
 
 
@@ -71,11 +71,10 @@ def _add_lookup_tables(
 ) -> None:
     lookup_table_id_for_field: Dict[str, int] = {}
 
-    for field_name, field_def in list(ngw_vector_layer.field_defs.items()):
-        lookup_table = field_def.get("lookup_table")
-        if lookup_table is None:
+    for field in ngw_vector_layer.fields:
+        if field.lookup_table is None:
             continue
-        lookup_table_id_for_field[field_name] = lookup_table["id"]
+        lookup_table_id_for_field[field.keyname] = field.lookup_table
 
     if len(lookup_table_id_for_field) == 0:
         return
