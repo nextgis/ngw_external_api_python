@@ -18,14 +18,12 @@
  ***************************************************************************/
 """
 
-import json
 import re
-import sys
-import traceback
 from typing import List, Union
 
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
+from nextgis_connect.exceptions import NgConnectError
 from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.core.ngw_error import NGWError
 from nextgis_connect.ngw_api.core.ngw_group_resource import NGWGroupResource
@@ -43,8 +41,6 @@ from nextgis_connect.ngw_api.core.ngw_webmap import (
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
 
 from .qt_ngw_resource_model_job_error import (
-    JobAuthorizationError,
-    JobInternalError,
     JobNGWError,
     JobServerRequestError,
     NGWResourceModelJobError,
@@ -111,13 +107,13 @@ class NGWResourceModelJob(QObject):
             name = name[:-3]
         new_name = name
         new_name_with_space = None
-        id = 1
+        suffix_id = 1
         while (
             new_name in present_names or new_name_with_space in present_names
         ):
-            new_name = f"{name}({id})"
-            new_name_with_space = f"{name} ({id})"
-            id += 1
+            new_name = f"{name}({suffix_id})"
+            new_name_with_space = f"{name} ({suffix_id})"
+            suffix_id += 1
         return new_name if new_name_with_space is None else new_name_with_space
 
     def unique_resource_name(
@@ -160,61 +156,41 @@ class NGWResourceModelJob(QObject):
         self.started.emit()
         try:
             self._do()
-        except NGWError as e:
-            if e.type == NGWError.TypeNGWError:
-                ngw_exeption_dict = json.loads(e.message)
-                if (
-                    ngw_exeption_dict.get("status_code") == 403
-                    or ngw_exeption_dict.get("status_code") == 401
-                ):
-                    self.errorOccurred.emit(JobAuthorizationError(e.url))
-                else:
-                    self.errorOccurred.emit(
-                        JobNGWError(
-                            str(
-                                ngw_exeption_dict.get("message", "No message")
-                            ),
-                            e.url,
-                        )
-                    )
-
-            elif e.type == NGWError.TypeRequestError:
+        except NGWError as error:
+            if error.type == NGWError.TypeRequestError:
                 self.errorOccurred.emit(
                     JobServerRequestError(
-                        self.tr("Bad http comunication.") + str(e),
-                        e.url,
-                        e.user_msg,
-                        e.need_reconnect,
+                        self.tr("Bad http comunication.") + str(error),
+                        error.url,
+                        error.user_msg,
+                        error.need_reconnect,
                     )
                 )
 
-            elif e.type == NGWError.TypeNGWUnexpectedAnswer:
+            elif error.type == NGWError.TypeNGWUnexpectedAnswer:
                 self.errorOccurred.emit(
-                    JobNGWError(self.tr("Can't parse server answer"), e.url)
+                    JobNGWError(
+                        self.tr("Can't parse server answer"), error.url
+                    )
                 )
 
             else:
                 self.errorOccurred.emit(
                     JobServerRequestError(
                         self.tr("Something wrong with request to server"),
-                        e.url,
+                        error.url,
                     )
                 )
 
-        except NGWResourceModelJobError as e:
-            self.errorOccurred.emit(e)
+        except (NGWResourceModelJobError, NgConnectError) as error:
+            logger.exception("Job error")
+            self.errorOccurred.emit(error)
 
-        except Exception as e:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            extracted_list = traceback.extract_tb(exc_traceback)
-            extracted_list = [
-                (f.split("\\")[-1], l, func, text)
-                for f, l, func, text in extracted_list  # noqa: E741
-            ]
-            logger.error(f"ERROR: \n{traceback.format_exc()}")
-            self.errorOccurred.emit(
-                JobInternalError(str(e), traceback.format_list(extracted_list))
-            )
+        except Exception as error:
+            logger.exception("Job error")
+            error = NgConnectError(str(error))
+            error.__cause__ = error
+            self.errorOccurred.emit(error)
 
         self.dataReceived.emit(self.result)
         self.finished.emit()

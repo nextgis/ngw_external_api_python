@@ -18,10 +18,11 @@
  ***************************************************************************/
 """
 
+import contextlib
 import json
 import time
 import urllib.parse
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from qgis.core import QgsNetworkAccessManager
 from qgis.PyQt.QtCore import (
@@ -34,14 +35,16 @@ from qgis.PyQt.QtCore import (
     QTimer,
     QUrl,
 )
-from qgis.PyQt.QtNetwork import QNetworkRequest
+from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 
+from nextgis_connect.exceptions import ErrorCode, NgConnectError, NgwError
 from nextgis_connect.logging import logger
+from nextgis_connect.ngw_api.core.ngw_error import NGWError
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
+from nextgis_connect.settings import NgConnectSettings
 
-from ..core.ngw_error import NGWError
 from .compat_qgis import CompatQt
 
 UPLOAD_FILE_URL = "/api/component/file_upload/"
@@ -52,12 +55,17 @@ TUS_CHUNK_SIZE = 16777216
 CLIENT_TIMEOUT = 3 * 60 * 1000
 
 
+def is_lunkwill_reply(reply: QNetworkReply) -> bool:
+    header_name = QNetworkRequest.KnownHeaders.ContentTypeHeader
+    lunkwill_type = "application/vnd.lunkwill.request-summary+json"
+    return reply.header(header_name).startswith(lunkwill_type)
+
+
 class QgsNgwConnection(QObject):
     """NextGIS Web API connection"""
 
-    AbilityBaseMap = list(range(1))
-
     __connection_id: str
+    __log_network: bool
 
     __ngw_components: Optional[Dict]
 
@@ -66,6 +74,12 @@ class QgsNgwConnection(QObject):
     ) -> None:
         super().__init__(parent)
         self.__connection_id = connection_id
+        self.__log_network = NgConnectSettings().is_network_debug_enabled
+
+        connections_manager = NgwConnectionsManager()
+        if not connections_manager.is_valid(connection_id):
+            message = "Invalid connection"
+            raise NgConnectError(message)
 
         self.__ngw_components = None
 
@@ -73,203 +87,96 @@ class QgsNgwConnection(QObject):
     def server_url(self) -> str:
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.__connection_id)
+        assert connection is not None
         return connection.url
 
     @property
     def connection_id(self) -> str:
         return self.__connection_id
 
-    def _get_json_param(self, j: Dict, key: str, def_val: Any):
-        return j.get(key, def_val)
-
-    def get(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, "GET", params, True, **kwargs)
-
-    def post(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, "POST", params, True, **kwargs)
-
-    def put(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, "PUT", params, True, **kwargs)
-
-    def patch(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, "PATCH", params, True, **kwargs)
-
-    def delete(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, "DELETE", params, True, **kwargs)
-
-    def post_lunkwill(
-        self, sub_url, params=None, extended_log=False, **kwargs
-    ):
-        """
-        Make a long POST request to NGW server which supports "Lunkwill".
-        """
-        default_wait_ms = 2000
-
-        # Add specific header to the first request.
-        headers = {"X-Lunkwill": "suggest"}
-        rep, j = self.__request_rep_json(
-            sub_url, "POST", params, headers, True, **kwargs
+    def get(
+        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+    ) -> Any:
+        return self.__request(
+            sub_url, "GET", params, is_lunkwill=is_lunkwill, **kwargs
         )
 
-        # Check that server supports lunkwill and return reply immideately if not (the request just has been processed
-        # as usual NGW API request).
-        hname = b"Content-Type"
-        if rep.hasRawHeader(hname):
-            hvalue = bytes(rep.rawHeader(hname)).decode()
-            hreqvalue = "application/vnd.lunkwill.request-summary+json"
-            if (
-                hreqvalue in hvalue
-            ):  # search for required substring, avoiding check for things like "; charset=utf-8"
-                # Send "summary" requests periodically to check long request's status.
-                # Make final "response" request with usual NGW json response after receiving "ready" status.
-                summary_failed_attempts = 3
-                summary_failed = 0
-                request_id = j["id"]
+    def post(
+        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+    ) -> Any:
+        return self.__request(
+            sub_url, "POST", params, is_lunkwill=is_lunkwill, **kwargs
+        )
 
-                if not extended_log:
-                    logger.debug(
-                        f'Skip lunkwill summary requests logging for id "{request_id}"'
-                    )
+    def put(
+        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+    ) -> Any:
+        return self.__request(
+            sub_url, "PUT", params, is_lunkwill=is_lunkwill, **kwargs
+        )
 
-                while True:
-                    status = j["status"]
-                    delay_ms = self._get_json_param(
-                        j, "delay_ms", default_wait_ms
-                    )  # this param could be not included into reply
-                    retry_ms = self._get_json_param(
-                        j, "retry_ms", default_wait_ms
-                    )
+    def patch(
+        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+    ) -> Any:
+        return self.__request(
+            sub_url, "PATCH", params, is_lunkwill=is_lunkwill, **kwargs
+        )
 
-                    if summary_failed == 0:
-                        wait_ms = delay_ms / 1000
-                    elif summary_failed <= summary_failed_attempts:
-                        wait_ms = retry_ms / 1000
-                    else:
-                        raise Exception(
-                            "Lunkwill request aborted: failed summary requests count exceeds maximum"
-                        )
-
-                    if (
-                        status == "processing"
-                        or status == "spooled"
-                        or status == "buffering"
-                    ):
-                        time.sleep(wait_ms)
-                        try:
-                            sub_url = f"/api/lunkwill/{request_id}/summary"
-                            j = self.__request_json(
-                                sub_url, "GET", None, extended_log, **kwargs
-                            )
-                            summary_failed = 0
-                        except Exception:
-                            if extended_log:
-                                logger.debug(
-                                    "Lunkwill summary request failed. Try again"
-                                )
-                            summary_failed += 1
-
-                    elif status == "ready":
-                        sub_url = f"/api/lunkwill/{request_id}/response"
-                        j = self.__request_json(
-                            sub_url, "GET", None, True, **kwargs
-                        )
-                        break
-
-                    else:
-                        raise Exception(
-                            f"Lunkwill request failed on server. Reply: {j!s}"
-                        )
-
-        rep.deleteLater()
-        del rep
-
-        return j
+    def delete(
+        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+    ) -> Any:
+        return self.__request(
+            sub_url, "DELETE", params, is_lunkwill=is_lunkwill, **kwargs
+        )
 
     def download(
         self,
         sub_url: str,
         path: str,
+        **kwargs,
+    ) -> None:
+        data = self.get(sub_url, is_lunkwill=True, **kwargs)
+
+        file = QFile(path)
+        if not file.open(QIODevice.OpenModeFlag.WriteOnly):
+            message = "Failed to open file for downloading into it"
+            raise RuntimeError(message)
+
+        file.write(data)
+        file.close()
+
+    def __request(
+        self,
+        sub_url,
+        method,
         params=None,
-        extended_log=False,
+        *,
+        is_lunkwill: bool = False,
         **kwargs,
     ):
-        """
-        Make a long GET request to NGW server which supports "Lunkwill".
-        """
-        default_wait_ms = 2000
+        headers = None
+        if is_lunkwill:
+            headers = {"X-Lunkwill": "suggest"}
 
-        # Add specific header to the first request.
-        headers = {"X-Lunkwill": "suggest"}
-        reply, is_lukwill, reply_data = self.__request_download(
+        reply, result = self.__request_and_decode(
             sub_url,
-            path,
+            method,
             params=params,
             headers=headers,
-            do_log=True,
             **kwargs,
         )
 
-        if is_lukwill:
-            # Send "summary" requests periodically to check long request's status.
-            # Make final "response" request with usual NGW json response after
-            # receiving "ready" status.
-
-            json_response = json.loads(reply_data.data().decode("utf-8"))
-
-            summary_failed_attempts = 3
-            summary_failed = 0
-            request_id = json_response["id"]
-
-            if not extended_log:
-                logger.debug(
-                    f'Skip lunkwill summary requests logging for id "{request_id}"'
-                )
-
-            while True:
-                status = json_response["status"]
-                delay_ms = self._get_json_param(
-                    json_response, "delay_ms", default_wait_ms
-                )  # this param could be not included into reply
-                retry_ms = self._get_json_param(
-                    json_response, "retry_ms", default_wait_ms
-                )
-
-                if summary_failed == 0:
-                    wait_ms = delay_ms / 1000
-                elif summary_failed <= summary_failed_attempts:
-                    wait_ms = retry_ms / 1000
-                else:
-                    raise Exception(
-                        "Lunkwill request aborted: failed summary requests count "
-                        "exceeds maximum"
-                    )
-
-                if status in ("processing", "spooled", "buffering"):
-                    time.sleep(wait_ms)
-                    try:
-                        sub_url = f"/api/lunkwill/{request_id}/summary"
-                        json_response = self.__request_json(
-                            sub_url, "GET", None, extended_log, **kwargs
-                        )
-                        summary_failed = 0
-                    except Exception:
-                        if extended_log:
-                            logger.debug(
-                                "Lunkwill summary request failed. Try again"
-                            )
-                        summary_failed += 1
-
-                elif status == "ready":
-                    sub_url = f"/api/lunkwill/{request_id}/response"
-                    self.__request_download(sub_url, path, **kwargs)
-                    break
-
-                else:
-                    raise Exception(
-                        f"Lunkwill request failed on server. Reply: {json_response}"
-                    )
-
+        is_lunkwill_supported = is_lunkwill and is_lunkwill_reply(reply)
         reply.deleteLater()
+        del reply
+
+        if is_lunkwill_supported:
+            result = self.__wait_for_answer(result)
+
+        if self.__log_network and isinstance(result, (dict, list)):
+            logger.debug(f"Reply:\n{result}\n")
+
+        return result
 
     def __request_rep(
         self,
@@ -278,7 +185,6 @@ class QgsNgwConnection(QObject):
         badata=None,
         params=None,
         headers=None,
-        do_log=True,
         **kwargs,
     ):
         json_data = None
@@ -294,7 +200,7 @@ class QgsNgwConnection(QObject):
 
         url = urllib.parse.urljoin(self.server_url, sub_url)
 
-        if do_log and False:
+        if self.__log_network:
             logger.debug(
                 "\nRequest\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
                     method,
@@ -304,7 +210,7 @@ class QgsNgwConnection(QObject):
                     if json_data is not None
                     else None,
                     headers,
-                    filename.encode("utf-8") if filename else "-",
+                    filename.encode() if filename else "-",
                     badata.size() if badata else "-",
                 )
             )
@@ -324,10 +230,8 @@ class QgsNgwConnection(QObject):
         connection.update_network_request(req)
 
         if headers is not None:  # add custom headers
-            for k, v in list(headers.items()):
-                hkey = k.encode("utf-8")
-                hval = v.encode("utf-8")
-                req.setRawHeader(hkey, hval)
+            for name, value in list(headers.items()):
+                req.setRawHeader(name.encode(), value.encode())
 
         iodevice = None  # default to None, not to "QBuffer(QByteArray())" - otherwise random crashes at post() in QGIS 3
         if badata is not None:
@@ -336,13 +240,14 @@ class QgsNgwConnection(QObject):
             iodevice = QFile(filename)
         elif json_data is not None:
             req.setHeader(
-                QNetworkRequest.ContentTypeHeader, "application/json"
+                QNetworkRequest.KnownHeaders.ContentTypeHeader,
+                "application/json",
             )
             json_data = QByteArray(json_data)
             iodevice = QBuffer(json_data)
 
         if iodevice is not None:
-            iodevice.open(QIODevice.ReadOnly)
+            iodevice.open(QIODevice.OpenModeFlag.ReadOnly)
 
         loop = QEventLoop()  # loop = QEventLoop(self)
         nam = QgsNetworkAccessManager.instance()
@@ -360,7 +265,7 @@ class QgsNgwConnection(QObject):
             else:
                 rep = nam.deleteResource(req)
         else:
-            rep = nam.sendCustomRequest(req, method.encode("utf-8"), iodevice)
+            rep = nam.sendCustomRequest(req, method.encode(), iodevice)
 
         rep.finished.connect(loop.quit)
         if filename is not None:
@@ -378,7 +283,7 @@ class QgsNgwConnection(QObject):
             timer.timeout.connect(loop.quit)
             timer.start(CLIENT_TIMEOUT)
 
-            loop.exec_()
+            loop.exec()
         del loop
 
         if iodevice is not None:
@@ -387,9 +292,10 @@ class QgsNgwConnection(QObject):
         # Indicate that request has been timed out by QGIS.
         # TODO: maybe use QgsNetworkAccessManager::requestTimedOut()?
         if rep.error() == 5:
-            logger.debug(
-                "Connection error qt code: 5 (QNetworkReply::OperationCanceledError)"
-            )
+            if self.__log_network:
+                logger.debug(
+                    "Connection error qt code: 5 (QNetworkReply::OperationCanceledError)"
+                )
             raise NGWError(
                 NGWError.TypeRequestError,
                 "Connection has been aborted or closed",
@@ -402,7 +308,8 @@ class QgsNgwConnection(QObject):
             )
 
         if rep.error() > 0 and rep.error() < 10:
-            logger.debug(f"Connection error qt code: {rep.error()}")
+            if self.__log_network:
+                logger.debug(f"Connection error qt code: {rep.error()}")
             raise NGWError(
                 NGWError.TypeRequestError,
                 f"Connection error qt code: {rep.error()}",
@@ -411,8 +318,8 @@ class QgsNgwConnection(QObject):
 
         return req, rep
 
-    def __request_rep_json(
-        self, sub_url, method, params=None, headers=None, do_log=True, **kwargs
+    def __request_and_decode(
+        self, sub_url, method, params=None, headers=None, **kwargs
     ):
         req, rep = self.__request_rep(
             sub_url,
@@ -420,144 +327,43 @@ class QgsNgwConnection(QObject):
             badata=None,
             params=params,
             headers=headers,
-            do_log=do_log,
             **kwargs,
         )
+        assert rep is not None
 
         status_code = rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+        if status_code is not None and status_code // 100 != 2:
+            if self.__log_network:
+                logger.debug(f"Response error\nstatus_code {status_code}")
 
-        data = rep.readAll()
-        rep_str = data.data().decode()
-        rep_str_log = rep_str
+            data = None
+            with contextlib.suppress(Exception):
+                data = self.__extract_data(rep)
 
-        # if  status_code / 100 != 2:
-        if status_code is not None and int(str(status_code)[:1]) != 2:
-            logger.debug(
-                f"Response\nerror status_code {status_code}\nmsg: {rep_str_log}"
-            )
+            if isinstance(data, dict):
+                raise NgwError.from_json(data)
 
-            ngw_message_present = False
-            try:
-                json.loads(bytes(data).decode("utf-8"))
-                ngw_message_present = True
-            except Exception:
-                pass
-
-            if ngw_message_present:
-                raise NGWError(
-                    NGWError.TypeNGWError, rep_str, req.url().toString()
-                )
-            else:
-                raise NGWError(
-                    NGWError.TypeRequestError,
-                    "Response status code is %s" % status_code,
-                    req.url().toString(),
-                )
+            error = NgwError()
+            error.add_note(f"Request url: {req.url().toString()}")
+            error.add_note(f"Status code: {status_code}")
+            raise error
 
         try:
-            json_response = json.loads(bytes(data).decode("utf-8"))
+            response_data = self.__extract_data(rep)
+
+        except NgConnectError:
+            raise
         except Exception as error:
-            logger.exception(
-                "Response\nerror response JSON parse\n%s" % rep_str_log
-            )
-            raise NGWError(
-                NGWError.TypeNGWUnexpectedAnswer, "", req.url().toString()
-            ) from error
+            message = "Extracting data error"
+            raise NgConnectError(message) from error
 
-        return rep, json_response
-
-    def __request_download(
-        self,
-        sub_url: str,
-        path: str,
-        *,
-        params=None,
-        headers=None,
-        do_log=True,
-        **kwargs,
-    ):
-        request, reply = self.__request_rep(
-            sub_url,
-            "GET",
-            badata=None,
-            params=params,
-            headers=headers,
-            do_log=do_log,
-            **kwargs,
-        )
-
-        assert request is not None
-        assert reply is not None
-
-        reply_data = reply.readAll()
-        status_code = reply.attribute(
-            QNetworkRequest.Attribute.HttpStatusCodeAttribute
-        )
-        if status_code is not None and status_code // 100 != 2:
-            rep_str = reply_data.data().decode("utf-8")
-            logger.debug(
-                f"Response\nerror status_code {status_code}\nmsg: {rep_str}"
-            )
-
-            ngw_message_present = False
-            try:
-                json.loads(rep_str)
-                ngw_message_present = True
-            except Exception:
-                pass
-
-            if ngw_message_present:
-                raise NGWError(
-                    NGWError.TypeNGWError, rep_str, request.url().toString()
-                )
-            else:
-                raise NGWError(
-                    NGWError.TypeRequestError,
-                    "Response status code is %s" % status_code,
-                    request.url().toString(),
-                )
-
-        header_name = b"Content-Type"
-        lunkwill_type = b"application/vnd.lunkwill.request-summary+json"
-        if reply.hasRawHeader(header_name) and reply.rawHeader(
-            header_name
-        ).contains(lunkwill_type):
-            return reply, True, reply_data
-
-        file = QFile(path)
-        if not file.open(QIODevice.OpenModeFlag.WriteOnly):
-            raise Exception("Failed to open file for download")
-
-        file.write(reply_data)
-        file.close()
-
-        return reply, False, None
-
-    def __request_json(
-        self, sub_url, method, params=None, do_log=True, **kwargs
-    ):
-        rep, j = self.__request_rep_json(
-            sub_url,
-            method,
-            params=params,
-            headers=None,
-            do_log=do_log,
-            **kwargs,
-        )
-
-        rep.deleteLater()
-        del rep
-
-        return j
-
-    def get_upload_file_url(self):
-        return UPLOAD_FILE_URL
+        return rep, response_data
 
     def upload_file(self, filename, callback):
         self.uploadProgressCallback = callback
-        return self.put(self.get_upload_file_url(), file=filename)
+        return self.put(UPLOAD_FILE_URL, file=filename)
 
-    def tus_upload_file(self, filename, callback, extended_log=False):
+    def tus_upload_file(self, filename, callback):
         """
         Implements tus protocol to upload a file to NGW.
         Note: This method internally uses self methods to send synchronous
@@ -609,9 +415,11 @@ class QgsNgwConnection(QObject):
         max_retry_count = 3
         bytes_sent = 0
 
+        is_file_large = (file_size / TUS_CHUNK_SIZE) > 10
+
         # Allow to skip logging of PATCH requests. Helpful when a large file is being uploaded.
         # Note: QGIS 3 has a hardcoded limit of log messages.
-        if not extended_log:
+        if self.__log_network and is_file_large:
             logger.debug(
                 f'Skip PATCH requests logging during uploading of file "{file_guid}"'
             )
@@ -623,7 +431,7 @@ class QgsNgwConnection(QObject):
                 break
             bytes_read = badata.size()
 
-            if extended_log:
+            if self.__log_network and not is_file_large:
                 logger.debug(
                     "Upload %d from %s"
                     % (
@@ -647,7 +455,6 @@ class QgsNgwConnection(QObject):
                     badata,
                     None,
                     chunk_hdrs,
-                    extended_log,
                 )
                 chunk_rep_code = chunk_rep.attribute(
                     QNetworkRequest.HttpStatusCodeAttribute
@@ -663,7 +470,7 @@ class QgsNgwConnection(QObject):
                 break
 
             bytes_sent += bytes_read
-            if extended_log:
+            if self.__log_network and not is_file_large:
                 logger.debug(
                     f"Tus-uploaded chunk of {bytes_read} bytes. Now "
                     "{bytes_sent} of overall {file_size} bytes are uploaded"
@@ -689,18 +496,88 @@ class QgsNgwConnection(QObject):
 
     def get_ngw_components(self):
         if self.__ngw_components is None:
+            logger.debug("Get versions")
             self.__ngw_components = self.get(GET_VERSION_URL)
+            domain = urllib.parse.urlparse(self.server_url).hostname
+            version = self.__ngw_components.get("nextgisweb")
+            logger.debug(
+                f"<b>Connected</b> to {domain} (NGW version: {version})"
+            )
         return self.__ngw_components
 
     def get_version(self):
-        logger.debug("Get versions")
         ngw_components = self.get_ngw_components()
         return ngw_components.get("nextgisweb")
 
-    def get_abilities(self):
-        ngw_components = self.get_ngw_components()
-        abilities = []
-        if "nextgisweb_basemap" in ngw_components:
-            abilities.append(self.AbilityBaseMap)
+    def __wait_for_answer(self, lunkwill_summary: Dict[str, Any]) -> Any:
+        # Send "summary" requests periodically to check long request's status.
+        # Make final "response" request with usual NGW json response after
+        # receiving "ready" status.
 
-        return abilities
+        default_wait_ms = 2000
+        max_failed_attempts = 3
+
+        summary_failed = 0
+        request_id = lunkwill_summary["id"]
+
+        while True:
+            status = lunkwill_summary["status"]
+            delay_ms = lunkwill_summary.get("delay_ms", default_wait_ms)
+            retry_ms = lunkwill_summary.get("retry_ms", default_wait_ms)
+
+            if summary_failed == 0:
+                wait_ms = delay_ms / 1000
+            elif summary_failed <= max_failed_attempts:
+                wait_ms = retry_ms / 1000
+            else:
+                message = "Lunkwill request aborted: failed summary requests count exceeds maximum"
+                raise RuntimeError(message)
+
+            if status in ("processing", "spooled", "buffering"):
+                time.sleep(wait_ms)
+                try:
+                    sub_url = f"/api/lunkwill/{request_id}/summary"
+                    lunkwill_summary = self.get(sub_url)
+                    summary_failed = 0
+                except Exception:
+                    if self.__log_network:
+                        logger.debug(
+                            "Lunkwill summary request failed. Try again"
+                        )
+                    summary_failed += 1
+
+            elif status == "ready":
+                sub_url = f"/api/lunkwill/{request_id}/response"
+                lunkwill_summary = self.get(sub_url)
+                break
+
+            else:
+                message = f"Lunkwill request failed on server. Reply: {lunkwill_summary!s}"
+                raise RuntimeError(message)
+
+        return lunkwill_summary
+
+    def __extract_data(
+        self, reply: QNetworkReply
+    ) -> Union[QByteArray, Dict[str, Any]]:
+        header_name = QNetworkRequest.KnownHeaders.ContentTypeHeader
+        lunkwill_type = "application/vnd.lunkwill.request-summary+json"
+        is_lunkwill_summary = reply.header(header_name).startswith(
+            lunkwill_type
+        )
+        is_json = reply.header(header_name) == "application/json"
+
+        data = reply.readAll()
+
+        if not is_lunkwill_summary and not is_json:
+            return data
+
+        try:
+            json_string = data.data().decode()
+            json_response = json.loads(json_string)
+        except json.decoder.JSONDecodeError:
+            message = "JSON parsing error"
+            logger.debug(f"{message}. Wrong data:\n{json_string}\n")
+            raise NgwError(message, code=ErrorCode.IncorrectAnswer) from None
+        else:
+            return json_response

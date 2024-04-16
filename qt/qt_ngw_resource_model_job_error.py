@@ -18,13 +18,20 @@
  ***************************************************************************/
 """
 
+from typing import Optional
 
-class NGWResourceModelJobError(Exception):
+from nextgis_connect.exceptions import NgConnectError
+
+
+class NGWResourceModelJobError(NgConnectError):
     """Common error"""
 
-    def __init__(self, msg):
-        super().__init__(msg)
-        self.user_msg = None
+    def __init__(self, msg, *, user_message=None):
+        super().__init__(msg, user_message=user_message)
+
+    @property
+    def user_msg(self) -> Optional[str]:
+        return self.__user_message
 
 
 class JobError(NGWResourceModelJobError):
@@ -39,21 +46,12 @@ class JobWarning(NGWResourceModelJobError):
     """Specific job warning"""
 
 
-class JobInternalError(NGWResourceModelJobError):
-    """Unexpected job error. With trace"""
-
-    def __init__(self, msg, trace):
-        super().__init__(msg)
-        self.trace = trace
-
-
 class JobServerRequestError(NGWResourceModelJobError):
     """Something wrong with request to NGW like  no connection, 502, ngw error"""
 
     def __init__(self, msg, url, user_msg=None, need_reconnect=True):
-        super().__init__(msg)
+        super().__init__(msg, user_message=user_msg)
         self.url = url
-        self.user_msg = user_msg
         self.need_reconnect = need_reconnect
 
 
@@ -62,10 +60,3 @@ class JobNGWError(JobServerRequestError):
 
     def __init__(self, msg, url):
         super().__init__(msg, url)
-
-
-class JobAuthorizationError(JobNGWError):
-    """NGW can't execute request for perform the job because user does not have rights"""
-
-    def __init__(self, url):
-        super().__init__("", url)

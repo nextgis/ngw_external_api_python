@@ -48,7 +48,7 @@ class NGWWmsConnection(NGWResource):
         version="1.1.1",
         auth=(None, None),
     ):
-        connection = ngw_group_resource._res_factory.connection
+        connection = ngw_group_resource.res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
 
         params = dict(
@@ -70,7 +70,7 @@ class NGWWmsConnection(NGWResource):
         result = connection.post(url, params=params)
 
         ngw_resource = cls(
-            ngw_group_resource._res_factory,
+            ngw_group_resource.res_factory,
             NGWResource.receive_resource_obj(connection, result["id"]),
         )
 

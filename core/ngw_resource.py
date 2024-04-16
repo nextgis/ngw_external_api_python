@@ -21,9 +21,12 @@
 import re
 import urllib.parse
 from os import path
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, List
 
-from ..utils import ICONS_DIR
+from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
+
+ICONS_DIR = str(Path(__file__).parents[1] / "icons")
 
 
 def API_RESOURCE_URL(res_id):
@@ -65,7 +68,7 @@ class NGWResource:
     icon_path = path.join(ICONS_DIR, "resource.svg")
     type_title = "NGW Resource"
 
-    _res_factory: Any  # NGWResourceFactory
+    res_factory: Any  # NGWResourceFactory
 
     # STATIC
     @classmethod
@@ -84,7 +87,7 @@ class NGWResource:
 
     @classmethod
     def delete_resource(cls, ngw_resource):
-        ngw_con = ngw_resource._res_factory.connection
+        ngw_con = ngw_resource.res_factory.connection
         url = API_RESOURCE_URL(ngw_resource.common.id)
         ngw_con.delete(url)
 
@@ -94,7 +97,7 @@ class NGWResource:
         Init resource from json representation
         :param ngw_resource: any ngw_resource
         """
-        self._res_factory = resource_factory
+        self.res_factory = resource_factory
         self._json = resource_json
         self._construct()
         self.children_count = None
@@ -123,7 +126,7 @@ class NGWResource:
 
     def get_parent(self):
         if self.common.parent:
-            return self._res_factory.get_resource(self.common.parent.id)
+            return self.res_factory.get_resource(self.common.parent.id)
         else:
             return None
 
@@ -132,19 +135,19 @@ class NGWResource:
             return []
 
         children_json = NGWResource.receive_resource_children(
-            self._res_factory.connection, self.common.id
+            self.res_factory.connection, self.common.id
         )
         children: List[NGWResource] = []
         for child_json in children_json:
-            children.append(self._res_factory.get_resource_by_json(child_json))
+            children.append(self.res_factory.get_resource_by_json(child_json))
         return children
 
     def get_absolute_url(self) -> str:
-        base_url = self._res_factory.connection.server_url
+        base_url = self.res_factory.connection.server_url
         return urllib.parse.urljoin(base_url, RESOURCE_URL(self.common.id))
 
     def get_absolute_api_url(self) -> str:
-        base_url = self._res_factory.connection.server_url
+        base_url = self.res_factory.connection.server_url
         return urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
 
     def get_absolute_vsicurl_url(self) -> str:
@@ -158,7 +161,11 @@ class NGWResource:
 
     @property
     def connection_id(self) -> str:
-        return self._res_factory.connection.connection_id
+        return self.res_factory.connection.connection_id
+
+    @property
+    def connection(self) -> QgsNgwConnection:
+        return self.res_factory.connection
 
     @classmethod
     def get_api_collection_url(cls) -> str:
@@ -180,7 +187,7 @@ class NGWResource:
             ),
         )
 
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
         url = self.get_relative_api_url()
         connection.put(url, params=params)
         self.update()
@@ -192,14 +199,14 @@ class NGWResource:
             ),
         )
 
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
         url = self.get_relative_api_url()
         connection.put(url, params=params)
         self.update()
 
     def update(self):
         self._json = self.receive_resource_obj(
-            self._res_factory.connection, self.common.id
+            self.res_factory.connection, self.common.id
         )
 
         self._construct()

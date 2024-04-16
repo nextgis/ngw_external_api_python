@@ -19,10 +19,10 @@
 """
 
 import re
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, urlparse
 
-from .ngw_connection import NGWConnection
-from .ngw_connection_settings import NGWConnectionSettings
+from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
+
 from .ngw_error import NGWError
 from .ngw_resource_factory import NGWResourceFactory
 
@@ -30,7 +30,7 @@ from .ngw_resource_factory import NGWResourceFactory
 # TODO: move to Identify plus
 def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     layer_source = qgs_map_layer.source()
-    layer_source = layer_source.lstrip("/vsicurl/")
+    layer_source = layer_source.lstrip("/vsicurl/")  # noqa: B005
 
     url_components = urlparse(layer_source)
 
@@ -42,30 +42,16 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     # m.group() is '.../resource/<resource id>/'
     basePathStructure = match.group().strip("/").split("/")
 
-    baseURL = (
-        url_components.scheme
-        + "://"
-        + url_components.netloc.split("@")[-1]
-        + "/"
-        + "/".join(basePathStructure[:-3])
-    )
+    # baseURL = (
+    #     url_components.scheme
+    #     + "://"
+    #     + url_components.netloc.split("@")[-1]
+    #     + "/"
+    #     + "/".join(basePathStructure[:-3])
+    # )
     ngw_resources_id = int(basePathStructure[-1])
     requestAttrs = parse_qs(url_components.query)
 
-    ngw_username = None
-    ngw_password = None
-
-    if qgs_map_layer.providerType() == "WFS":
-        if "username" in requestAttrs:
-            ngw_username = requestAttrs.get("username")[0]
-        if "password" in requestAttrs:
-            ngw_password = requestAttrs.get("password")[0]
-    elif qgs_map_layer.providerType() == "ogr":
-        if url_components.username and url_components.password:
-            ngw_username = unquote(url_components.username)
-            ngw_password = unquote(url_components.password)
-    else:
-        return None
     # additionAttrs = {}
     # if requestAttrs.get(u'TYPENAME') is not None:
     #    additionAttrs.update({u'LayerName': requestAttrs[u'TYPENAME'][0]})
@@ -76,15 +62,12 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     # additionAttrs.update({u'baseURL':baseURL})
     # additionAttrs.update({u'resourceId':ngw_resources_id})
 
-    ngwConnectionSettings = NGWConnectionSettings(
-        "ngw", baseURL, ngw_username, ngw_password
-    )
-    ngwConnection = NGWConnection(ngwConnectionSettings)
-
-    ngwResourceFactory = NGWResourceFactory(ngwConnection)
+    connection_id = qgs_map_layer.customProperty("ngw_connection_id")
+    ngw_connection = QgsNgwConnection(connection_id)
+    ngw_resource_factory = NGWResourceFactory(ngw_connection)
 
     try:
-        ngw_resource = ngwResourceFactory.get_resource(ngw_resources_id)
+        ngw_resource = ngw_resource_factory.get_resource(ngw_resources_id)
 
         if ngw_resource is None:
             return None
@@ -95,7 +78,7 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
                 if layer["keyname"] == layer_name:
                     ngw_resources_id = layer["resource_id"]
                     break
-            return ngwResourceFactory.get_resource(ngw_resources_id)
+            return ngw_resource_factory.get_resource(ngw_resources_id)
         else:
             return ngw_resource
         # return NGWVectorLayer(ngwResourceFactory, NGWResource.receive_resource_obj(ngwConnection, ngw_resources_id))

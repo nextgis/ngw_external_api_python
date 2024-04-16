@@ -42,7 +42,7 @@ class NGWAttachment:
         )
 
     def unlink(self):
-        self.ngw_feature.ngw_vector_layer._res_factory.connection.delete(
+        self.ngw_feature.ngw_vector_layer.res_factory.connection.delete(
             self.get_attachmet_url()
         )
 
@@ -54,12 +54,14 @@ class NGWAttachment:
         )
 
     def get_image_full_url(self):
-        base_url = self.ngw_feature.ngw_vector_layer._res_factory.connection.server_url
+        base_url = (
+            self.ngw_feature.ngw_vector_layer.res_factory.connection.server_url
+        )
         return urllib.parse.urljoin(base_url, self.get_image_url())
 
     def get_image(self):
         attachment_info = (
-            self.ngw_feature.ngw_vector_layer._res_factory.connection.get(
+            self.ngw_feature.ngw_vector_layer.res_factory.connection.get(
                 self.get_attachmet_url()
             )
         )
@@ -73,8 +75,10 @@ class NGWAttachment:
         else:
             format = "jpeg"
 
-        file_contetnt = self.ngw_feature.ngw_vector_layer._res_factory.connection.download_file(
-            self.get_image_url()
+        file_contetnt = (
+            self.ngw_feature.ngw_vector_layer.res_factory.connection.get(
+                self.get_image_url(), is_lunkwill=True
+            ).data()
         )
 
         return [name, format, file_contetnt]

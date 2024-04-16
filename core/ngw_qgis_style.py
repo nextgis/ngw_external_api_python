@@ -26,7 +26,7 @@ class NGWQGISStyle(NGWResource):
         return self.get_absolute_api_url() + "/qml"
 
     def update_qml(self, qml, callback):
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
 
         style_file_desc = connection.upload_file(qml, callback)
 

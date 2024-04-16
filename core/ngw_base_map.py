@@ -31,7 +31,7 @@ class NGWBaseMap(NGWResource):
     def create_in_group(
         cls, name, ngw_group_resource, base_map_url, qms_ext_settings=None
     ):
-        connection = ngw_group_resource._res_factory.connection
+        connection = ngw_group_resource.res_factory.connection
         params = dict(
             resource=dict(
                 cls=cls.type_id,
@@ -50,7 +50,7 @@ class NGWBaseMap(NGWResource):
         )
 
         ngw_resource = cls(
-            ngw_group_resource._res_factory,
+            ngw_group_resource.res_factory,
             NGWResource.receive_resource_obj(connection, result["id"]),
         )
 

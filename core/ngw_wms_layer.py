@@ -33,7 +33,7 @@ class NGWWmsLayer(NGWResource):
         wms_layer_desc = self._json.get(self.type_id, {})
         wms_connection_id = wms_layer_desc.get("connection", {}).get("id")
         if wms_connection_id is not None:
-            wms_connection = self._res_factory.get_resource(wms_connection_id)
+            wms_connection = self.res_factory.get_resource(wms_connection_id)
             self.ngw_wms_connection_url = wms_connection.get_connection_url()
         self.ngw_wms_layers = wms_layer_desc.get("wmslayers").split(",")
 
@@ -46,7 +46,7 @@ class NGWWmsLayer(NGWResource):
         wms_layers,
         wms_format,
     ):
-        connection = ngw_group_resource._res_factory.connection
+        connection = ngw_group_resource.res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
 
         params = dict(
@@ -67,7 +67,7 @@ class NGWWmsLayer(NGWResource):
         result = connection.post(url, params=params)
 
         ngw_resource = cls(
-            ngw_group_resource._res_factory,
+            ngw_group_resource.res_factory,
             NGWResource.receive_resource_obj(connection, result["id"]),
         )
 

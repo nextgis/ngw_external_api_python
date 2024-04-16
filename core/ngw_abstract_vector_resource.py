@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List
+from typing import ClassVar, Dict, List, Optional
 
 from osgeo import ogr
 from qgis.core import (
@@ -29,7 +29,7 @@ class NGWAbstractVectorResource(ABC, NGWResource):
     POLYGONZ = 11
     MULTIPOLYGONZ = 12
 
-    __GEOMETRIES = {
+    __GEOMETRIES: ClassVar[Dict[str, int]] = {
         "POINT": POINT,
         "MULTIPOINT": MULTIPOINT,
         "LINESTRING": LINESTRING,
@@ -52,10 +52,12 @@ class NGWAbstractVectorResource(ABC, NGWResource):
         FieldTypeDate,
         FieldTypeTime,
         FieldTypeDatetime,
-    ) = ["INTEGER", "BIGINT", "REAL", "STRING", "DATE", "TIME", "DATETIME"]
+    ) = ["INTEGER", "BIGINT", "REAL", "STRING", "DATE", "TIME", "DATETIME"]  # noqa: RUF012
 
     def __init__(self, resource_factory, resource_json):
         super().__init__(resource_factory, resource_json)
+
+        self.__features_count = None
 
         self.__fields = NgwField.list_from_json(
             self._json.get("feature_layer", {}).get("fields", [])
@@ -65,14 +67,7 @@ class NGWAbstractVectorResource(ABC, NGWResource):
     def fields(self) -> List[NgwField]:
         return self.__fields
 
-    @property
-    def qgs_fields(self) -> QgsFields:
-        fields = QgsFields()
-        for field in self.fields:
-            fields.append(field.to_qgsfield())
-        return fields
-
-    def fieldType(self, name):
+    def field(self, name: str) -> Optional[NgwField]:
         found_field = None
         for field in self.fields:
             if field.keyname == name:
@@ -82,7 +77,25 @@ class NGWAbstractVectorResource(ABC, NGWResource):
         if found_field is None:
             return None
 
-        return found_field.datatype_name
+        return found_field
+
+    @property
+    def qgs_fields(self) -> QgsFields:
+        fields = QgsFields()
+        for field in self.fields:
+            fields.append(field.to_qgsfield())
+        return fields
+
+    @property
+    def features_count(self) -> int:
+        if self.__features_count is None:
+            feature_count_url = (
+                f"/api/resource/{self.resource_id}/feature_count"
+            )
+            result = self.connection.get(feature_count_url)
+            self.__features_count = result["total_count"]
+
+        return self.__features_count
 
     def geom_type(self):
         if self.type_id in self._json:
@@ -93,8 +106,8 @@ class NGWAbstractVectorResource(ABC, NGWResource):
         return self.UNKNOWN
 
     @property
-    def geom_name(self) -> str:
-        return self._json[self.type_id]["geometry_type"]
+    def geom_name(self) -> Optional[str]:
+        return self._json[self.type_id].get("geometry_type")
 
     @property
     def wkb_geom_type(self) -> int:

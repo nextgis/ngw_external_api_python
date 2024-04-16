@@ -23,15 +23,14 @@ class NGWError(Exception):
     (
         TypeUnknownError,
         TypeRequestError,
-        TypeNGWError,
         TypeNGWUnexpectedAnswer,
-    ) = list(range(4))
+    ) = list(range(3))  # noqa: RUF012
 
     def __init__(
         self, type, message, url=None, user_msg=None, need_reconnect=True
     ):
         if not isinstance(message, str):
-            self.message = str(message)  # , 'utf-8')
+            self.message = str(message)
         else:
             self.message = message
 

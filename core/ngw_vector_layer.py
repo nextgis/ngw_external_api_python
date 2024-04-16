@@ -80,7 +80,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
             ngw_feature.asDict() for ngw_feature in ngw_feature_list
         ]
 
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
 
         url = self.get_feature_adding_url()
         connection.patch(url, params=features_dict_list)
@@ -89,7 +89,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         json_feature = {}
 
         for field_name, pyvalue in list(attributes.items()):
-            field_type = self.fieldType(field_name)
+            field_type = self.field(field_name).datatype_name
             field_value = None
             if field_type == NGWVectorLayer.FieldTypeDate:
                 if isinstance(pyvalue, datetime.date):
@@ -125,12 +125,12 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         return json_feature
 
     def delete_all_features(self):
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
         connection.delete(self.get_feature_deleting_url())
 
     # TODO Need refactoring. Paging loading with process
     def get_features(self) -> List[NGWFeature]:
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
 
         url = self.get_feature_adding_url()
         result = connection.get(url)
@@ -142,7 +142,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         return ngw_features
 
     def extent(self):
-        result = self._res_factory.connection.get(
+        result = self.res_factory.connection.get(
             API_LAYER_EXTENT(self.common.id)
         )
         extent = result.get("extent")
@@ -164,7 +164,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         qml - full path to qml file
         callback - upload file callback
         """
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
         if not style_name:
             style_name = self.common.display_name
         style_name = self.generate_unique_child_name(style_name)
@@ -183,7 +183,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         url = self.get_api_collection_url()
         result = connection.post(url, params=params)
         ngw_resource = NGWQGISVectorStyle(
-            self._res_factory,
+            self.res_factory,
             NGWResource.receive_resource_obj(connection, result["id"]),
         )
 
@@ -191,7 +191,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
 
     def create_map_server_style(self):
         """Create default Map Srver style for this layer"""
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
 
         style_name = self.generate_unique_child_name(
             self.common.display_name + ""
@@ -208,7 +208,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         url = self.get_api_collection_url()
         result = connection.post(url, params=params)
         ngw_resource = NGWMapServerStyle(
-            self._res_factory,
+            self.res_factory,
             NGWResource.receive_resource_obj(connection, result["id"]),
         )
 
@@ -224,7 +224,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
                 continue
             field.update(fields_params[field_keyname])
 
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
         url = self.get_relative_api_url()
 
         params = dict(feature_layer=flayer_dict)
@@ -239,7 +239,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
             f"{url}/export?format={format}&srs={srs}&fid=&zipped=false"
         )
 
-        connection = self._res_factory.connection
+        connection = self.res_factory.connection
         connection.download(export_url, path)
 
     @property

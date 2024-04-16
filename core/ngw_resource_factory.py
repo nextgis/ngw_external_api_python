@@ -20,7 +20,8 @@
 
 from typing import Dict, Type
 
-from ..qgis.qgis_ngw_connection import QgsNgwConnection
+from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
+
 from .ngw_base_map import NGWBaseMap
 from .ngw_group_resource import NGWGroupResource
 from .ngw_mapserver_style import NGWMapServerStyle

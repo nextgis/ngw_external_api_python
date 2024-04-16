@@ -45,13 +45,13 @@ class NGWFeature:
         )
 
     def get_attachments(self):
-        return self.ngw_vector_layer._res_factory.connection.get(
+        return self.ngw_vector_layer.res_factory.connection.get(
             self.get_feature_attachmets_url()
         )
 
     def link_attachment(self, uploaded_file_info):
         json_data = dict(file_upload=uploaded_file_info)
-        res = self.ngw_vector_layer._res_factory.connection.post(
+        res = self.ngw_vector_layer.res_factory.connection.post(
             self.get_feature_attachmets_url(), json=json_data
         )
         return res["id"]

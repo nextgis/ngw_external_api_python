@@ -42,7 +42,7 @@ class NGWWebMap(NGWResource):
         if bbox is None:
             bbox = [-180, 180, 90, -90]
 
-        connection = ngw_group_resource._res_factory.connection
+        connection = ngw_group_resource.res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
 
         base_maps = []
@@ -80,7 +80,7 @@ class NGWWebMap(NGWResource):
         result = connection.post(url, params=params)
 
         ngw_resource = NGWWebMap(
-            ngw_group_resource._res_factory,
+            ngw_group_resource.res_factory,
             NGWResource.receive_resource_obj(connection, result["id"]),
         )
 

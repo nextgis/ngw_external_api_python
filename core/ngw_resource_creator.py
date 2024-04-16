@@ -31,7 +31,7 @@ from .ngw_wfs_service import NGWWfsService
 class ResourceCreator:
     @staticmethod
     def create_group(parent_ngw_resource, new_group_name):
-        connection = parent_ngw_resource._res_factory.connection
+        connection = parent_ngw_resource.res_factory.connection
         url = parent_ngw_resource.get_api_collection_url()
 
         params = dict(
@@ -45,7 +45,7 @@ class ResourceCreator:
         result = connection.post(url, params=params)
 
         ngw_resource = NGWGroupResource(
-            parent_ngw_resource._res_factory,
+            parent_ngw_resource.res_factory,
             NGWResource.receive_resource_obj(connection, result["id"]),
         )
         parent_ngw_resource.common.children = True
@@ -60,12 +60,12 @@ class ResourceCreator:
         upload_callback,
         create_callback,
     ) -> NGWVectorLayer:
-        connection = parent_ngw_resource._res_factory.connection
+        connection = parent_ngw_resource.res_factory.connection
 
         # Use tus uploading for files by default.
         # vector_file_desc = connection.upload_file(filename, upload_callback)
         vector_file_desc = connection.tus_upload_file(
-            filename, upload_callback, extended_log=False
+            filename, upload_callback
         )
 
         url = parent_ngw_resource.get_api_collection_url()
@@ -87,9 +87,7 @@ class ResourceCreator:
 
         # Use "lunkwill" layer creation request (specific type of long request) by default.
         # result = connection.post(url, params=params)
-        result = connection.post_lunkwill(
-            url, params=params, extended_log=False
-        )
+        result = connection.post(url, params=params, is_lunkwill=True)
 
         ngw_resource = NGWResource.receive_resource_obj(
             connection, result["id"]
@@ -97,7 +95,7 @@ class ResourceCreator:
 
         parent_ngw_resource.common.children = True
 
-        return NGWVectorLayer(parent_ngw_resource._res_factory, ngw_resource)
+        return NGWVectorLayer(parent_ngw_resource.res_factory, ngw_resource)
 
     @staticmethod
     def create_raster_layer(
@@ -108,12 +106,12 @@ class ResourceCreator:
         upload_callback,
         create_callback,
     ):
-        connection = parent_ngw_resource._res_factory.connection
+        connection = parent_ngw_resource.res_factory.connection
 
         # Use tus uploading for files by default.
         # raster_file_desc = connection.upload_file(filename, upload_callback)
         raster_file_desc = connection.tus_upload_file(
-            filename, upload_callback, extended_log=False
+            filename, upload_callback
         )
 
         url = parent_ngw_resource.get_api_collection_url()
@@ -132,16 +130,14 @@ class ResourceCreator:
 
         # Use "lunkwill" layer creation request (specific type of long request) by default.
         # result = connection.post(url, params=params)
-        result = connection.post_lunkwill(
-            url, params=params, extended_log=False
-        )
+        result = connection.post(url, params=params, is_lunkwill=True)
 
         ngw_resource = NGWResource.receive_resource_obj(
             connection, result["id"]
         )
         parent_ngw_resource.common.children = True
 
-        return NGWRasterLayer(parent_ngw_resource._res_factory, ngw_resource)
+        return NGWRasterLayer(parent_ngw_resource.res_factory, ngw_resource)
 
     @staticmethod
     def create_wfs_or_ogcf_service(
@@ -153,7 +149,7 @@ class ResourceCreator:
     ):
         assert service_type in ("WFS", "OGC API - Features")
 
-        connection = ngw_group_resource._res_factory.connection
+        connection = ngw_group_resource.res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
 
         params_layers = []
@@ -181,7 +177,7 @@ class ResourceCreator:
         result = connection.post(url, params=params)
 
         ngw_resource = ngw_type(
-            ngw_group_resource._res_factory,
+            ngw_group_resource.res_factory,
             NGWResource.receive_resource_obj(connection, result["id"]),
         )
         ngw_group_resource.common.children = True
@@ -194,7 +190,7 @@ class ResourceCreator:
         items: Dict[str, str],
         parent_group_resource: NGWGroupResource,
     ) -> NGWResource:
-        connection = parent_group_resource._res_factory.connection
+        connection = parent_group_resource.res_factory.connection
         url = parent_group_resource.get_api_collection_url()
 
         params = dict(
@@ -209,7 +205,7 @@ class ResourceCreator:
         result = connection.post(url, params=params)
 
         ngw_resource = NGWResource(
-            parent_group_resource._res_factory,
+            parent_group_resource.res_factory,
             NGWResource.receive_resource_obj(connection, result["id"]),
         )
         parent_group_resource.common.children = True

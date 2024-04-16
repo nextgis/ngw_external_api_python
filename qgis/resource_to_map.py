@@ -36,17 +36,20 @@ from qgis.PyQt.QtCore import (
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
 from nextgis_connect.logging import logger
+from nextgis_connect.ngw_api.core.ngw_error import NGWError
+from nextgis_connect.ngw_api.core.ngw_ogcf_service import NGWOgcfService
+from nextgis_connect.ngw_api.core.ngw_qgis_style import NGWQGISStyle
+from nextgis_connect.ngw_api.core.ngw_raster_layer import NGWRasterLayer
+from nextgis_connect.ngw_api.core.ngw_resource import (
+    API_RESOURCE_URL,
+    NGWResource,
+)
+from nextgis_connect.ngw_api.core.ngw_vector_layer import NGWVectorLayer
+from nextgis_connect.ngw_api.core.ngw_wfs_service import NGWWfsService
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
 
-from ..core.ngw_error import NGWError
-from ..core.ngw_ogcf_service import NGWOgcfService
-from ..core.ngw_qgis_style import NGWQGISStyle
-from ..core.ngw_raster_layer import NGWRasterLayer
-from ..core.ngw_resource import API_RESOURCE_URL, NGWResource
-from ..core.ngw_vector_layer import NGWVectorLayer
-from ..core.ngw_wfs_service import NGWWfsService
 from .qgis_ngw_connection import QgsNgwConnection
 
 
@@ -82,7 +85,7 @@ def _add_lookup_tables(
     lookup_tables: Dict[int, List[Dict[str, str]]] = {}
     lookup_table_ids = set(lookup_table_id_for_field.values())
     for lookup_table_id in lookup_table_ids:
-        connection: QgsNgwConnection = ngw_vector_layer._res_factory.connection
+        connection: QgsNgwConnection = ngw_vector_layer.res_factory.connection
         lookup_url = API_RESOURCE_URL(lookup_table_id)
         try:
             result = connection.get(lookup_url)
@@ -110,9 +113,7 @@ def _add_lookup_tables(
         qgs_vector_layer.setEditorWidgetSetup(field_index, setup)
 
 
-def _add_geojson_layer(resource):
-    if not isinstance(resource, NGWVectorLayer):
-        raise Exception("Resource type is not VectorLayer!")
+def _add_geojson_layer(resource: NGWVectorLayer):
     qgs_geojson_layer = QgsVectorLayer(
         resource.get_absolute_geojson_url(),
         resource.common.display_name,
@@ -220,22 +221,40 @@ def _add_all_styles_to_layer(
             )
 
 
-def add_resource_as_geojson(resource, children, default_style=None):
+def add_resource_as_geojson(
+    resource: NGWVectorLayer, children, default_style=None
+):
     qgs_geojson_layer = _add_geojson_layer(resource)
 
     _add_all_styles_to_layer(qgs_geojson_layer, children, default_style)
     _add_aliases(qgs_geojson_layer, resource)
     _add_lookup_tables(qgs_geojson_layer, resource)
 
+    qgs_geojson_layer.setCustomProperty(
+        "ngw_connection_id", resource.connection_id
+    )
+    qgs_geojson_layer.setCustomProperty(
+        "ngw_resource_id", resource.resource_id
+    )
+
     project = QgsProject.instance()
     assert project is not None
-    project.addMapLayer(qgs_geojson_layer)
+    map_layer = project.addMapLayer(qgs_geojson_layer)
+    if map_layer is None:
+        raise Exception("Failed to add layer to QGIS")
 
 
-def add_resource_as_cog_raster(resource, children, default_style=None):
+def add_resource_as_cog_raster(
+    resource: NGWRasterLayer, children, default_style=None
+):
     qgs_raster_layer = _add_cog_raster_layer(resource)
 
     _add_all_styles_to_layer(qgs_raster_layer, children, default_style)
+
+    qgs_raster_layer.setCustomProperty(
+        "ngw_connection_id", resource.connection_id
+    )
+    qgs_raster_layer.setCustomProperty("ngw_resource_id", resource.resource_id)
 
     project = QgsProject.instance()
     assert project is not None
@@ -244,7 +263,7 @@ def add_resource_as_cog_raster(resource, children, default_style=None):
         raise Exception("Failed to add layer to QGIS")
 
 
-def add_resource_as_wfs_layers(wfs_resource):
+def add_resource_as_wfs_layers(wfs_resource: NGWWfsService):
     if not isinstance(wfs_resource, NGWWfsService):
         raise NGWError(
             NGWError.TypeUnknownError, "Resource type is not WfsService!"
@@ -271,6 +290,13 @@ def add_resource_as_wfs_layers(wfs_resource):
         _add_aliases(qgs_wfs_layer, ngw_vector_layer)
         _add_lookup_tables(qgs_wfs_layer, ngw_vector_layer)
 
+        qgs_wfs_layer.setCustomProperty(
+            "ngw_connection_id", wfs_resource.connection_id
+        )
+        qgs_wfs_layer.setCustomProperty(
+            "ngw_resource_id", wfs_resource.resource_id
+        )
+
         project = QgsProject.instance()
         assert project is not None
         project.addMapLayer(qgs_wfs_layer, False)
@@ -295,7 +321,7 @@ def add_ogcf_resource(ogcf_resource: NGWOgcfService):
         url = ogcf_resource.get_ogcf_url(ogc_layer.keyname)
         qgis_ogc_layer = QgsVectorLayer(url, ogc_layer.display_name, "OAPIF")
 
-        layer_resource = ogcf_resource._res_factory.get_resource(
+        layer_resource = ogcf_resource.res_factory.get_resource(
             ogc_layer.resource_id
         )
 
@@ -305,6 +331,13 @@ def add_ogcf_resource(ogcf_resource: NGWOgcfService):
 
         _add_aliases(qgis_ogc_layer, layer_resource)
         _add_lookup_tables(qgis_ogc_layer, layer_resource)
+
+        qgis_ogc_layer.setCustomProperty(
+            "ngw_connection_id", ogcf_resource.connection_id
+        )
+        qgis_ogc_layer.setCustomProperty(
+            "ngw_resource_id", ogcf_resource.resource_id
+        )
 
         project.addMapLayer(qgis_ogc_layer, addToLegend=False)
         layers_group.addLayer(qgis_ogc_layer)
