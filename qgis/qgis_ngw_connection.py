@@ -182,6 +182,7 @@ class QgsNgwConnection(QObject):
         self,
         sub_url,
         method,
+        *,
         badata=None,
         params=None,
         headers=None,
@@ -390,7 +391,7 @@ class QgsNgwConnection(QObject):
             #'Upload-Metadata': 'name {}'.format(base64name)
         }
         create_req, create_rep = self.__request_rep(
-            TUS_UPLOAD_FILE_URL, "POST", None, None, create_hdrs, True
+            TUS_UPLOAD_FILE_URL, "POST", headers=create_hdrs
         )
         create_rep_code = create_rep.attribute(
             QNetworkRequest.HttpStatusCodeAttribute
@@ -452,9 +453,8 @@ class QgsNgwConnection(QObject):
                 chunk_req, chunk_rep = self.__request_rep(
                     file_upload_url,
                     "PATCH",
-                    badata,
-                    None,
-                    chunk_hdrs,
+                    badata=badata,
+                    headers=chunk_hdrs,
                 )
                 chunk_rep_code = chunk_rep.attribute(
                     QNetworkRequest.HttpStatusCodeAttribute
