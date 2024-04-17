@@ -19,6 +19,7 @@
 """
 
 import contextlib
+import html
 import json
 import time
 import urllib.parse
@@ -37,7 +38,12 @@ from qgis.PyQt.QtCore import (
 )
 from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 
-from nextgis_connect.exceptions import ErrorCode, NgConnectError, NgwError
+from nextgis_connect.exceptions import (
+    ErrorCode,
+    NgConnectError,
+    NgwConnectionError,
+    NgwError,
+)
 from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.core.ngw_error import NGWError
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
@@ -78,8 +84,7 @@ class QgsNgwConnection(QObject):
 
         connections_manager = NgwConnectionsManager()
         if not connections_manager.is_valid(connection_id):
-            message = "Invalid connection"
-            raise NgConnectError(message)
+            raise NgwConnectionError(code=ErrorCode.InvalidConnection)
 
         self.__ngw_components = None
 
@@ -174,7 +179,8 @@ class QgsNgwConnection(QObject):
             result = self.__wait_for_answer(result)
 
         if self.__log_network and isinstance(result, (dict, list)):
-            logger.debug(f"Reply:\n{result}\n")
+            escaped_result = html.escape(str(result))
+            logger.debug(f"\nReply:\n{escaped_result}\n")
 
         return result
 
@@ -334,12 +340,15 @@ class QgsNgwConnection(QObject):
 
         status_code = rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
         if status_code is not None and status_code // 100 != 2:
-            if self.__log_network:
-                logger.debug(f"Response error\nstatus_code {status_code}")
-
             data = None
             with contextlib.suppress(Exception):
                 data = self.__extract_data(rep)
+
+            if self.__log_network:
+                logger.debug(f"Response error\nstatus_code {status_code}")
+                if isinstance(data, (dict, list)):
+                    escaped_data = html.escape(str(data))
+                    logger.debug(f"\nReply:\n{escaped_data}\n")
 
             if isinstance(data, dict):
                 raise NgwError.from_json(data)

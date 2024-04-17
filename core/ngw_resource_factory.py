@@ -53,6 +53,7 @@ class NGWResourceFactory:
             NGWOgcfService.type_id: NGWOgcfService,
             NGWWmsService.type_id: NGWWmsService,
             NGWGroupResource.type_id: NGWGroupResource,
+            "demo_project": NGWGroupResource,
             NGWVectorLayer.type_id: NGWVectorLayer,
             NGWMapServerStyle.type_id: NGWMapServerStyle,
             NGWQGISVectorStyle.type_id: NGWQGISVectorStyle,
