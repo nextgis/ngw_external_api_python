@@ -23,6 +23,7 @@ import html
 import json
 import time
 import urllib.parse
+from http import HTTPStatus
 from typing import Any, Dict, Optional, Union
 
 from qgis.core import QgsNetworkAccessManager
@@ -568,7 +569,13 @@ class QgsNgwConnection(QObject):
 
     def __extract_data(
         self, reply: QNetworkReply
-    ) -> Union[QByteArray, Dict[str, Any]]:
+    ) -> Union[QByteArray, Dict[str, Any], None]:
+        status_code = reply.attribute(
+            QNetworkRequest.Attribute.HttpStatusCodeAttribute
+        )
+        if status_code == HTTPStatus.NO_CONTENT:
+            return None
+
         header_name = QNetworkRequest.KnownHeaders.ContentTypeHeader
         lunkwill_type = "application/vnd.lunkwill.request-summary+json"
         is_lunkwill_summary = reply.header(header_name).startswith(
