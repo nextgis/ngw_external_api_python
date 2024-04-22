@@ -130,7 +130,7 @@ def get_wkt(qgis_geometry: QgsGeometry):
     return wkt
 
 
-def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer):
+def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer) -> WkbType:
     MAPINFO_DRIVER = "MapInfo File"
     if qgs_vector_layer.storageType() != MAPINFO_DRIVER:
         return qgs_vector_layer.wkbType()
@@ -166,7 +166,7 @@ def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer):
     if has_z:
         wkb_type |= ogr.wkb25DBit
 
-    return wkb_type
+    return WkbType(wkb_type)
 
 
 @dataclass(frozen=True)
@@ -780,20 +780,27 @@ class QGISResourceJob(NGWResourceModelJob):
         source_srs = qgs_vector_layer.sourceCrs()
         destination_srs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
 
-        writer = QgsVectorFileWriter(
-            vectorFileName=tmp_gpkg_path,
-            fileEncoding="UTF-8",
+        project = QgsProject.instance()
+        assert project is not None
+
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = "GPKG"
+        options.layerName = qgs_vector_layer.name()
+        options.fileEncoding = "UTF-8"
+        options.layerOptions = [
+            *QgsVectorFileWriter.defaultDatasetOptions("GPKG"),
+            "SPATIAL_INDEX=NO",
+        ]
+
+        writer = QgsVectorFileWriter.create(
+            fileName=tmp_gpkg_path,
             fields=qgs_vector_layer.fields(),
             geometryType=get_real_wkb_type(qgs_vector_layer),
+            transformContext=project.transformContext(),
             srs=destination_srs,
-            driverName="GPKG",
-            layerOptions=(
-                [
-                    *QgsVectorFileWriter.defaultDatasetOptions("GPKG"),
-                    "SPATIAL_INDEX=NO",
-                ]
-            ),
+            options=options,
         )
+        assert writer is not None
 
         transform = None
         if source_srs != destination_srs:

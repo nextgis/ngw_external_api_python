@@ -8,7 +8,7 @@ from qgis.core import (
     QgsWkbTypes,
 )
 
-from nextgis_connect.compat import WkbType
+from nextgis_connect.compat import GeometryType, WkbType
 from nextgis_connect.resources.ngw_field import NgwField
 
 from .ngw_resource import NGWResource
@@ -97,20 +97,12 @@ class NGWAbstractVectorResource(ABC, NGWResource):
 
         return self.__features_count
 
-    def geom_type(self):
-        if self.type_id in self._json:
-            if "geometry_type" in self._json[self.type_id]:
-                return self.__GEOMETRIES.get(
-                    self._json[self.type_id]["geometry_type"], self.UNKNOWN
-                )
-        return self.UNKNOWN
-
     @property
     def geom_name(self) -> Optional[str]:
         return self._json[self.type_id].get("geometry_type")
 
     @property
-    def wkb_geom_type(self) -> int:
+    def wkb_geom_type(self) -> WkbType:
         wkb_mapping = {
             self.UNKNOWN: ogr.wkbNone,
             self.POINT: ogr.wkbPoint,
@@ -126,13 +118,24 @@ class NGWAbstractVectorResource(ABC, NGWResource):
             self.MULTIPOLYGON: ogr.wkbMultiPolygon,
             self.MULTIPOLYGONZ: ogr.wkbMultiPolygon25D,
         }
-        return wkb_mapping[self.geom_type()]
 
-    def is_geom_multy(self):
-        return QgsWkbTypes.isMultiType(WkbType(self.wkb_geom_type))
+        geom_type = self.__GEOMETRIES.get(
+            self._json.get(self.type_id, {}).get("geometry_type", self.UNKNOWN)
+        )
+        if geom_type is None:
+            geom_type = self.UNKNOWN
 
-    def is_geom_with_z(self):
-        return QgsWkbTypes.hasZ(WkbType(self.wkb_geom_type))
+        return WkbType(wkb_mapping[geom_type])
+
+    @property
+    def geometry_type(self) -> GeometryType:
+        return QgsWkbTypes.geometryType(self.wkb_geom_type)
+
+    def is_geom_multy(self) -> bool:
+        return QgsWkbTypes.isMultiType(self.wkb_geom_type)
+
+    def is_geom_with_z(self) -> bool:
+        return QgsWkbTypes.hasZ(self.wkb_geom_type)
 
     def srs(self):
         return self._json.get(self.type_id, {}).get("srs", {}).get("id")

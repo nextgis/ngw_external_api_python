@@ -39,6 +39,7 @@ from nextgis_connect.ngw_api.core.ngw_webmap import (
     NGWWebMapRoot,
 )
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
+from nextgis_connect.settings import NgConnectSettings
 
 from .qt_ngw_resource_model_job_error import (
     JobNGWError,
@@ -153,6 +154,12 @@ class NGWResourceModelJob(QObject):
         self.result.putDeletedResource(ngw_resource)
 
     def run(self):
+        if NgConnectSettings().is_developer_mode:
+            import debugpy  # noqa: T100
+
+            if debugpy.is_client_connected():
+                debugpy.debug_this_thread()
+
         self.started.emit()
         try:
             self._do()

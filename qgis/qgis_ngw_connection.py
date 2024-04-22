@@ -198,11 +198,11 @@ class QgsNgwConnection(QObject):
         json_data = None
         if params:
             if isinstance(params, str):
-                json_data = params.encode()
+                json_data = params
             else:
-                json_data = json.dumps(params).encode()
+                json_data = json.dumps(params)
         if "json" in kwargs:
-            json_data = json.dumps(kwargs["json"]).encode()
+            json_data = json.dumps(kwargs["json"])
 
         filename = kwargs.get("file")
 
@@ -214,11 +214,9 @@ class QgsNgwConnection(QObject):
                     method,
                     url,
                     # type(json_data),
-                    json_data.decode("unicode_escape")
-                    if json_data is not None
-                    else None,
+                    json_data,
                     headers,
-                    filename.encode() if filename else "-",
+                    filename if filename else "-",
                     badata.size() if badata else "-",
                 )
             )
@@ -251,7 +249,7 @@ class QgsNgwConnection(QObject):
                 QNetworkRequest.KnownHeaders.ContentTypeHeader,
                 "application/json",
             )
-            json_data = QByteArray(json_data)
+            json_data = QByteArray(json_data.encode())
             iodevice = QBuffer(json_data)
 
         if iodevice is not None:
