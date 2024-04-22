@@ -1198,7 +1198,7 @@ class QGISResourcesUploader(QGISResourceJob):
                 )
 
         for node in self.qgs_layer_tree_nodes:
-            if QgsLayerTree.isLayer(node):
+            if isinstance(node, QgsLayerTreeLayer):
                 collect_value_relations(node)
             else:
                 group_node = cast(QgsLayerTreeGroup, node)
