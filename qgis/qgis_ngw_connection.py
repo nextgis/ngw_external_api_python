@@ -352,7 +352,12 @@ class QgsNgwConnection(QObject):
             if isinstance(data, dict):
                 raise NgwError.from_json(data)
 
-            error = NgwError()
+            codes = {
+                HTTPStatus.UNAUTHORIZED: ErrorCode.AuthorizationError,
+                HTTPStatus.FORBIDDEN: ErrorCode.PermissionsError,
+                HTTPStatus.NOT_FOUND: ErrorCode.NotFound,
+            }
+            error = NgwError(code=codes.get(status_code, ErrorCode.NgwError))
             error.add_note(f"Request url: {req.url().toString()}")
             error.add_note(f"Status code: {status_code}")
             raise error
