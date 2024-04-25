@@ -42,6 +42,7 @@ from qgis.core import (
     QgsProject,
     QgsProviderRegistry,
     QgsRasterLayer,
+    QgsValueRelationFieldFormatter,
     QgsVectorFileWriter,
     QgsVectorLayer,
     QgsWkbTypes,
@@ -258,7 +259,7 @@ class QGISResourceJob(NGWResourceModelJob):
             and hasattr(qgs_plugin_layer.layerDef, "serviceUrl")
         ):
             logger.debug(
-                f'>>> Uploading plugin layer "{qgs_plugin_layer.name()}"'
+                f'<b>Uploading plugin layer</b> "{qgs_plugin_layer.name()}"'
             )
 
             new_layer_name = self.unique_resource_name(
@@ -289,7 +290,7 @@ class QGISResourceJob(NGWResourceModelJob):
         return []
 
     def importQgsWMSLayer(self, qgs_wms_layer, ngw_group):
-        logger.debug(f'>>> Uploading WMS layer "{qgs_wms_layer.name()}"')
+        logger.debug(f'<b>Uploading WMS layer</b> "{qgs_wms_layer.name()}"')
 
         self._layer_status(
             qgs_wms_layer.name(), self.tr("create WMS connection")
@@ -360,7 +361,7 @@ class QGISResourceJob(NGWResourceModelJob):
             qgs_raster_layer.name(), ngw_parent_resource
         )
         logger.debug(
-            f'>>> Uploading raster layer "{qgs_raster_layer.name()}" (with the name "{new_layer_name}")'
+            f'<b>Uploading raster layer</b> "{qgs_raster_layer.name()}" (with the name "{new_layer_name}")'
         )
 
         def uploadFileCallback(total_size, readed_size, value=None):
@@ -399,7 +400,7 @@ class QGISResourceJob(NGWResourceModelJob):
             qgs_vector_layer.name(), ngw_parent_resource
         )
         logger.debug(
-            f'>>> Uploading vector layer "{qgs_vector_layer.name()}" (with the name "{new_layer_name}")'
+            f'<b>Uploading vector layer</b> "{qgs_vector_layer.name()}" (with the name "{new_layer_name}")'
         )
 
         def uploadFileCallback(total_size, readed_size, value=None):
@@ -455,7 +456,11 @@ class QGISResourceJob(NGWResourceModelJob):
             lookup_table = None
             editor_widget_setup = field.editorWidgetSetup()
             if editor_widget_setup.type() == "ValueRelation":
-                config = editor_widget_setup.config()
+                config = editor_widget_setup.config().copy()
+                related_layer = QgsValueRelationFieldFormatter.resolveLayer(
+                    config, QgsProject.instance()
+                )
+                config["Layer"] = related_layer.id()
                 value_relation = ValueRelation.from_config(config)
                 lookup_table = self._lookup_tables_id[value_relation]
 
@@ -499,12 +504,12 @@ class QGISResourceJob(NGWResourceModelJob):
             and self.hasBadFields(qgs_vector_layer)
             and not self.ngwSupportsAutoRenameFields()
         ):
-            logger.warning(
+            logger.debug(
                 "Incorrect fields of layer will be renamed by NextGIS Connect"
             )
             layer_has_bad_fields = True
         else:
-            logger.warning(
+            logger.debug(
                 "Incorrect fields of layer will NOT be renamed by NextGIS Connect"
             )
 
@@ -1193,8 +1198,15 @@ class QGISResourcesUploader(QGISResourceJob):
                 editor_widget_setup = layer.editorWidgetSetup(attribute_index)
                 if editor_widget_setup.type() != "ValueRelation":
                     continue
+
+                config = editor_widget_setup.config().copy()
+                related_layer = QgsValueRelationFieldFormatter.resolveLayer(
+                    config, QgsProject.instance()
+                )
+
+                config["Layer"] = related_layer.id()
                 self._value_relations.add(
-                    ValueRelation.from_config(editor_widget_setup.config())
+                    ValueRelation.from_config(config)
                 )
 
         for node in self.qgs_layer_tree_nodes:
@@ -1737,7 +1749,6 @@ class NGWUpdateVectorLayer(QGISResourceJob):
             yield ngw_features
 
     def _do(self):
-        logger.debug(">>> NGWUpdateVectorLayer _do")
         block_size = 10
         total_count = self.qgis_layer.featureCount()
 
