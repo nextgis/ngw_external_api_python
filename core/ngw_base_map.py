@@ -19,6 +19,13 @@
 """
 
 import json
+from typing import Tuple
+
+from qgis.core import QgsProviderRegistry
+
+from nextgis_connect.ngw_connection.ngw_connections_manager import (
+    NgwConnectionsManager,
+)
 
 from .ngw_resource import NGWResource
 
@@ -26,6 +33,39 @@ from .ngw_resource import NGWResource
 class NGWBaseMap(NGWResource):
     type_id = "basemap_layer"
     type_title = "NGW Base Map layer"
+
+    @property
+    def layer_params(self) -> Tuple[str, str, str]:
+        resource_json = self._json[self.type_id]
+
+        params = {"type": "xyz"}
+        qms = resource_json.get("qms")
+        if qms is None:
+            params["url"] = resource_json["url"]
+        else:
+            decoded_qms = json.loads(qms)
+            params["url"] = decoded_qms["url"]
+            params["zmin"] = decoded_qms.get("z_min")
+            params["zmax"] = decoded_qms.get("z_max")
+
+        connections_manager = NgwConnectionsManager()
+        connection = connections_manager.connection(self.connection_id)
+        assert connection is not None
+        if (
+            params["url"].startswith(connection.url)
+            and connection.auth_config_id is not None
+        ):
+            params["authcfg"] = connection.auth_config_id
+
+        params = {
+            key: value for key, value in params.items() if value is not None
+        }
+
+        provider_metadata = QgsProviderRegistry.instance().providerMetadata(
+            "wms"
+        )
+
+        return provider_metadata.encodeUri(params), self.display_name, "wms"
 
     @classmethod
     def create_in_group(
