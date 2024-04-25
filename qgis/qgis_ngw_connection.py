@@ -65,7 +65,10 @@ CLIENT_TIMEOUT = 3 * 60 * 1000
 def is_lunkwill_reply(reply: QNetworkReply) -> bool:
     header_name = QNetworkRequest.KnownHeaders.ContentTypeHeader
     lunkwill_type = "application/vnd.lunkwill.request-summary+json"
-    return reply.header(header_name).startswith(lunkwill_type)
+    header = reply.header(header_name)
+    if not isinstance(header, str):
+        return False
+    return header.startswith(lunkwill_type)
 
 
 class QgsNgwConnection(QObject):
@@ -579,11 +582,8 @@ class QgsNgwConnection(QObject):
         if status_code == HTTPStatus.NO_CONTENT:
             return None
 
+        is_lunkwill_summary = is_lunkwill_reply(reply)
         header_name = QNetworkRequest.KnownHeaders.ContentTypeHeader
-        lunkwill_type = "application/vnd.lunkwill.request-summary+json"
-        is_lunkwill_summary = reply.header(header_name).startswith(
-            lunkwill_type
-        )
         is_json = reply.header(header_name) == "application/json"
 
         data = reply.readAll()
