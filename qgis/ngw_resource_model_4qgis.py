@@ -657,9 +657,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
                 self.warningOccurred.emit(JobWarning(msg))
 
-        import_crs = QgsCoordinateReferenceSystem(
-            4326, QgsCoordinateReferenceSystem.EpsgCrsId
-        )
+        import_crs = QgsCoordinateReferenceSystem.fromEpsgId(4326)
         qgs_vector_layer_dst = QgsVectorLayer(
             f"{geometry_type}?crs={import_crs.authid()}",
             "temp",
@@ -1074,9 +1072,8 @@ class QGISResourceJob(NGWResourceModelJob):
         g.transform(
             QgsCoordinateTransform(
                 qgs_map_layer.crs(),
-                QgsCoordinateReferenceSystem(
+                QgsCoordinateReferenceSystem.fromEpsgId(
                     ngw_layer_resource.srs(),
-                    QgsCoordinateReferenceSystem.EpsgCrsId,
                 ),
                 QgsProject.instance(),
             )
@@ -1523,9 +1520,7 @@ class QGISProjectUploader(QGISResourcesUploader):
         rectangle = self.iface.mapCanvas().extent()
         ct = QgsCoordinateTransform(
             self.iface.mapCanvas().mapSettings().destinationCrs(),
-            QgsCoordinateReferenceSystem(
-                4326, QgsCoordinateReferenceSystem.EpsgCrsId
-            ),
+            QgsCoordinateReferenceSystem.fromEpsgId(4326),
             QgsProject.instance(),
         )
         rectangle = ct.transform(rectangle)
