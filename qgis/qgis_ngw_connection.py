@@ -338,10 +338,13 @@ class QgsNgwConnection(QObject):
             headers=headers,
             **kwargs,
         )
-        assert rep is not None
+        assert isinstance(rep, QNetworkReply)
 
         status_code = rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
-        if status_code is not None and status_code // 100 != 2:
+        if (
+            rep.error() != QNetworkReply.NetworkError.NoError  # type: ignore
+            or (status_code is not None and status_code // 100 != 2)
+        ):
             data = None
             with contextlib.suppress(Exception):
                 data = self.__extract_data(rep)
