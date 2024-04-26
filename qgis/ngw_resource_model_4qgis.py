@@ -56,6 +56,7 @@ from nextgis_connect.compat import (
     WkbType,
     parse_version,
 )
+from nextgis_connect.exceptions import NgConnectError
 from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.core.ngw_base_map import (
     NGWBaseMap,
@@ -1205,9 +1206,7 @@ class QGISResourcesUploader(QGISResourceJob):
                 )
 
                 config["Layer"] = related_layer.id()
-                self._value_relations.add(
-                    ValueRelation.from_config(config)
-                )
+                self._value_relations.add(ValueRelation.from_config(config))
 
         for node in self.qgs_layer_tree_nodes:
             if isinstance(node, QgsLayerTreeLayer):
@@ -1425,7 +1424,7 @@ class QGISResourcesUploader(QGISResourceJob):
     def add_group(
         self,
         ngw_resource_group,
-        qgsLayerTreeGroup,
+        qgsLayerTreeGroup: QgsLayerTreeGroup,
         ngw_webmap_item,
         ngw_webmap_basemaps,
     ) -> None:
@@ -1533,6 +1532,14 @@ class QGISProjectUploader(QGISResourcesUploader):
         ngw_webmap_items_as_dicts = [
             item.toDict() for item in ngw_webmap_items
         ]
+        if len(ngw_webmap_items) == 0 and len(ngw_webmap_basemaps) == 0:
+            raise NgConnectError(
+                user_message=self.tr(
+                    "Failed to load any resource to the NextGIS Web."
+                    " Webmap will not be created"
+                )
+            )
+
         return NGWWebMap.create_in_group(
             ngw_webmap_name,
             ngw_resource,
