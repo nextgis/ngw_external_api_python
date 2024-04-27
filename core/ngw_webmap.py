@@ -18,6 +18,15 @@
  ***************************************************************************/
 """
 
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsRectangle,
+    QgsReferencedRectangle,
+)
+
 from .ngw_resource import NGWResource
 
 
@@ -25,8 +34,118 @@ class NGWWebMap(NGWResource):
     type_id = "webmap"
     type_title = "NGW Web Map"
 
+    __root: Optional["NGWWebMapRoot"]
+    __used_tree_resources: List[int]
+    __basemaps: List["WebMapBaseMap"]
+
+    def __init__(self, resource_factory, resource_json):
+        super().__init__(resource_factory, resource_json)
+        self.__root = None
+        self.__used_tree_resources = []
+        self.__basemaps = []
+
+    @property
+    def all_resources_id(self) -> List[int]:
+        if self.__root is None:
+            self.__create_structure()
+
+        resources_id = self.__used_tree_resources
+        resources_id.extend(basemap.resource_id for basemap in self.__basemaps)
+
+        return resources_id
+
+    @property
+    def root(self) -> "NGWWebMapRoot":
+        if self.__root is None:
+            self.__create_structure()
+        assert self.__root is not None
+        return self.__root
+
+    @property
+    def basemaps(self) -> List["WebMapBaseMap"]:
+        if self.__root is None:
+            self.__create_structure()
+
+        return self.__basemaps
+
+    @property
+    def extent(self) -> Optional[QgsReferencedRectangle]:
+        webmap = self._json[self.type_id]
+        extent = [
+            webmap.get(f"extent_{side}")
+            for side in ["left", "bottom", "right", "top"]
+        ]
+
+        if any(side is None for side in extent):
+            return None
+
+        rectangle = QgsRectangle(*extent)
+        crs = QgsCoordinateReferenceSystem.fromEpsgId(4326)
+
+        return QgsReferencedRectangle(rectangle, crs)
+
     def get_display_url(self):
         return "{}/{}".format(self.get_absolute_url(), "display")
+
+    def __create_structure(self) -> None:
+        basemap_webmap = self._json.get("basemap_webmap", {})
+
+        self.__root = NGWWebMapRoot()
+        for item in self._json[self.type_id]["root_item"].get("children", []):
+            if item["item_type"] == "layer":
+                webmap_layer = self.__extract_layer(item)
+                assert webmap_layer.style_parent_id is not None
+                self.__used_tree_resources.append(webmap_layer.style_parent_id)
+                self.__used_tree_resources.append(webmap_layer.layer_style_id)
+                self.__root.appendChild(webmap_layer)
+            else:
+                webmap_group = self.__extract_group(item)
+                self.__root.appendChild(webmap_group)
+
+        self.__basemaps = [
+            WebMapBaseMap(**basemap)
+            for basemap in basemap_webmap.get("basemaps", [])
+        ]
+        self.__basemaps.sort(reverse=True)
+
+    def __extract_layer(self, layer_item: Dict[str, Any]) -> "NGWWebMapLayer":
+        layer_id = layer_item["style_parent_id"]
+        style_id = layer_item["layer_style_id"]
+
+        legend_value = layer_item.get("legend_symbols")
+        if legend_value is None:
+            legend_value = self._json[self.type_id].get("legend_symbols")
+
+        if legend_value is not None:
+            legend_value = legend_value == "expand"
+
+        return NGWWebMapLayer(
+            style_id,
+            layer_item["display_name"],
+            is_visible=layer_item["layer_enabled"],
+            transparency=layer_item.get("layer_transparency"),
+            legend=legend_value,
+            style_parent_id=layer_id,
+        )
+
+    def __extract_group(self, group_item: Dict[str, Any]) -> "NGWWebMapGroup":
+        group = NGWWebMapGroup(
+            group_item["display_name"],
+            group_item.get("group_expanded", False),
+        )
+
+        for item in group_item.get("children", []):
+            if item["item_type"] == "layer":
+                webmap_layer = self.__extract_layer(item)
+                assert webmap_layer.style_parent_id is not None
+                self.__used_tree_resources.append(webmap_layer.style_parent_id)
+                self.__used_tree_resources.append(webmap_layer.layer_style_id)
+                group.appendChild(webmap_layer)
+            else:
+                webmap_group = self.__extract_group(item)
+                group.appendChild(webmap_group)
+
+        return group
 
     @classmethod
     def create_in_group(
@@ -92,11 +211,14 @@ class NGWWebMapItem:
     ITEM_TYPE_LAYER = "layer"
     ITEM_TYPE_GROUP = "group"
 
+    item_type: str
+    children: List["NGWWebMapItem"]
+
     def __init__(self, item_type):
         self.item_type = item_type
         self.children = []
 
-    def appendChild(self, ngw_web_map_item):
+    def appendChild(self, ngw_web_map_item: "NGWWebMapItem"):
         self.children.append(ngw_web_map_item)
 
     def toDict(self):
@@ -122,7 +244,14 @@ class NGWWebMapRoot(NGWWebMapItem):
 
 class NGWWebMapLayer(NGWWebMapItem):
     def __init__(
-        self, layer_style_id, display_name, is_visible, transparency, legend
+        self,
+        layer_style_id: int,
+        display_name: str,
+        *,
+        is_visible: bool,
+        transparency: Optional[float],
+        legend: Optional[bool],
+        style_parent_id: Optional[int] = None,
     ):
         super().__init__(NGWWebMapItem.ITEM_TYPE_LAYER)
         self.layer_style_id = layer_style_id
@@ -130,6 +259,7 @@ class NGWWebMapLayer(NGWWebMapItem):
         self.is_visible = is_visible
         self.transparency = transparency
         self.legend = legend
+        self.style_parent_id = style_parent_id
 
     def _attributes(self):
         legend = None
@@ -159,3 +289,12 @@ class NGWWebMapGroup(NGWWebMapItem):
             display_name=self.display_name,
             group_expanded=self.expanded,
         )
+
+
+@dataclass(order=True)
+class WebMapBaseMap:
+    position: int
+    resource_id: int
+    display_name: str
+    enabled: bool
+    opacity: Optional[float]

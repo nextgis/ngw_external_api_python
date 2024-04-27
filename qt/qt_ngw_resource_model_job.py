@@ -52,12 +52,14 @@ class NGWResourceModelJobResult:
     added_resources: List[NGWResource]
     deleted_resources: List[NGWResource]
     edited_resources: List[NGWResource]
+    dangling_resources: List[NGWResource]
     main_resource_id: int
 
     def __init__(self):
         self.added_resources = []
         self.deleted_resources = []
         self.edited_resources = []
+        self.dangling_resources = []
 
         self.main_resource_id = -1
 
@@ -359,8 +361,8 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
             NGWWebMapLayer(
                 self.ngw_style.common.id,
                 ngw_layer.common.display_name,
-                True,
-                None,
+                is_visible=True,
+                transparency=None,
                 legend=True,
             )
         )

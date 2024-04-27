@@ -42,7 +42,6 @@ from nextgis_connect.ngw_api.core.ngw_qgis_style import NGWQGISStyle
 from nextgis_connect.ngw_api.core.ngw_raster_layer import NGWRasterLayer
 from nextgis_connect.ngw_api.core.ngw_resource import (
     API_RESOURCE_URL,
-    NGWResource,
 )
 from nextgis_connect.ngw_api.core.ngw_vector_layer import NGWVectorLayer
 from nextgis_connect.ngw_api.core.ngw_wfs_service import NGWWfsService
@@ -191,8 +190,8 @@ def _add_style_to_layer(style_resource: NGWQGISStyle, qgs_layer: QgsMapLayer):
 
 def _add_all_styles_to_layer(
     qgs_layer: QgsMapLayer,
-    resources: List[NGWResource],
-    default_style: Optional[NGWResource] = None,
+    resources: List[NGWQGISStyle],
+    default_style: Optional[NGWQGISStyle] = None,
 ) -> None:
     styles = filter(
         lambda resource: isinstance(resource, NGWQGISStyle), resources
@@ -246,7 +245,7 @@ def add_resource_as_geojson(
 
 def add_resource_as_cog_raster(
     resource: NGWRasterLayer, children, default_style=None
-):
+) -> QgsRasterLayer:
     qgs_raster_layer = _add_cog_raster_layer(resource)
 
     _add_all_styles_to_layer(qgs_raster_layer, children, default_style)
@@ -261,6 +260,8 @@ def add_resource_as_cog_raster(
     map_layer = project.addMapLayer(qgs_raster_layer)
     if map_layer is None:
         raise Exception("Failed to add layer to QGIS")
+
+    return qgs_raster_layer
 
 
 def add_resource_as_wfs_layers(wfs_resource: NGWWfsService):

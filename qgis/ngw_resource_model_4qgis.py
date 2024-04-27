@@ -24,7 +24,7 @@ import os
 import tempfile
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, cast
+from typing import Any, Dict, Iterable, List, Optional, Set, cast
 
 from osgeo import ogr
 from qgis.core import (
@@ -71,6 +71,9 @@ from nextgis_connect.ngw_api.core.ngw_qgis_style import (
 from nextgis_connect.ngw_api.core.ngw_raster_layer import NGWRasterLayer
 from nextgis_connect.ngw_api.core.ngw_resource import NGWResource
 from nextgis_connect.ngw_api.core.ngw_resource_creator import ResourceCreator
+from nextgis_connect.ngw_api.core.ngw_resource_factory import (
+    NGWResourceFactory,
+)
 from nextgis_connect.ngw_api.core.ngw_vector_layer import NGWVectorLayer
 from nextgis_connect.ngw_api.core.ngw_webmap import (
     NGWWebMap,
@@ -81,6 +84,7 @@ from nextgis_connect.ngw_api.core.ngw_webmap import (
 from nextgis_connect.ngw_api.core.ngw_wms_connection import NGWWmsConnection
 from nextgis_connect.ngw_api.core.ngw_wms_layer import NGWWmsLayer
 from nextgis_connect.ngw_api.core.ngw_wms_service import NGWWmsService
+from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
 from nextgis_connect.ngw_api.qt.qt_ngw_resource_model_job import (
     NGWResourceModelJob,
 )
@@ -1374,8 +1378,8 @@ class QGISResourcesUploader(QGISResourceJob):
                             NGWWebMapLayer(
                                 ngw_style.common.id,
                                 layer_tree_item.layer().name(),
-                                layer_tree_item.itemVisibilityChecked(),
-                                0,
+                                is_visible=layer_tree_item.itemVisibilityChecked(),
+                                transparency=None,
                                 legend=layer_tree_item.isExpanded(),
                             )
                         )
@@ -1401,8 +1405,8 @@ class QGISResourcesUploader(QGISResourceJob):
                     NGWWebMapLayer(
                         ngw_resource.common.id,
                         ngw_resource.common.display_name,
-                        layer_tree_item.itemVisibilityChecked(),
-                        transparency,
+                        is_visible=layer_tree_item.itemVisibilityChecked(),
+                        transparency=transparency,
                         legend=layer_tree_item.isExpanded(),
                     )
                 )
@@ -1578,8 +1582,8 @@ class MapForLayerCreater(QGISResourceJob):
             NGWWebMapLayer(
                 self.ngw_style_id,
                 self.ngw_layer.common.display_name,
-                True,
-                0,
+                is_visible=True,
+                transparency=None,
                 legend=True,
             )
         )
@@ -1607,8 +1611,8 @@ class MapForLayerCreater(QGISResourceJob):
             NGWWebMapLayer(
                 self.ngw_style_id,
                 self.ngw_layer.common.display_name,
-                True,
-                0,
+                is_visible=True,
+                transparency=None,
                 legend=True,
             )
         )
@@ -1772,3 +1776,21 @@ class NGWUpdateVectorLayer(QGISResourceJob):
                     self.qgis_layer.name(),
                     self.tr("adding features ({}%)").format(progress),
                 )
+
+
+class ResourcesDownloader(QGISResourceJob):
+    __connection_id: str
+    __resources_id: Iterable[int]
+
+    def __init__(self, connection_id: str, resources_id: Iterable[int]):
+        super().__init__()
+        self.__connection_id = connection_id
+        self.__resources_id = resources_id
+
+    def _do(self):
+        ngw_connection = QgsNgwConnection(self.__connection_id)
+        resources_factory = NGWResourceFactory(ngw_connection)
+        for resource_id in self.__resources_id:
+            self.result.dangling_resources.append(
+                resources_factory.get_resource(resource_id)
+            )
