@@ -118,6 +118,8 @@ class NGWWebMap(NGWResource):
 
         if legend_value is not None:
             legend_value = legend_value == "expand"
+        else:
+            legend_value = False
 
         return NGWWebMapLayer(
             style_id,
@@ -133,6 +135,8 @@ class NGWWebMap(NGWResource):
             group_item["display_name"],
             group_item.get("group_expanded", False),
         )
+        if group.expanded is None:
+            group.expanded = False
 
         for item in group_item.get("children", []):
             if item["item_type"] == "layer":
