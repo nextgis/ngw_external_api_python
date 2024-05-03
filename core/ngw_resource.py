@@ -172,6 +172,10 @@ class NGWResource:
         return API_COLLECTION_URL
 
     @property
+    def parent_id(self) -> int:
+        return self.common.parent.id
+
+    @property
     def resource_id(self) -> int:
         return self.common.id
 

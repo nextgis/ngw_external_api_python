@@ -49,10 +49,7 @@ class NGWWebMap(NGWResource):
         if self.__root is None:
             self.__create_structure()
 
-        resources_id = self.__used_tree_resources
-        resources_id.extend(basemap.resource_id for basemap in self.__basemaps)
-
-        return resources_id
+        return self.__used_tree_resources
 
     @property
     def root(self) -> "NGWWebMapRoot":
@@ -71,9 +68,15 @@ class NGWWebMap(NGWResource):
     @property
     def extent(self) -> Optional[QgsReferencedRectangle]:
         webmap = self._json[self.type_id]
-        extent = [
+        left, bottom, right, top = (
             webmap.get(f"extent_{side}")
             for side in ["left", "bottom", "right", "top"]
+        )
+        extent = [
+            min(left, right),
+            min(bottom, top),
+            max(left, right),
+            max(bottom, top),
         ]
 
         if any(side is None for side in extent):
@@ -100,13 +103,18 @@ class NGWWebMap(NGWResource):
                 self.__root.appendChild(webmap_layer)
             else:
                 webmap_group = self.__extract_group(item)
-                self.__root.appendChild(webmap_group)
+                if len(webmap_group.children) > 0:
+                    self.__root.appendChild(webmap_group)
 
         self.__basemaps = [
             WebMapBaseMap(**basemap)
             for basemap in basemap_webmap.get("basemaps", [])
         ]
         self.__basemaps.sort(reverse=True)
+
+        self.__used_tree_resources.extend(
+            basemap.resource_id for basemap in self.__basemaps
+        )
 
     def __extract_layer(self, layer_item: Dict[str, Any]) -> "NGWWebMapLayer":
         layer_id = layer_item["style_parent_id"]

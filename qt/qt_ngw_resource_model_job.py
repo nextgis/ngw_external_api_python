@@ -157,10 +157,15 @@ class NGWResourceModelJob(QObject):
 
     def run(self):
         if NgConnectSettings().is_developer_mode:
-            import debugpy  # noqa: T100
-
-            if debugpy.is_client_connected():
-                debugpy.debug_this_thread()
+            try:
+                import debugpy  # noqa: T100
+            except ImportError:
+                logger.warning(
+                    "To support threads debugging you need to install debugpy"
+                )
+            else:
+                if debugpy.is_client_connected():
+                    debugpy.debug_this_thread()
 
         self.started.emit()
         try:

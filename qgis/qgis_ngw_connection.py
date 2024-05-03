@@ -317,13 +317,9 @@ class QgsNgwConnection(QObject):
             )
 
         if rep.error() > 0 and rep.error() < 10:
-            if self.__log_network:
-                logger.debug(f"Connection error qt code: {rep.error()}")
-            raise NGWError(
-                NGWError.TypeRequestError,
-                f"Connection error qt code: {rep.error()}",
-                req.url().toString(),
-            )
+            error = NgwError(f"Connection error qt code: {rep.error()}")
+            error.add_note(f"URL: {req.url().toString()}")
+            raise error
 
         return req, rep
 

@@ -36,6 +36,9 @@ from qgis.PyQt.QtCore import (
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
 from nextgis_connect.logging import logger
+from nextgis_connect.ngw_api.core.ngw_abstract_vector_resource import (
+    NGWAbstractVectorResource,
+)
 from nextgis_connect.ngw_api.core.ngw_error import NGWError
 from nextgis_connect.ngw_api.core.ngw_ogcf_service import NGWOgcfService
 from nextgis_connect.ngw_api.core.ngw_qgis_style import NGWQGISStyle
@@ -57,7 +60,8 @@ class UnsupportedRasterTypeException(Exception):
 
 
 def _add_aliases(
-    qgs_vector_layer: QgsVectorLayer, ngw_vector_layer: NGWVectorLayer
+    qgs_vector_layer: QgsVectorLayer,
+    ngw_vector_layer: NGWAbstractVectorResource,
 ) -> None:
     for field in ngw_vector_layer.fields:
         if field.display_name is None:
@@ -69,7 +73,8 @@ def _add_aliases(
 
 
 def _add_lookup_tables(
-    qgs_vector_layer: QgsVectorLayer, ngw_vector_layer: NGWVectorLayer
+    qgs_vector_layer: QgsVectorLayer,
+    ngw_vector_layer: NGWAbstractVectorResource,
 ) -> None:
     lookup_table_id_for_field: Dict[str, int] = {}
 
@@ -193,10 +198,13 @@ def _add_all_styles_to_layer(
     resources: List[NGWQGISStyle],
     default_style: Optional[NGWQGISStyle] = None,
 ) -> None:
-    styles = filter(
-        lambda resource: isinstance(resource, NGWQGISStyle), resources
+    styles = list(
+        filter(lambda resource: isinstance(resource, NGWQGISStyle), resources)
     )
-    styles = sorted(styles, key=lambda resource: resource.common.display_name)
+    if len(styles) == 0:
+        return
+
+    styles.sort(key=lambda resource: resource.common.display_name)
 
     for style_resource in styles:
         style_resource = cast(NGWQGISStyle, style_resource)
@@ -244,11 +252,11 @@ def add_resource_as_geojson(
 
 
 def add_resource_as_cog_raster(
-    resource: NGWRasterLayer, children, default_style=None
+    resource: NGWRasterLayer, styles, default_style=None
 ) -> QgsRasterLayer:
     qgs_raster_layer = _add_cog_raster_layer(resource)
 
-    _add_all_styles_to_layer(qgs_raster_layer, children, default_style)
+    _add_all_styles_to_layer(qgs_raster_layer, styles, default_style)
 
     qgs_raster_layer.setCustomProperty(
         "ngw_connection_id", resource.connection_id

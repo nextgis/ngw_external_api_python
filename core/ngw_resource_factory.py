@@ -20,13 +20,17 @@
 
 from typing import Dict, Type
 
+from nextgis_connect.ngw_api.core.ngw_tms_resources import (
+    NGWTmsConnection,
+    NGWTmsLayer,
+)
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
 
 from .ngw_base_map import NGWBaseMap
 from .ngw_group_resource import NGWGroupResource
 from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_ogcf_service import NGWOgcfService
-from .ngw_postgis_layer import NGWPostgisLayer
+from .ngw_postgis_layer import NGWPostgisConnection, NGWPostgisLayer
 from .ngw_qgis_style import NGWQGISRasterStyle, NGWQGISVectorStyle
 from .ngw_raster_layer import NGWRasterLayer
 from .ngw_raster_style import NGWRasterStyle
@@ -64,7 +68,10 @@ class NGWResourceFactory:
             NGWWmsConnection.type_id: NGWWmsConnection,
             NGWWmsLayer.type_id: NGWWmsLayer,
             NGWBaseMap.type_id: NGWBaseMap,
+            NGWPostgisConnection.type_id: NGWPostgisConnection,
             NGWPostgisLayer.type_id: NGWPostgisLayer,
+            NGWTmsConnection.type_id: NGWTmsConnection,
+            NGWTmsLayer.type_id: NGWTmsLayer,
         }
         self.__default_type = NGWResource.type_id
         self.__conn = ngw_connection

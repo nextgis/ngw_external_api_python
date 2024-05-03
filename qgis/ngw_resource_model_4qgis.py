@@ -429,8 +429,7 @@ class QGISResourceJob(NGWResourceModelJob):
         ):
             self.errorOccurred.emit(
                 JobError(
-                    "Vector layer '%s' has no suitable geometry"
-                    % qgs_vector_layer.name()
+                    f"Vector layer '{qgs_vector_layer.name()}' has no suitable geometry"
                 )
             )
             return None
@@ -441,8 +440,7 @@ class QGISResourceJob(NGWResourceModelJob):
         if filepath is None:
             self.errorOccurred.emit(
                 JobError(
-                    "Can't prepare layer '%s'. Skipped!"
-                    % qgs_vector_layer.name()
+                    f"Can't prepare layer '{qgs_vector_layer.name()}'. Skipped!"
                 )
             )
             return None
@@ -576,8 +574,7 @@ class QGISResourceJob(NGWResourceModelJob):
                         for polyline in polygon:
                             if len(polyline) < 4:
                                 logger.warning(
-                                    "Feature %s has not valid geometry (less then 4 points)"
-                                    % str(fid)
+                                    f"Feature {fid} has not valid geometry (less then 4 points)"
                                 )
                                 fids_with_not_valid_geom.append(fid)
                                 break
@@ -585,8 +582,7 @@ class QGISResourceJob(NGWResourceModelJob):
                     for polyline in geom.asPolygon():
                         if len(polyline) < 4:
                             logger.warning(
-                                "Feature %s has not valid geometry (less then 4 points)"
-                                % str(fid)
+                                f"Feature {fid} has not valid geometry (less then 4 points)"
                             )
                             fids_with_not_valid_geom.append(fid)
                             break
