@@ -4,12 +4,12 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1761"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1757"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1775"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1771"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -17,12 +17,12 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1522"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1518"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1535"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1531"/>
         <source>Failed to load any resource to the NextGIS Web. Webmap will not be created</source>
         <translation>При загрузке ресурсов в NextGIS Web произошла ошибка. Веб-карта не будет создана</translation>
     </message>
@@ -45,52 +45,52 @@
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="485"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="483"/>
         <source>adding aliases</source>
         <translation>добавление псевдонимов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="490"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="488"/>
         <source>finishing</source>
         <translation>завершение</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="496"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="494"/>
         <source>preparing</source>
         <translation>подготовка</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="901"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="897"/>
         <source>Style for &quot;{}&quot;</source>
         <translation>Стиль для &quot;{}&quot;</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1027"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1023"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="955"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="951"/>
         <source>uploading ({}%)</source>
         <translation>загрузка ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="552"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="550"/>
         <source>checking geometry ({}%)</source>
         <translation>проверка геометрии ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="723"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="719"/>
         <source>preparing layer ({}%)</source>
         <translation>подготовка слоя ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="827"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="823"/>
         <source>Feature {} haven&apos;t been added. Please check geometry</source>
         <translation>Объект {} не был добавлен. Пожалуйста, проверьте геометрию</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1044"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1040"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -98,7 +98,7 @@
 <context>
     <name>QGISResourcesUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1248"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1244"/>
         <source>A group tree is being created</source>
         <translation>Создаётся дерево ресурсов</translation>
     </message>
@@ -106,7 +106,7 @@
 <context>
     <name>QgsNgwConnection</name>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="419"/>
+        <location filename="../qgis_ngw_connection.py" line="415"/>
         <source>File is too large for uploading</source>
         <translation>Загружаемый файл слишком большой</translation>
     </message>
