@@ -4,12 +4,12 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1757"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1764"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1771"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1778"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -17,12 +17,12 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1518"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1524"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1531"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1537"/>
         <source>Failed to load any resource to the NextGIS Web. Webmap will not be created</source>
         <translation>При загрузке ресурсов в NextGIS Web произошла ошибка. Веб-карта не будет создана</translation>
     </message>
@@ -98,15 +98,20 @@
 <context>
     <name>QGISResourcesUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1244"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1250"/>
         <source>A group tree is being created</source>
         <translation>Создаётся дерево ресурсов</translation>
+    </message>
+    <message>
+        <location filename="../ngw_resource_model_4qgis.py" line="1185"/>
+        <source>Maximum number of resources exceeded.</source>
+        <translation>Превышено максимальное количество ресурсов.</translation>
     </message>
 </context>
 <context>
     <name>QgsNgwConnection</name>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="415"/>
+        <location filename="../qgis_ngw_connection.py" line="418"/>
         <source>File is too large for uploading</source>
         <translation>Загружаемый файл слишком большой</translation>
     </message>
