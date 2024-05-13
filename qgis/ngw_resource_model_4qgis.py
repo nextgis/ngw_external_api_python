@@ -56,7 +56,7 @@ from nextgis_connect.compat import (
     WkbType,
     parse_version,
 )
-from nextgis_connect.exceptions import NgConnectError
+from nextgis_connect.exceptions import ErrorCode, NgConnectError, NgwError
 from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.core.ngw_base_map import (
     NGWBaseMap,
@@ -1175,14 +1175,20 @@ class QGISResourcesUploader(QGISResourceJob):
         del counter[None]
 
         try:
-            result = self.parent_group_resource.res_factory.connection.post(
+            self.parent_group_resource.res_factory.connection.post(
                 "/api/component/resource/check_quota", counter
             )
-        except Exception:
-            logger.warning("Quota check is unawailable")
-        else:
-            if not result["success"]:
-                raise JobError(result["message"])
+        except NgwError as error:
+            if error.code == ErrorCode.NotFound:
+                return
+
+            raise NgwError(
+                error.log_message,
+                user_message=self.tr("Maximum number of resources exceeded."),
+            ) from None
+
+        except Exception as error:
+            raise NgConnectError from error
 
     def _find_lookup_tables(self) -> None:
         def collect_value_relations(layer_node: QgsLayerTreeNode) -> None:
@@ -1528,7 +1534,8 @@ class QGISProjectUploader(QGISResourcesUploader):
             item.toDict() for item in ngw_webmap_items
         ]
         if len(ngw_webmap_items) == 0 and len(ngw_webmap_basemaps) == 0:
-            raise NgConnectError(
+            raise NgwError(
+                "Can't create webmap",
                 user_message=self.tr(
                     "Failed to load any resource to the NextGIS Web."
                     " Webmap will not be created"

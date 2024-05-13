@@ -197,11 +197,9 @@ class NGWResourceModelJob(QObject):
                 )
 
         except (NGWResourceModelJobError, NgConnectError) as error:
-            logger.exception("Job error")
             self.errorOccurred.emit(error)
 
         except Exception as error:
-            logger.exception("Job error")
             error = NgConnectError(str(error))
             error.__cause__ = error
             self.errorOccurred.emit(error)

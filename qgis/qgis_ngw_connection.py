@@ -352,6 +352,9 @@ class QgsNgwConnection(QObject):
                     logger.debug(f"\nReply:\n{escaped_data}\n")
 
             if isinstance(data, dict):
+                if "status_code" not in data:
+                    data["status_code"] = status_code
+
                 raise NgwError.from_json(data)
 
             codes = {
