@@ -1539,7 +1539,7 @@ class QGISProjectUploader(QGISResourcesUploader):
                 user_message=self.tr(
                     "Failed to load any resource to the NextGIS Web."
                     " Webmap will not be created"
-                )
+                ),
             )
 
         return NGWWebMap.create_in_group(

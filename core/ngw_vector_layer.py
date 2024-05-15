@@ -30,7 +30,6 @@ from nextgis_connect.ngw_connection.ngw_connections_manager import (
 from .ngw_abstract_vector_resource import NGWAbstractVectorResource
 from .ngw_feature import NGWFeature
 from .ngw_mapserver_style import NGWMapServerStyle
-from .ngw_qgis_style import NGWQGISVectorStyle
 from .ngw_resource import API_LAYER_EXTENT, NGWResource
 
 ADD_FEATURE_URL = "/api/resource/%s/feature/"
@@ -155,39 +154,6 @@ class NGWVectorLayer(NGWAbstractVectorResource):
             extent.get("minLat", -90),
             extent.get("maxLat", 90),
         )
-
-    def create_qml_style(
-        self, qml, callback, style_name=None
-    ) -> NGWQGISVectorStyle:
-        """Create QML style for this layer
-
-        qml - full path to qml file
-        callback - upload file callback
-        """
-        connection = self.res_factory.connection
-        if not style_name:
-            style_name = self.common.display_name
-        style_name = self.generate_unique_child_name(style_name)
-
-        style_file_desc = connection.upload_file(qml, callback)
-
-        params = dict(
-            resource=dict(
-                cls=NGWQGISVectorStyle.type_id,
-                parent=dict(id=self.common.id),
-                display_name=style_name,
-            ),
-        )
-        params[NGWQGISVectorStyle.type_id] = dict(file_upload=style_file_desc)
-
-        url = self.get_api_collection_url()
-        result = connection.post(url, params=params)
-        ngw_resource = NGWQGISVectorStyle(
-            self.res_factory,
-            NGWResource.receive_resource_obj(connection, result["id"]),
-        )
-
-        return ngw_resource
 
     def create_map_server_style(self):
         """Create default Map Srver style for this layer"""

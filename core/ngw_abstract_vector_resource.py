@@ -9,6 +9,7 @@ from qgis.core import (
 )
 
 from nextgis_connect.compat import GeometryType, WkbType
+from nextgis_connect.ngw_api.core.ngw_qgis_style import NGWQGISVectorStyle
 from nextgis_connect.resources.ngw_field import NgwField
 
 from .ngw_resource import NGWResource
@@ -146,3 +147,36 @@ class NGWAbstractVectorResource(ABC, NGWResource):
         if srs_id is None:
             return QgsCoordinateReferenceSystem()
         return QgsCoordinateReferenceSystem.fromEpsgId(srs_id)
+
+    def create_qml_style(
+        self, qml, callback, style_name=None
+    ) -> NGWQGISVectorStyle:
+        """Create QML style for this layer
+
+        qml - full path to qml file
+        callback - upload file callback
+        """
+        connection = self.res_factory.connection
+        if not style_name:
+            style_name = self.common.display_name
+        style_name = self.generate_unique_child_name(style_name)
+
+        style_file_desc = connection.upload_file(qml, callback)
+
+        params = dict(
+            resource=dict(
+                cls=NGWQGISVectorStyle.type_id,
+                parent=dict(id=self.common.id),
+                display_name=style_name,
+            ),
+        )
+        params[NGWQGISVectorStyle.type_id] = dict(file_upload=style_file_desc)
+
+        url = self.get_api_collection_url()
+        result = connection.post(url, params=params)
+        ngw_resource = NGWQGISVectorStyle(
+            self.res_factory,
+            NGWResource.receive_resource_obj(connection, result["id"]),
+        )
+
+        return ngw_resource
