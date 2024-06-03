@@ -4,12 +4,12 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1764"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1765"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1778"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1779"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -17,12 +17,12 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1524"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1525"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1537"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1538"/>
         <source>Failed to load any resource to the NextGIS Web. Webmap will not be created</source>
         <translation>При загрузке ресурсов в NextGIS Web произошла ошибка. Веб-карта не будет создана</translation>
     </message>
@@ -98,14 +98,14 @@
 <context>
     <name>QGISResourcesUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1250"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1251"/>
         <source>A group tree is being created</source>
         <translation>Создаётся дерево ресурсов</translation>
     </message>
     <message>
         <location filename="../ngw_resource_model_4qgis.py" line="1185"/>
-        <source>Maximum number of resources exceeded.</source>
-        <translation>Превышено максимальное количество ресурсов.</translation>
+        <source>Maximum number of resources exceeded</source>
+        <translation>Превышено максимальное количество ресурсов</translation>
     </message>
 </context>
 <context>

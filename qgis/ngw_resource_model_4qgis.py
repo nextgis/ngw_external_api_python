@@ -1183,8 +1183,9 @@ class QGISResourcesUploader(QGISResourceJob):
                 return
 
             raise NgwError(
-                error.log_message,
-                user_message=self.tr("Maximum number of resources exceeded."),
+                "Maximum number of resources exceeded",
+                user_message=self.tr("Maximum number of resources exceeded"),
+                detail=error.log_message,
             ) from None
 
         except Exception as error:
