@@ -1701,7 +1701,9 @@ class NGWCreateWMSForVector(QGISResourceJob):
 
 
 class NGWUpdateVectorLayer(QGISResourceJob):
-    def __init__(self, ngw_vector_layer, qgs_map_layer):
+    def __init__(
+        self, ngw_vector_layer: NGWVectorLayer, qgs_map_layer: QgsVectorLayer
+    ):
         super().__init__()
         self.ngw_layer = ngw_vector_layer
         self.qgis_layer = qgs_map_layer
@@ -1761,6 +1763,26 @@ class NGWUpdateVectorLayer(QGISResourceJob):
     def _do(self):
         block_size = 10
         total_count = self.qgis_layer.featureCount()
+
+        for field in self.qgis_layer.fields():
+            found_compatible = False
+
+            for ngw_field in self.ngw_layer.fields:
+                if ngw_field.is_compatible(field):
+                    found_compatible = True
+                    break
+
+            if not found_compatible:
+                log_message = (
+                    f'Field "{field.name()}" is not found in '
+                    f'"{self.ngw_layer.display_name}" '
+                    f"(id={self.ngw_layer.resource_id})"
+                )
+                user_message = self.tr(
+                    "The layer structure is different from the layer in"
+                    " NextGIS Web"
+                )
+                raise NgwError(log_message, user_message=user_message)
 
         self._layer_status(
             self.qgis_layer.name(), self.tr("removing all features")
