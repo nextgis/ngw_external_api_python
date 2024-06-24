@@ -180,20 +180,27 @@ class NGWVectorLayer(NGWAbstractVectorResource):
 
         return ngw_resource
 
-    def update_fields_params(self, fields_params: Dict[str, Dict[str, Any]]):
-        flayer_dict = self._json.get("feature_layer")
-        fields_list = flayer_dict.get("fields")
+    def update_fields_params(
+        self, params_for_update: Dict[str, Dict[str, Any]]
+    ):
+        layer_dict = self._json.get("feature_layer")
+        ngw_fields_list = layer_dict.get("fields")
 
-        for field in fields_list:
-            field_keyname = field["keyname"]
-            if field_keyname not in fields_params:
-                continue
-            field.update(fields_params[field_keyname])
+        fields_for_update = []
+
+        for ngw_field in ngw_fields_list:
+            field_for_update = dict(id=ngw_field["id"])
+
+            field_keyname = ngw_field["keyname"]
+            if field_keyname in params_for_update:
+                field_for_update.update(params_for_update[field_keyname])
+
+            fields_for_update.append(field_for_update)
 
         connection = self.res_factory.connection
         url = self.get_relative_api_url()
 
-        params = dict(feature_layer=flayer_dict)
+        params = dict(feature_layer=dict(fields=fields_for_update))
 
         connection.put(url, params=params)
 

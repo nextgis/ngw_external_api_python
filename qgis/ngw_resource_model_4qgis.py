@@ -48,7 +48,7 @@ from qgis.core import (
     QgsWkbTypes,
 )
 from qgis.gui import QgisInterface, QgsFileWidget
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QVariant
 
 from nextgis_connect.compat import (
     GeometryType,
@@ -453,7 +453,8 @@ class QGISResourceJob(NGWResourceModelJob):
             createLayerCallback,
         )
 
-        fields_params: Dict[str, Dict[str, Any]] = {}
+        fields_aliases: Dict[str, Dict[str, str]] = {}
+        fields_lookup_table: Dict[str, Dict[str, Dict[str, Any]]] = {}
         for field in qgs_vector_layer.fields():
             alias = field.alias()
             lookup_table = None
@@ -470,20 +471,33 @@ class QGISResourceJob(NGWResourceModelJob):
             if len(alias) == 0 and lookup_table is None:
                 continue
 
-            field_params: Dict[str, Any] = {}
-            if len(alias) > 0:
-                field_params["display_name"] = alias
-            if lookup_table is not None:
-                field_params["lookup_table"] = dict(id=lookup_table)
-
             field_name = rename_fields_map.get(field.name(), field.name())
-            fields_params[field_name] = field_params
 
-        if len(fields_params) > 0:
+            if len(alias) > 0:
+                fields_aliases[field_name] = dict(display_name=alias)
+            if lookup_table is not None:
+                fields_lookup_table[field_name] = dict(
+                    lookup_table=dict(id=lookup_table)
+                )
+
+        if len(fields_aliases) > 0:
             self._layer_status(
                 qgs_vector_layer.name(), self.tr("adding aliases")
             )
-            ngw_vector_layer.update_fields_params(fields_params)
+
+            try:
+                ngw_vector_layer.update_fields_params(fields_aliases)
+            except Exception as error:
+                self.warningOccurred.emit(error)
+
+        if len(fields_lookup_table) > 0:
+            self._layer_status(
+                qgs_vector_layer.name(), self.tr("adding lookup tables")
+            )
+            try:
+                ngw_vector_layer.update_fields_params(fields_lookup_table)
+            except Exception as error:
+                self.warningOccurred.emit(error)
 
         self._layer_status(qgs_vector_layer.name(), self.tr("finishing"))
         os.remove(filepath)
@@ -1291,7 +1305,10 @@ class QGISResourcesUploader(QGISResourceJob):
             result: Dict[str, str] = {}
             for feature in layer.getFeatures(request):  # type: ignore
                 key = feature[value_relation.key_field]
-                value = feature[value_relation.value_field]
+                if key is None or isinstance(key, QVariant):
+                    continue
+                key = str(key)
+                value = str(feature[value_relation.value_field])
                 result[key] = value
             return result
 
