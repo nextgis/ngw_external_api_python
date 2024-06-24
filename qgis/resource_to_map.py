@@ -142,17 +142,12 @@ def _add_cog_raster_layer(resource: NGWRasterLayer):
 
     uri_config = {
         "path": f"{resource.get_absolute_vsicurl_url()}/cog",
-        "authcfg": connection.auth_config_id,
     }
-    uri_config = {
-        key: value for key, value in uri_config.items() if value is not None
-    }
+    is_fixed = False
+    connection.update_uri_config(uri_config, workaround=not is_fixed)
 
     provider_registry = QgsProviderRegistry.instance()
-    assert provider_registry is not None
-    metadata_provider = provider_registry.providerMetadata("gdal")
-    assert metadata_provider is not None
-    resource_uri = metadata_provider.encodeUri(uri_config)
+    resource_uri = provider_registry.encodeUri("gdal", uri_config)
 
     qgs_raster_layer = QgsRasterLayer(
         resource_uri, resource.common.display_name, "gdal"
@@ -164,6 +159,7 @@ def _add_cog_raster_layer(resource: NGWRasterLayer):
         raise Exception(
             f'Layer "{resource.common.display_name}" can\'t be added to the map!'
         )
+
     return qgs_raster_layer
 
 
