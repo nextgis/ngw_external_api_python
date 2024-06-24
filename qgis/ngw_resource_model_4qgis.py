@@ -24,6 +24,7 @@ import os
 import tempfile
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, cast
 
 from osgeo import ogr
@@ -1002,23 +1003,34 @@ class QGISResourceJob(NGWResourceModelJob):
                 ):
                     root_dir = editor_config["DefaultRoot"]
 
-                for finx, ftr in enumerate(qgs_vector_layer.getFeatures()):
-                    imgf = f"{root_dir}/{ftr.attributes()[attrInx]}"
-                    if os.path.isfile(imgf):
-                        if len(ngw_ftrs) == 0:
-                            # Lazy loading
-                            ngw_ftrs = ngw_resource.get_features()
+                root_dir = (
+                    Path(root_dir)
+                    if root_dir is not None
+                    and not isinstance(root_dir, QVariant)
+                    else Path()
+                )
 
-                        logger.debug(f"Load file: {imgf}")
-                        uploaded_file_info = ngw_ftrs[
-                            finx
-                        ].ngw_vector_layer.res_factory.connection.upload_file(
-                            imgf, uploadFileCallback
-                        )
-                        logger.debug(
-                            f"Uploaded file info: {uploaded_file_info}"
-                        )
-                        ngw_ftrs[finx].link_attachment(uploaded_file_info)
+                for finx, ftr in enumerate(qgs_vector_layer.getFeatures()):
+                    file_path = ftr.attributes()[attrInx]
+                    if file_path is None or isinstance(file_path, QVariant):
+                        continue
+
+                    imgf = root_dir / file_path
+                    if not imgf.is_file():
+                        continue
+
+                    if len(ngw_ftrs) == 0:
+                        # Lazy loading
+                        ngw_ftrs = ngw_resource.get_features()
+
+                    logger.debug(f"Load file: {imgf}")
+                    uploaded_file_info = ngw_ftrs[
+                        finx
+                    ].ngw_vector_layer.res_factory.connection.upload_file(
+                        str(imgf), uploadFileCallback
+                    )
+                    logger.debug(f"Uploaded file info: {uploaded_file_info}")
+                    ngw_ftrs[finx].link_attachment(uploaded_file_info)
 
     def overwriteQGISMapLayer(self, qgs_map_layer, ngw_layer_resource):
         layer_type = qgs_map_layer.type()
