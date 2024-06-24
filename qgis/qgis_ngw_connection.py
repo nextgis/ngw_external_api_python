@@ -491,7 +491,7 @@ class QgsNgwConnection(QObject):
             if self.__log_network and not is_file_large:
                 logger.debug(
                     f"Tus-uploaded chunk of {bytes_read} bytes. Now "
-                    "{bytes_sent} of overall {file_size} bytes are uploaded"
+                    f"{bytes_sent} of overall {file_size} bytes are uploaded"
                 )
 
         file.close()
