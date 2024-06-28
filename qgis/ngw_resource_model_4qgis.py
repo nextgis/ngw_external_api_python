@@ -1239,12 +1239,11 @@ class QGISResourcesUploader(QGISResourceJob):
                 self._value_relations.add(ValueRelation.from_config(config))
 
         for node in self.qgs_layer_tree_nodes:
-            if isinstance(node, QgsLayerTreeLayer):
-                collect_value_relations(node)
-            else:
-                group_node = cast(QgsLayerTreeGroup, node)
-                for layer_node in group_node.findLayers():
+            if isinstance(node, QgsLayerTreeGroup):
+                for layer_node in node.findLayers():
                     collect_value_relations(layer_node)
+            elif isinstance(node, QgsLayerTreeLayer):
+                collect_value_relations(node)
 
     def process_one_level_of_layers_tree(
         self,
