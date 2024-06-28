@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple
 
 from qgis.core import QgsDataSourceUri
 
+from nextgis_connect.exceptions import ErrorCode, NgwError
 from nextgis_connect.ngw_api.core.ngw_resource import NGWResource
 
 from .ngw_abstract_vector_resource import NGWAbstractVectorResource
@@ -27,6 +28,11 @@ class NGWPostgisLayer(NGWAbstractVectorResource):
         self, postgis_connection: NGWPostgisConnection
     ) -> Tuple[str, str, str]:
         connection_info = postgis_connection.connection_info
+        if len(connection_info) == 0:
+            raise NgwError(
+                "Can't get connection params", code=ErrorCode.PermissionsError
+            )
+
         uri = QgsDataSourceUri()
         uri.setConnection(
             connection_info["hostname"],
