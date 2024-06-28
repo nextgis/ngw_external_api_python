@@ -4,17 +4,17 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1816"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1815"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1830"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1829"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1810"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1809"/>
         <source>The layer structure is different from the layer in NextGIS Web</source>
         <translation>Структура слоя отличается от слоя в NextGIS Web</translation>
     </message>
@@ -22,12 +22,12 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1554"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1553"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1567"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1566"/>
         <source>Failed to load any resource to the NextGIS Web. Webmap will not be created</source>
         <translation>При загрузке ресурсов в NextGIS Web произошла ошибка. Веб-карта не будет создана</translation>
     </message>
@@ -108,7 +108,7 @@
 <context>
     <name>QGISResourcesUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1277"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1276"/>
         <source>A group tree is being created</source>
         <translation>Создаётся дерево ресурсов</translation>
     </message>
