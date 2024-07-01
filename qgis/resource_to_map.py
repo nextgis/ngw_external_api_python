@@ -202,16 +202,17 @@ def _add_all_styles_to_layer(
 
     styles.sort(key=lambda resource: resource.common.display_name)
 
+    TEMP_NAME = "_TODELETE"
+
+    style_manager = qgs_layer.styleManager()
+    style_manager.renameStyle(style_manager.currentStyle(), TEMP_NAME)
+
     for style_resource in styles:
         style_resource = cast(NGWQGISStyle, style_resource)
         _add_style_to_layer(style_resource, qgs_layer)
 
-    style_manager = qgs_layer.styleManager()
-    assert style_manager is not None
-
     # Remove default style
-    current_style_name = style_manager.currentStyle()
-    style_manager.removeStyle(current_style_name)
+    style_manager.removeStyle(TEMP_NAME)
 
     # Set choosen or the first one
     if default_style is not None:
