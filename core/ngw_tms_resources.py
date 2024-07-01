@@ -25,13 +25,43 @@ class NGWTmsLayer(NGWResource):
     def service_resource_id(self) -> int:
         return self._json[self.type_id]["connection"]["id"]
 
-    def layer_params(
+    def layer_params(self) -> Tuple[str, str, str]:
+        connections_manager = NgwConnectionsManager()
+        connection = connections_manager.connection(self.connection_id)
+        assert connection is not None
+
+        layer_info = self._json[self.type_id]
+
+        url = (
+            f"{connection.url}/api/component/render/tile?"
+            f"resource={self.resource_id}&nd=204&z={{z}}&x={{x}}&y={{y}}"
+        )
+
+        params = {"type": "xyz", "url": url}
+        params["zmin"] = layer_info.get("minzoom")
+        params["zmax"] = layer_info.get("maxzoom")
+
+        connection.update_uri_config(params)
+
+        params = {
+            key: value for key, value in params.items() if value is not None
+        }
+
+        provider_metadata = QgsProviderRegistry.instance().providerMetadata(
+            "wms"
+        )
+        return provider_metadata.encodeUri(params), self.display_name, "wms"
+
+    def layer_origin_params(
         self, tms_connection: NGWTmsConnection
     ) -> Tuple[str, str, str]:
         connection_info = tms_connection.connection_info
         layer_info = self._json[self.type_id]
 
-        params = {"type": "xyz", "url": connection_info["url_template"]}
+        layer_name = layer_info["layer_name"]
+        url = connection_info["url_template"].format(layer=layer_name)
+
+        params = {"type": "xyz", "url": url}
         params["zmin"] = layer_info.get("minzoom")
         params["zmax"] = layer_info.get("maxzoom")
 
