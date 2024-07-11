@@ -1809,6 +1809,10 @@ class ResourcesDownloader(QGISResourceJob):
         ngw_connection = QgsNgwConnection(self.__connection_id)
         resources_factory = NGWResourceFactory(ngw_connection)
         for resource_id in self.__resources_id:
-            self.result.dangling_resources.append(
-                resources_factory.get_resource(resource_id)
-            )
+            try:
+                self.result.dangling_resources.append(
+                    resources_factory.get_resource(resource_id)
+                )
+            except NgwError as error:
+                if error.code != ErrorCode.PermissionsError:
+                    raise
