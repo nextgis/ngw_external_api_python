@@ -20,6 +20,7 @@
 
 from typing import Dict, Type
 
+from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.core.ngw_tms_resources import (
     NGWTmsConnection,
     NGWTmsLayer,
@@ -81,6 +82,7 @@ class NGWResourceFactory:
         return self.__conn
 
     def get_resource(self, resource_id: int) -> NGWResource:
+        logger.debug(f"Fetch resource with id={resource_id}")
         res_json = NGWResource.receive_resource_obj(self.__conn, resource_id)
         return self.get_resource_by_json(res_json)
 
