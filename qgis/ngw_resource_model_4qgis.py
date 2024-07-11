@@ -1763,9 +1763,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
 
         filepath, _, _ = self.prepareImportFile(self.qgis_layer)
         if filepath is None:
-            raise JobError(
-                f'Can\'t prepare layer "{self.qgis_layer.name()}"'
-            )
+            raise JobError(f'Can\'t prepare layer "{self.qgis_layer.name()}"')
 
         connection = self.ngw_layer.res_factory.connection
         vector_file_desc = connection.tus_upload_file(
@@ -1814,5 +1812,15 @@ class ResourcesDownloader(QGISResourceJob):
                     resources_factory.get_resource(resource_id)
                 )
             except NgwError as error:
-                if error.code != ErrorCode.PermissionsError:
+                if error.code not in (
+                    ErrorCode.PermissionsError,
+                    ErrorCode.AuthorizationError,
+                ):
                     raise
+
+                logger.warning(
+                    "An permission error occured while fetching resource"
+                    f" (id={resource_id})"
+                )
+
+                self.result.not_permitted_resources.append(resource_id)
