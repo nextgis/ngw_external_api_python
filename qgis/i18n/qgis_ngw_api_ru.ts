@@ -4,19 +4,19 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1815"/>
-        <source>removing all features</source>
-        <translation>удаление всех объектов</translation>
+        <location filename="../ngw_resource_model_4qgis.py" line="1745"/>
+        <source>uploading ({}%)</source>
+        <translation>загрузка ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1829"/>
-        <source>adding features ({}%)</source>
-        <translation>добавление объектов ({}%)</translation>
+        <location filename="../ngw_resource_model_4qgis.py" line="1787"/>
+        <source>replacing features</source>
+        <translation>замена объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1809"/>
-        <source>The layer structure is different from the layer in NextGIS Web</source>
-        <translation>Структура слоя отличается от слоя в NextGIS Web</translation>
+        <location filename="../ngw_resource_model_4qgis.py" line="1793"/>
+        <source>finishing</source>
+        <translation>завершение</translation>
     </message>
 </context>
 <context>
