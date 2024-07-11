@@ -1736,100 +1736,64 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         self.ngw_layer = ngw_vector_layer
         self.qgis_layer = qgs_map_layer
 
-    def createNGWFeatureDictFromQGSFeature(self, qgs_feature: QgsFeature):
-        feature_dict = {}
-
-        # id need only for update not for create
-        # feature_dict["id"] = qgs_feature.id() + 1 # Fix NGW behavior
-        import_crs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
-
-        g = qgs_feature.geometry()
-        if g.isNull():
-            return None
-        g.transform(
-            QgsCoordinateTransform(
-                self.qgis_layer.crs(), import_crs, QgsProject.instance()
-            )
-        )
-        if self.ngw_layer.is_geom_multy():
-            g.convertToMultiType()
-
-        feature_dict["geom"] = get_wkt(g)
-
-        attributes = {}
-        for qgsField in qgs_feature.fields().toList():
-            value = qgs_feature.attribute(qgsField.name())
-            attributes[qgsField.name()] = CompatQt.get_clean_python_value(
-                value
-            )
-
-        feature_dict["fields"] = self.ngw_layer.construct_ngw_feature_as_json(
-            attributes
-        )
-
-        return feature_dict
-
-    def getFeaturesPart(self, pack_size):
-        ngw_features = []
-        for qgsFeature in self.qgis_layer.getFeatures():
-            ngw_feature_dict = self.createNGWFeatureDictFromQGSFeature(
-                qgsFeature
-            )
-            if ngw_feature_dict is None:
-                # TODO: somehow warn user about skipped features?
-                logger.warning("Feature skipped")
-                continue
-            ngw_features.append(NGWFeature(ngw_feature_dict, self.ngw_layer))
-
-            if len(ngw_features) == pack_size:
-                yield ngw_features
-                ngw_features = []
-
-        if len(ngw_features) > 0:
-            yield ngw_features
-
     def _do(self):
-        block_size = 10
-        total_count = self.qgis_layer.featureCount()
+        logger.debug(
+            f'<b>Replace "{self.ngw_layer.display_name}" layer features</b> from layer "{self.qgis_layer.name()}")'
+        )
 
-        for field in self.qgis_layer.fields():
-            found_compatible = False
+        def uploadFileCallback(total_size, readed_size, value=None):
+            self._layer_status(
+                self.qgis_layer.name(),
+                self.tr("uploading ({}%)").format(
+                    int(
+                        readed_size * 100 / total_size
+                        if value is None
+                        else value
+                    )
+                ),
+            )
 
-            for ngw_field in self.ngw_layer.fields:
-                if ngw_field.is_compatible(field):
-                    found_compatible = True
-                    break
+        if (
+            self.isSuitableLayer(self.qgis_layer)
+            == self.SUITABLE_LAYER_BAD_GEOMETRY
+        ):
+            raise JobError(
+                f"Vector layer '{self.qgis_layer.name()}' has no suitable geometry"
+            )
 
-            if not found_compatible:
-                log_message = (
-                    f'Field "{field.name()}" is not found in '
-                    f'"{self.ngw_layer.display_name}" '
-                    f"(id={self.ngw_layer.resource_id})"
-                )
-                user_message = self.tr(
-                    "The layer structure is different from the layer in"
-                    " NextGIS Web"
-                )
-                raise NgwError(log_message, user_message=user_message)
+        filepath, _, _ = self.prepareImportFile(self.qgis_layer)
+        if filepath is None:
+            raise JobError(
+                f'Can\'t prepare layer "{self.qgis_layer.name()}"'
+            )
+
+        connection = self.ngw_layer.res_factory.connection
+        vector_file_desc = connection.tus_upload_file(
+            filepath, uploadFileCallback
+        )
+
+        url = self.ngw_layer.get_absolute_api_url()
+        params = dict(
+            resource=dict(),
+            vector_layer=dict(
+                srs=dict(id=3857),
+                source=vector_file_desc,
+                fix_errors="LOSSY",
+                skip_errors=True,
+                skip_other_geometry_types=False,
+                fid_source="AUTO",
+                fid_field="ngw_id, id",
+            ),
+        )
 
         self._layer_status(
-            self.qgis_layer.name(), self.tr("removing all features")
+            self.ngw_layer.display_name, self.tr("replacing features")
         )
-        self.ngw_layer.delete_all_features()
 
-        features_counter = 0
-        progress = 0
-        for features in self.getFeaturesPart(block_size):
-            self.ngw_layer.patch_features(features)
+        connection.put(url, params=params, is_lunkwill=True)
 
-            features_counter += len(features)
-            v = int(features_counter * 100 / total_count)
-            if progress < v:
-                progress = v
-                self._layer_status(
-                    self.qgis_layer.name(),
-                    self.tr("adding features ({}%)").format(progress),
-                )
+        self._layer_status(self.ngw_layer.display_name, self.tr("finishing"))
+        os.remove(filepath)
 
 
 class ResourcesDownloader(QGISResourceJob):
