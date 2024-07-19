@@ -4,17 +4,17 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1745"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1747"/>
         <source>uploading ({}%)</source>
         <translation>загрузка ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1787"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1789"/>
         <source>replacing features</source>
         <translation>замена объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1793"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1795"/>
         <source>finishing</source>
         <translation>завершение</translation>
     </message>
@@ -22,12 +22,12 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1553"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1555"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1566"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1568"/>
         <source>Failed to load any resource to the NextGIS Web. Webmap will not be created</source>
         <translation>При загрузке ресурсов в NextGIS Web произошла ошибка. Веб-карта не будет создана</translation>
     </message>
@@ -70,7 +70,7 @@
         <translation>Стиль для &quot;{}&quot;</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1049"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1051"/>
         <source>removing all features</source>
         <translation>удаление всех объектов</translation>
     </message>
@@ -95,7 +95,7 @@
         <translation>Объект {} не был добавлен. Пожалуйста, проверьте геометрию</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1066"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1068"/>
         <source>adding features ({}%)</source>
         <translation>добавление объектов ({}%)</translation>
     </message>
@@ -108,12 +108,12 @@
 <context>
     <name>QGISResourcesUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1276"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1278"/>
         <source>A group tree is being created</source>
         <translation>Создаётся дерево ресурсов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1211"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1213"/>
         <source>Maximum number of resources exceeded</source>
         <translation>Превышено максимальное количество ресурсов</translation>
     </message>
