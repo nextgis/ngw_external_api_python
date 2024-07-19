@@ -49,8 +49,8 @@ class NGWFeature:
             self.get_feature_attachmets_url()
         )
 
-    def link_attachment(self, uploaded_file_info):
-        json_data = dict(file_upload=uploaded_file_info)
+    def link_attachment(self, name: str, uploaded_file_info):
+        json_data = dict(name=name, file_upload=uploaded_file_info)
         res = self.ngw_vector_layer.res_factory.connection.post(
             self.get_feature_attachmets_url(), json=json_data
         )

@@ -964,7 +964,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         def uploadFileCallback(total_size, readed_size, value=None):
             self._layer_status(
-                imgf,
+                full_path,
                 self.tr("uploading ({}%)").format(
                     int(
                         readed_size * 100 / total_size
@@ -1012,25 +1012,27 @@ class QGISResourceJob(NGWResourceModelJob):
 
                 for finx, ftr in enumerate(qgs_vector_layer.getFeatures()):
                     file_path = ftr.attributes()[attrInx]
-                    if file_path is None or isinstance(file_path, QVariant):
+                    if not isinstance(file_path, str):
                         continue
 
-                    imgf = root_dir / file_path
-                    if not imgf.is_file():
+                    full_path = root_dir / file_path
+                    if not full_path.is_file():
                         continue
 
                     if len(ngw_ftrs) == 0:
                         # Lazy loading
                         ngw_ftrs = ngw_resource.get_features()
 
-                    logger.debug(f"Load file: {imgf}")
+                    logger.debug(f"Load file: {full_path}")
                     uploaded_file_info = ngw_ftrs[
                         finx
                     ].ngw_vector_layer.res_factory.connection.upload_file(
-                        str(imgf), uploadFileCallback
+                        str(full_path), uploadFileCallback
                     )
                     logger.debug(f"Uploaded file info: {uploaded_file_info}")
-                    ngw_ftrs[finx].link_attachment(uploaded_file_info)
+                    ngw_ftrs[finx].link_attachment(
+                        full_path.name, uploaded_file_info
+                    )
 
     def overwriteQGISMapLayer(self, qgs_map_layer, ngw_layer_resource):
         layer_type = qgs_map_layer.type()
