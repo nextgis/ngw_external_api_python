@@ -9,14 +9,19 @@
         <translation>загрузка ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1789"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1791"/>
         <source>replacing features</source>
         <translation>замена объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1795"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1820"/>
         <source>finishing</source>
         <translation>завершение</translation>
+    </message>
+    <message>
+        <location filename="../ngw_resource_model_4qgis.py" line="1811"/>
+        <source>adding aliases</source>
+        <translation>добавление псевдонимов</translation>
     </message>
 </context>
 <context>
