@@ -1763,7 +1763,9 @@ class NGWUpdateVectorLayer(QGISResourceJob):
                 f"Vector layer '{self.qgis_layer.name()}' has no suitable geometry"
             )
 
-        filepath, _, _ = self.prepareImportFile(self.qgis_layer)
+        filepath, _, rename_fields_map = self.prepareImportFile(
+            self.qgis_layer
+        )
         if filepath is None:
             raise JobError(f'Can\'t prepare layer "{self.qgis_layer.name()}"')
 
@@ -1791,6 +1793,29 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         )
 
         connection.put(url, params=params, is_lunkwill=True)
+
+        self.ngw_layer = self.ngw_layer.res_factory.get_resource(
+            self.ngw_layer.resource_id
+        )
+
+        fields_aliases: Dict[str, Dict[str, str]] = {}
+        for field in self.qgis_layer.fields():
+            alias = field.alias()
+            if len(alias) == 0:
+                continue
+
+            field_name = rename_fields_map.get(field.name(), field.name())
+            fields_aliases[field_name] = dict(display_name=alias)
+
+        if len(fields_aliases) > 0:
+            self._layer_status(
+                self.ngw_layer.display_name, self.tr("adding aliases")
+            )
+
+            try:
+                self.ngw_layer.update_fields_params(fields_aliases)
+            except Exception as error:
+                self.warningOccurred.emit(error)
 
         self._layer_status(self.ngw_layer.display_name, self.tr("finishing"))
         os.remove(filepath)
