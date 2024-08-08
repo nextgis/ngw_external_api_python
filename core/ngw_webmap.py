@@ -305,8 +305,8 @@ class NGWWebMapGroup(NGWWebMapItem):
 
 @dataclass(order=True)
 class WebMapBaseMap:
-    position: int
     resource_id: int
     display_name: str
     enabled: bool
-    opacity: Optional[float]
+    position: Optional[int] = None
+    opacity: Optional[float] = None
