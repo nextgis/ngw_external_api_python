@@ -105,6 +105,10 @@ class NGWResource:
         if icon_path.exists():
             self.icon_path = str(icon_path)
 
+        icon_path = ICONS_DIR / f"{self.type_id}.svg"
+        if icon_path.exists():
+            self.icon_path = str(icon_path)
+
     def set_children_count(self, children_count):
         self.children_count = children_count
 
