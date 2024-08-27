@@ -20,28 +20,27 @@
 
 import re
 import urllib.parse
-from os import path
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, List
 
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
 
-ICONS_DIR = str(Path(__file__).parents[1] / "icons")
+ICONS_DIR = Path(__file__).parents[1] / "icons"
 
 
-def API_RESOURCE_URL(res_id):
-    return "/api/resource/%d" % res_id
+def API_RESOURCE_URL(res_id: int) -> str:
+    return f"/api/resource/{res_id}"
 
 
 API_COLLECTION_URL = "/api/resource/"
 
 
-def RESOURCE_URL(res_id):
-    return "/resource/%d" % res_id
+def RESOURCE_URL(res_id: int) -> str:
+    return f"/resource/{res_id}"
 
 
-def API_LAYER_EXTENT(res_id):
-    return "/api/resource/%d/extent" % res_id
+def API_LAYER_EXTENT(res_id: int) -> str:
+    return f"/api/resource/{res_id}/extent"
 
 
 class Wrapper:
@@ -65,7 +64,7 @@ def list_dict_to_list_object(list_dict):
 
 class NGWResource:
     type_id = "resource"
-    icon_path = path.join(ICONS_DIR, "resource.svg")
+    icon_path = str(ICONS_DIR / "resource.svg")
     type_title = "NGW Resource"
 
     res_factory: Any  # NGWResourceFactory
@@ -102,9 +101,9 @@ class NGWResource:
         self._construct()
         self.children_count = None
 
-        icon_path = path.join(ICONS_DIR, f"{self.common.cls}.svg")
-        if path.exists(icon_path):
-            self.icon_path = icon_path
+        icon_path = ICONS_DIR / f"{self.common.cls}.svg"
+        if icon_path.exists():
+            self.icon_path = str(icon_path)
 
     def set_children_count(self, children_count):
         self.children_count = children_count

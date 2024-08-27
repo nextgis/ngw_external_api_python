@@ -28,6 +28,7 @@ from nextgis_connect.ngw_api.core.ngw_tms_resources import (
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
 
 from .ngw_base_map import NGWBaseMap
+from .ngw_eeko_storage import NGWEekoStorage
 from .ngw_group_resource import NGWGroupResource
 from .ngw_mapserver_style import NGWMapServerStyle
 from .ngw_ogcf_service import NGWOgcfService
@@ -58,7 +59,6 @@ class NGWResourceFactory:
             NGWOgcfService.type_id: NGWOgcfService,
             NGWWmsService.type_id: NGWWmsService,
             NGWGroupResource.type_id: NGWGroupResource,
-            "demo_project": NGWGroupResource,
             NGWVectorLayer.type_id: NGWVectorLayer,
             NGWMapServerStyle.type_id: NGWMapServerStyle,
             NGWQGISVectorStyle.type_id: NGWQGISVectorStyle,
@@ -73,6 +73,18 @@ class NGWResourceFactory:
             NGWPostgisLayer.type_id: NGWPostgisLayer,
             NGWTmsConnection.type_id: NGWTmsConnection,
             NGWTmsLayer.type_id: NGWTmsLayer,
+            NGWEekoStorage.type_id: NGWEekoStorage,
+
+            # Aliases
+            "demo_project": NGWGroupResource,
+            "gpdobj_group": NGWGroupResource,
+            "gpdobj_pi_dm": NGWGroupResource,
+            "gpdobj_pir_obj": NGWGroupResource,
+            "gpdobj_pir_oip": NGWGroupResource,
+            "gpdobj_pir_dm": NGWGroupResource,
+            "gpdobj_dm_section": NGWGroupResource,
+            "gpdobj_dm_group": NGWGroupResource,
+            "gpdobj_storage": NGWEekoStorage,
         }
         self.__default_type = NGWResource.type_id
         self.__conn = ngw_connection
