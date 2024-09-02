@@ -144,7 +144,7 @@ def _add_cog_raster_layer(resource: NGWRasterLayer):
         "path": f"{resource.get_absolute_vsicurl_url()}/cog",
     }
     is_fixed = False
-    connection.update_uri_config(uri_config, workaround=not is_fixed)
+    connection.update_uri_config(uri_config, workaround_for_email=not is_fixed)
 
     provider_registry = QgsProviderRegistry.instance()
     resource_uri = provider_registry.encodeUri("gdal", uri_config)

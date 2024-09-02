@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import ClassVar, Dict, List, Optional
+from typing import ClassVar, Dict, Optional
 
 from osgeo import ogr
 from qgis.core import (
@@ -10,7 +10,7 @@ from qgis.core import (
 
 from nextgis_connect.compat import GeometryType, WkbType
 from nextgis_connect.ngw_api.core.ngw_qgis_style import NGWQGISVectorStyle
-from nextgis_connect.resources.ngw_field import NgwField
+from nextgis_connect.resources.ngw_field import NgwField, NgwFields
 
 from .ngw_resource import NGWResource
 
@@ -60,32 +60,20 @@ class NGWAbstractVectorResource(ABC, NGWResource):
 
         self.__features_count = None
 
-        self.__fields = NgwField.list_from_json(
+        self.__fields = NgwFields.from_json(
             self._json.get("feature_layer", {}).get("fields", [])
         )
 
     @property
-    def fields(self) -> List[NgwField]:
+    def fields(self) -> NgwFields:
         return self.__fields
 
     def field(self, name: str) -> Optional[NgwField]:
-        found_field = None
-        for field in self.fields:
-            if field.keyname == name:
-                found_field = field
-                break
-
-        if found_field is None:
-            return None
-
-        return found_field
+        return self.__fields.find_with(name=name)
 
     @property
     def qgs_fields(self) -> QgsFields:
-        fields = QgsFields()
-        for field in self.fields:
-            fields.append(field.to_qgsfield())
-        return fields
+        return self.fields.to_qgs_fields()
 
     @property
     def features_count(self) -> int:

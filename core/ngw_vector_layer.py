@@ -230,7 +230,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         return feature_layer["versioning"].get("epoch")
 
     @property
-    def latest_version(self) -> Optional[int]:
+    def version(self) -> Optional[int]:
         feature_layer = self._json.get("feature_layer", {})
         if "versioning" not in feature_layer:
             return None

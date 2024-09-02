@@ -186,6 +186,10 @@ class NGWResource:
     def display_name(self) -> str:
         return self.common.display_name
 
+    @property
+    def description(self) -> str:
+        return self.common.description
+
     def change_name(self, name):
         new_name = self.generate_unique_child_name(name)
         params = dict(

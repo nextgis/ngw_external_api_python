@@ -74,7 +74,6 @@ class NGWResourceFactory:
             NGWTmsConnection.type_id: NGWTmsConnection,
             NGWTmsLayer.type_id: NGWTmsLayer,
             NGWEekoStorage.type_id: NGWEekoStorage,
-
             # Aliases
             "demo_project": NGWGroupResource,
             "gpdobj_group": NGWGroupResource,
