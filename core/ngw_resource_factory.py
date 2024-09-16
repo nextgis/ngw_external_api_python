@@ -85,6 +85,7 @@ class NGWResourceFactory:
             "gpdobj_dm_section": NGWGroupResource,
             "gpdobj_dm_group": NGWGroupResource,
             "gpdobj_storage": NGWEekoStorage,
+            "gpdobj_oper_dm": NGWGroupResource,
         }
         self.__default_type = NGWResource.type_id
         self.__conn = ngw_connection
