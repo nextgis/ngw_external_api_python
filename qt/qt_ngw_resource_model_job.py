@@ -425,6 +425,3 @@ class NgwStylesDownloader(NGWResourceModelJob):
 class NGWMissingResourceUpdater(NGWResourceUpdater):
     # Empty class for blocking interface
     pass
-
-class AddLayersStub(NGWResourceModelJob):
-    pass
