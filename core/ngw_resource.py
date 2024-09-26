@@ -104,10 +104,10 @@ class NGWResource:
         icon_path = ICONS_DIR / f"{self.common.cls}.svg"
         if icon_path.exists():
             self.icon_path = str(icon_path)
-
-        icon_path = ICONS_DIR / f"{self.type_id}.svg"
-        if icon_path.exists():
-            self.icon_path = str(icon_path)
+        else:
+            icon_path = ICONS_DIR / f"{self.type_id}.svg"
+            if icon_path.exists():
+                self.icon_path = str(icon_path)
 
     def __repr__(self) -> str:
         class_name = self.__class__.__name__
