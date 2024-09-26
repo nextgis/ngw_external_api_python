@@ -74,9 +74,7 @@ class NGWRasterLayer(NGWResource):
     def create_style(self):
         """Create default style for this layer"""
         connection = self.res_factory.connection
-        style_name = self.generate_unique_child_name(
-            self.common.display_name + ""
-        )
+        style_name = self.generate_unique_child_name(self.display_name + "")
 
         params = dict(
             resource=dict(
@@ -103,7 +101,7 @@ class NGWRasterLayer(NGWResource):
         """
         connection = self.res_factory.connection
         if not style_name:
-            style_name = self.common.display_name
+            style_name = self.display_name
         style_name = self.generate_unique_child_name(style_name)
 
         style_file_desc = connection.upload_file(qml, callback)

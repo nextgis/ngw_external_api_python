@@ -79,7 +79,7 @@ class NGWQGISStyle(NGWResource):
 
         params = dict(
             resource=dict(
-                display_name=self.common.display_name,
+                display_name=self.display_name,
             ),
         )
         params[self.type_id] = dict(file_upload=style_file_desc)

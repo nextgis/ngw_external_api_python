@@ -188,7 +188,7 @@ class NGWResource:
 
     @property
     def display_name(self) -> str:
-        return self.common.display_name
+        return self.display_name
 
     @property
     def description(self) -> str:
@@ -230,7 +230,7 @@ class NGWResource:
         self.set_children_count(len(children))
 
     def generate_unique_child_name(self, name: str):
-        chd_names = [ch.common.display_name for ch in self.get_children()]
+        chd_names = [ch.display_name for ch in self.get_children()]
         if name not in chd_names:
             return name
 

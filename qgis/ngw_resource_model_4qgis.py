@@ -346,7 +346,7 @@ class QGISResourceJob(NGWResourceModelJob):
             )
 
             ngw_wms_layer_name = self.unique_resource_name(
-                wms_connection.common.display_name + "_layer", ngw_group
+                wms_connection.display_name + "_layer", ngw_group
             )
 
             layer_ids = parameters.get("layers", wms_connection.layers())
@@ -854,7 +854,7 @@ class QGISResourceJob(NGWResourceModelJob):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
                 self.tr('Style for "{}"').format(
-                    ngw_layer_resource.common.display_name
+                    ngw_layer_resource.display_name
                 )
                 + " - "
                 + self.tr("uploading ({}%)").format(
@@ -911,7 +911,7 @@ class QGISResourceJob(NGWResourceModelJob):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
                 self.tr('Style for "{}"').format(
-                    ngw_layer_resource.common.display_name
+                    ngw_layer_resource.display_name
                 )
                 + " - "
                 + self.tr("uploading ({}%)").format(
@@ -1049,7 +1049,7 @@ class QGISResourceJob(NGWResourceModelJob):
         total_count = qgs_map_layer.featureCount()
 
         self._layer_status(
-            ngw_layer_resource.common.display_name,
+            ngw_layer_resource.display_name,
             self.tr("removing all features"),
         )
         ngw_layer_resource.delete_all_features()
@@ -1066,7 +1066,7 @@ class QGISResourceJob(NGWResourceModelJob):
             if progress < v:
                 progress = v
                 self._layer_status(
-                    ngw_layer_resource.common.display_name,
+                    ngw_layer_resource.display_name,
                     self.tr("adding features ({}%)").format(progress),
                 )
 
@@ -1437,7 +1437,7 @@ class QGISResourcesUploader(QGISResourceJob):
                 ngw_webmap_item.appendChild(
                     NGWWebMapLayer(
                         ngw_resource.common.id,
-                        ngw_resource.common.display_name,
+                        ngw_resource.display_name,
                         is_visible=layer_tree_item.itemVisibilityChecked(),
                         transparency=transparency,
                         legend=layer_tree_item.isExpanded(),
@@ -1465,7 +1465,7 @@ class QGISResourcesUploader(QGISResourceJob):
         ngw_resource_child_group = self._groups[qgsLayerTreeGroup]
 
         ngw_webmap_child_group = NGWWebMapGroup(
-            ngw_resource_child_group.common.display_name,
+            ngw_resource_child_group.display_name,
             qgsLayerTreeGroup.isExpanded(),
         )
         ngw_webmap_item.appendChild(ngw_webmap_child_group)
@@ -1615,7 +1615,7 @@ class MapForLayerCreater(QGISResourceJob):
         ngw_webmap_root_group.appendChild(
             NGWWebMapLayer(
                 self.ngw_style_id,
-                self.ngw_layer.common.display_name,
+                self.ngw_layer.display_name,
                 is_visible=True,
                 transparency=None,
                 legend=True,
@@ -1625,7 +1625,7 @@ class MapForLayerCreater(QGISResourceJob):
         ngw_group = self.ngw_layer.get_parent()
 
         ngw_map_name = self.unique_resource_name(
-            self.ngw_layer.common.display_name + "-map", ngw_group
+            self.ngw_layer.display_name + "-map", ngw_group
         )
         ngw_resource = NGWWebMap.create_in_group(
             ngw_map_name,
@@ -1644,7 +1644,7 @@ class MapForLayerCreater(QGISResourceJob):
         ngw_webmap_root_group.appendChild(
             NGWWebMapLayer(
                 self.ngw_style_id,
-                self.ngw_layer.common.display_name,
+                self.ngw_layer.display_name,
                 is_visible=True,
                 transparency=None,
                 legend=True,
@@ -1654,7 +1654,7 @@ class MapForLayerCreater(QGISResourceJob):
         ngw_group = self.ngw_layer.get_parent()
 
         ngw_map_name = self.unique_resource_name(
-            self.ngw_layer.common.display_name + "-map", ngw_group
+            self.ngw_layer.display_name + "-map", ngw_group
         )
 
         ngw_resource = NGWWebMap.create_in_group(
@@ -1717,7 +1717,7 @@ class NGWCreateWMSForVector(QGISResourceJob):
                 self.ngw_style_id = ngw_style.common.id
 
         ngw_wms_service_name = self.unique_resource_name(
-            self.ngw_layer.common.display_name + " — WMS service",
+            self.ngw_layer.display_name + " — WMS service",
             self.ngw_group_resource,
         )
 

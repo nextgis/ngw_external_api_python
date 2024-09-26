@@ -126,8 +126,7 @@ class NGWResourceModelJob(QObject):
         self, resource_name: str, ngw_group: NGWGroupResource
     ) -> str:
         children_names = [
-            children.common.display_name
-            for children in ngw_group.get_children()
+            children.display_name for children in ngw_group.get_children()
         ]
         unique_resource_name = self.generate_unique_name(
             resource_name, children_names
@@ -305,7 +304,7 @@ class NGWCreateWfsOrOgcfService(NGWResourceModelJob):
         self.ret_obj_num = max_features
 
     def _do(self):
-        service_name: str = self.ngw_vector_layer.common.display_name
+        service_name: str = self.ngw_vector_layer.display_name
         service_name += f" — {self.service_type} service"
         ngw_wfs_service_name = self.unique_resource_name(
             service_name, self.ngw_group_resource
@@ -359,14 +358,14 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
         ngw_group = ngw_layer.get_parent()
 
         ngw_map_name = self.unique_resource_name(
-            self.ngw_style.common.display_name + "-map", ngw_group
+            self.ngw_style.display_name + "-map", ngw_group
         )
 
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_root_group.appendChild(
             NGWWebMapLayer(
                 self.ngw_style.common.id,
-                ngw_layer.common.display_name,
+                ngw_layer.display_name,
                 is_visible=True,
                 transparency=None,
                 legend=True,

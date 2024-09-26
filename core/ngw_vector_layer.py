@@ -159,9 +159,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         """Create default Map Srver style for this layer"""
         connection = self.res_factory.connection
 
-        style_name = self.generate_unique_child_name(
-            self.common.display_name + ""
-        )
+        style_name = self.generate_unique_child_name(self.display_name + "")
 
         params = dict(
             resource=dict(

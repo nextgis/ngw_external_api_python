@@ -180,7 +180,7 @@ class NGWWebMap(NGWResource):
         for ngw_base_map in ngw_base_maps:
             base_maps.append(
                 {
-                    "display_name": ngw_base_map.common.display_name,
+                    "display_name": ngw_base_map.display_name,
                     "resource_id": ngw_base_map.common.id,
                     "enabled": True,
                     "opacity": None,
