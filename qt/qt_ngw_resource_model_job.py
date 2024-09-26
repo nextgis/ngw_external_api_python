@@ -27,6 +27,7 @@ from nextgis_connect.exceptions import NgConnectError
 from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.core.ngw_error import NGWError
 from nextgis_connect.ngw_api.core.ngw_group_resource import NGWGroupResource
+from nextgis_connect.ngw_api.core.ngw_qgis_style import NGWQGISStyle
 from nextgis_connect.ngw_api.core.ngw_resource import NGWResource
 from nextgis_connect.ngw_api.core.ngw_resource_creator import ResourceCreator
 from nextgis_connect.ngw_api.core.ngw_resource_factory import (
@@ -393,3 +394,37 @@ class NGWRenameResource(NGWResourceModelJob):
 
         # self.putAddedResourceToResult(self.ngw_resource, is_main=True)
         self.putEditedResourceToResult(self.ngw_resource, is_main=True)
+
+
+class NgwStylesDownloader(NGWResourceModelJob):
+    def __init__(
+        self,
+        ngw_resources: Union[NGWQGISStyle, List[NGWQGISStyle]],
+    ) -> None:
+        super().__init__()
+        if isinstance(ngw_resources, list):
+            self.ngw_resources = ngw_resources
+        else:
+            self.ngw_resources = [ngw_resources]
+            self.result.main_resource_id = ngw_resources.common.id
+
+    def _do(self):
+        total = len(self.ngw_resources)
+
+        for i, style_resource in enumerate(self.ngw_resources):
+            name = style_resource.display_name
+            progress = "" if total == "1" else f"\n({i + 1}/{total})"
+            self.statusChanged.emit(
+                self.tr('Downloading style "{name}"').format(name=name)
+                + progress
+            )
+
+            style_resource.populate_qml()
+
+
+class NGWMissingResourceUpdater(NGWResourceUpdater):
+    # Empty class for blocking interface
+    pass
+
+class AddLayersStub(NGWResourceModelJob):
+    pass
