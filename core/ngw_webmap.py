@@ -250,6 +250,10 @@ class NGWWebMapRoot(NGWWebMapItem):
     def __init__(self):
         super().__init__(NGWWebMapItem.ITEM_TYPE_ROOT)
 
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"<{class_name}: root>"
+
     def _attributes(self):
         return dict()
 
@@ -272,6 +276,10 @@ class NGWWebMapLayer(NGWWebMapItem):
         self.transparency = transparency
         self.legend = legend
         self.style_parent_id = style_parent_id
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"<{class_name}: {self.display_name}>"
 
     def _attributes(self):
         legend = None
@@ -296,6 +304,10 @@ class NGWWebMapGroup(NGWWebMapItem):
         self.display_name = display_name
         self.expanded = expanded
 
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"<{class_name}: {self.display_name}>"
+
     def _attributes(self):
         return dict(
             display_name=self.display_name,
@@ -310,3 +322,7 @@ class WebMapBaseMap:
     enabled: bool
     position: Optional[int] = None
     opacity: Optional[float] = None
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"<{class_name}: {self.display_name} (id={self.resource_id})>"

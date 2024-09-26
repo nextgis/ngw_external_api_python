@@ -109,6 +109,10 @@ class NGWResource:
         if icon_path.exists():
             self.icon_path = str(icon_path)
 
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"<{class_name}: {self.display_name} ({self.common.cls}, id={self.resource_id})>"
+
     def set_children_count(self, children_count):
         self.children_count = children_count
 
