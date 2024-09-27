@@ -37,7 +37,7 @@ class ResourceCreator:
         params = dict(
             resource=dict(
                 cls=NGWGroupResource.type_id,
-                parent=dict(id=parent_ngw_resource.common.id),
+                parent=dict(id=parent_ngw_resource.resource_id),
                 display_name=new_group_name,
             )
         )
@@ -72,7 +72,7 @@ class ResourceCreator:
         params = dict(
             resource=dict(
                 cls=NGWVectorLayer.type_id,
-                parent=dict(id=parent_ngw_resource.common.id),
+                parent=dict(id=parent_ngw_resource.resource_id),
                 display_name=layer_name,
             ),
             vector_layer=dict(
@@ -118,7 +118,7 @@ class ResourceCreator:
         params = dict(
             resource=dict(
                 cls=NGWRasterLayer.type_id,
-                parent=dict(id=parent_ngw_resource.common.id),
+                parent=dict(id=parent_ngw_resource.resource_id),
                 display_name=layer_name,
             ),
             raster_layer=dict(
@@ -156,8 +156,8 @@ class ResourceCreator:
         for ngw_layer in ngw_layers:
             params_layer = dict(
                 display_name=ngw_layer.display_name,
-                keyname="ngw_id_%d" % ngw_layer.common.id,
-                resource_id=ngw_layer.common.id,
+                keyname="ngw_id_%d" % ngw_layer.resource_id,
+                resource_id=ngw_layer.resource_id,
                 maxfeatures=max_features,
             )
             params_layers.append(params_layer)
@@ -168,7 +168,7 @@ class ResourceCreator:
             resource=dict(
                 cls=ngw_type.type_id,
                 display_name=service_name,
-                parent=dict(id=ngw_group_resource.common.id),
+                parent=dict(id=ngw_group_resource.resource_id),
             )
         )
         params_key = "layers" if service_type == "WFS" else "collections"
@@ -197,7 +197,7 @@ class ResourceCreator:
             resource=dict(
                 cls="lookup_table",
                 display_name=name,
-                parent=dict(id=parent_group_resource.common.id),
+                parent=dict(id=parent_group_resource.resource_id),
             ),
             lookup_table=dict(items=items),
         )

@@ -87,7 +87,7 @@ class NGWResource:
     @classmethod
     def delete_resource(cls, ngw_resource):
         ngw_con = ngw_resource.res_factory.connection
-        url = API_RESOURCE_URL(ngw_resource.common.id)
+        url = API_RESOURCE_URL(ngw_resource.resource_id)
         ngw_con.delete(url)
 
     # INSTANCE
@@ -133,7 +133,7 @@ class NGWResource:
 
     def get_parent(self):
         if self.common.parent:
-            return self.res_factory.get_resource(self.common.parent.id)
+            return self.res_factory.get_resource(self.parent_id)
         else:
             return None
 
@@ -142,7 +142,7 @@ class NGWResource:
             return []
 
         children_json = NGWResource.receive_resource_children(
-            self.res_factory.connection, self.common.id
+            self.res_factory.connection, self.resource_id
         )
         children: List[NGWResource] = []
         for child_json in children_json:
@@ -151,20 +151,22 @@ class NGWResource:
 
     def get_absolute_url(self) -> str:
         base_url = self.res_factory.connection.server_url
-        return urllib.parse.urljoin(base_url, RESOURCE_URL(self.common.id))
+        return urllib.parse.urljoin(base_url, RESOURCE_URL(self.resource_id))
 
     def get_absolute_api_url(self) -> str:
         base_url = self.res_factory.connection.server_url
-        return urllib.parse.urljoin(base_url, API_RESOURCE_URL(self.common.id))
+        return urllib.parse.urljoin(
+            base_url, API_RESOURCE_URL(self.resource_id)
+        )
 
     def get_absolute_vsicurl_url(self) -> str:
         return f"/vsicurl/{self.get_absolute_api_url()}"
 
     def get_relative_url(self) -> str:
-        return RESOURCE_URL(self.common.id)
+        return RESOURCE_URL(self.resource_id)
 
     def get_relative_api_url(self) -> str:
-        return API_RESOURCE_URL(self.common.id)
+        return API_RESOURCE_URL(self.resource_id)
 
     @property
     def connection_id(self) -> str:
@@ -188,7 +190,7 @@ class NGWResource:
 
     @property
     def display_name(self) -> str:
-        return self.display_name
+        return self.common.display_name
 
     @property
     def description(self) -> str:
@@ -221,7 +223,7 @@ class NGWResource:
 
     def update(self):
         self._json = self.receive_resource_obj(
-            self.res_factory.connection, self.common.id
+            self.res_factory.connection, self.resource_id
         )
 
         self._construct()

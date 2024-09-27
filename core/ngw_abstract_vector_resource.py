@@ -154,7 +154,7 @@ class NGWAbstractVectorResource(ABC, NGWResource):
         params = dict(
             resource=dict(
                 cls=NGWQGISVectorStyle.type_id,
-                parent=dict(id=self.common.id),
+                parent=dict(id=self.resource_id),
                 display_name=style_name,
             ),
         )

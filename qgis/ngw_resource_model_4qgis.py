@@ -356,7 +356,7 @@ class QGISResourceJob(NGWResourceModelJob):
             wms_layer = NGWWmsLayer.create_in_group(
                 ngw_wms_layer_name,
                 ngw_group,
-                wms_connection.common.id,
+                wms_connection.resource_id,
                 layer_ids,
                 parameters.get("format"),
             )
@@ -1349,7 +1349,7 @@ class QGISResourcesUploader(QGISResourceJob):
                 extract_items(layer_node, value_relation),
                 parent_group_resource,
             )
-            self._lookup_tables_id[value_relation] = lookup_table.common.id
+            self._lookup_tables_id[value_relation] = lookup_table.resource_id
             self.putAddedResourceToResult(lookup_table)
 
     def add_layer(
@@ -1409,7 +1409,7 @@ class QGISResourcesUploader(QGISResourceJob):
                     if style_name == current_style:
                         ngw_webmap_item.appendChild(
                             NGWWebMapLayer(
-                                ngw_style.common.id,
+                                ngw_style.resource_id,
                                 layer_tree_item.layer().name(),
                                 is_visible=layer_tree_item.itemVisibilityChecked(),
                                 transparency=None,
@@ -1436,7 +1436,7 @@ class QGISResourcesUploader(QGISResourceJob):
 
                 ngw_webmap_item.appendChild(
                     NGWWebMapLayer(
-                        ngw_resource.common.id,
+                        ngw_resource.resource_id,
                         ngw_resource.display_name,
                         is_visible=layer_tree_item.itemVisibilityChecked(),
                         transparency=transparency,
@@ -1604,12 +1604,12 @@ class MapForLayerCreater(QGISResourceJob):
             if self.ngw_layer.type_id == NGWVectorLayer.type_id:
                 ngw_style = self._defStyleForVector(self.ngw_layer)
                 self.putAddedResourceToResult(ngw_style)
-                self.ngw_style_id = ngw_style.common.id
+                self.ngw_style_id = ngw_style.resource_id
 
             if self.ngw_layer.type_id == NGWRasterLayer.type_id:
                 ngw_style = self._defStyleForRaster(self.ngw_layer)
                 self.putAddedResourceToResult(ngw_style)
-                self.ngw_style_id = ngw_style.common.id
+                self.ngw_style_id = ngw_style.resource_id
 
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_root_group.appendChild(
@@ -1638,7 +1638,7 @@ class MapForLayerCreater(QGISResourceJob):
         self.putAddedResourceToResult(ngw_resource, is_main=True)
 
     def create4WmsLayer(self):
-        self.ngw_style_id = self.ngw_layer.common.id
+        self.ngw_style_id = self.ngw_layer.resource_id
 
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_root_group.appendChild(
@@ -1709,12 +1709,12 @@ class NGWCreateWMSForVector(QGISResourceJob):
             if self.ngw_layer.type_id == NGWVectorLayer.type_id:
                 ngw_style = self._defStyleForVector(self.ngw_layer)
                 self.putAddedResourceToResult(ngw_style)
-                self.ngw_style_id = ngw_style.common.id
+                self.ngw_style_id = ngw_style.resource_id
 
             if self.ngw_layer.type_id == NGWRasterLayer.type_id:
                 ngw_style = self._defStyleForRaster(self.ngw_layer)
                 self.putAddedResourceToResult(ngw_style)
-                self.ngw_style_id = ngw_style.common.id
+                self.ngw_style_id = ngw_style.resource_id
 
         ngw_wms_service_name = self.unique_resource_name(
             self.ngw_layer.display_name + " — WMS service",

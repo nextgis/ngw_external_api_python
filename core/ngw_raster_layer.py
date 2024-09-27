@@ -58,7 +58,7 @@ class NGWRasterLayer(NGWResource):
 
     def extent(self):
         result = self.res_factory.connection.get(
-            API_LAYER_EXTENT(self.common.id)
+            API_LAYER_EXTENT(self.resource_id)
         )
         extent = result.get("extent")
         if extent is None:
@@ -79,7 +79,7 @@ class NGWRasterLayer(NGWResource):
         params = dict(
             resource=dict(
                 cls="raster_style",
-                parent=dict(id=self.common.id),
+                parent=dict(id=self.resource_id),
                 display_name=style_name,
             ),
         )
@@ -109,7 +109,7 @@ class NGWRasterLayer(NGWResource):
         params = dict(
             resource=dict(
                 cls=NGWQGISRasterStyle.type_id,
-                parent=dict(id=self.common.id),
+                parent=dict(id=self.resource_id),
                 display_name=style_name,
             ),
         )

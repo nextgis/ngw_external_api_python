@@ -36,7 +36,7 @@ class NGWAttachment:
 
     def get_attachmet_url(self):
         return FEATURE_ATTACHMENT_URL(
-            self.ngw_feature.ngw_vector_layer.common.id,
+            self.ngw_feature.ngw_vector_layer.resource_id,
             self.ngw_feature.id,
             self.id,
         )
@@ -48,7 +48,7 @@ class NGWAttachment:
 
     def get_image_url(self):
         return IMAGE_URL(
-            self.ngw_feature.ngw_vector_layer.common.id,
+            self.ngw_feature.ngw_vector_layer.resource_id,
             self.ngw_feature.id,
             self.id,
         )

@@ -37,11 +37,11 @@ class NGWFeature:
         self.fields = ngw_feature_dict.get("fields", {})
 
     def get_feature_url(self):
-        return FEATURE_URL(self.ngw_vector_layer.common.id, self.id)
+        return FEATURE_URL(self.ngw_vector_layer.resource_id, self.id)
 
     def get_feature_attachmets_url(self):
         return FEATURE_ATTACHMENTS_URL(
-            self.ngw_vector_layer.common.id, self.id
+            self.ngw_vector_layer.resource_id, self.id
         )
 
     def get_attachments(self):

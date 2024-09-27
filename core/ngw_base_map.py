@@ -76,7 +76,7 @@ class NGWBaseMap(NGWResource):
             resource=dict(
                 cls=cls.type_id,
                 display_name=name,
-                parent=dict(id=ngw_group_resource.common.id),
+                parent=dict(id=ngw_group_resource.resource_id),
             )
         )
 

@@ -71,14 +71,14 @@ class NGWResourceModelJobResult:
     ) -> None:
         self.added_resources.append(ngw_resource)
         if is_main:
-            self.main_resource_id = ngw_resource.common.id
+            self.main_resource_id = ngw_resource.resource_id
 
     def putEditedResource(
         self, ngw_resource: NGWResource, is_main: bool = False
     ) -> None:
         self.edited_resources.append(ngw_resource)
         if is_main:
-            self.main_resource_id = ngw_resource.common.id
+            self.main_resource_id = ngw_resource.resource_id
 
     def putDeletedResource(self, ngw_resource: NGWResource) -> None:
         self.deleted_resources.append(ngw_resource)
@@ -239,7 +239,7 @@ class NGWResourceUpdater(NGWResourceModelJob):
             self.ngw_resources = ngw_resources
         else:
             self.ngw_resources = [ngw_resources]
-            self.result.main_resource_id = ngw_resources.common.id
+            self.result.main_resource_id = ngw_resources.resource_id
         self.recursive = recursive
 
     def _do(self):
@@ -364,7 +364,7 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
         ngw_webmap_root_group = NGWWebMapRoot()
         ngw_webmap_root_group.appendChild(
             NGWWebMapLayer(
-                self.ngw_style.common.id,
+                self.ngw_style.resource_id,
                 ngw_layer.display_name,
                 is_visible=True,
                 transparency=None,
@@ -405,7 +405,7 @@ class NgwStylesDownloader(NGWResourceModelJob):
             self.ngw_resources = ngw_resources
         else:
             self.ngw_resources = [ngw_resources]
-            self.result.main_resource_id = ngw_resources.common.id
+            self.result.main_resource_id = ngw_resources.resource_id
 
     def _do(self):
         total = len(self.ngw_resources)

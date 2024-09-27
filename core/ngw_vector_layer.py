@@ -68,10 +68,10 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         return metadata_provider.encodeUri(uri_config)
 
     def get_feature_adding_url(self):
-        return ADD_FEATURE_URL % self.common.id
+        return ADD_FEATURE_URL % self.resource_id
 
     def get_feature_deleting_url(self):
-        return DEL_ALL_FEATURES_URL % self.common.id
+        return DEL_ALL_FEATURES_URL % self.resource_id
 
     # TODO Need refactoring
     def patch_features(self, ngw_feature_list):
@@ -142,7 +142,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
 
     def extent(self):
         result = self.res_factory.connection.get(
-            API_LAYER_EXTENT(self.common.id)
+            API_LAYER_EXTENT(self.resource_id)
         )
         extent = result.get("extent")
         if extent is None:
@@ -164,7 +164,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         params = dict(
             resource=dict(
                 cls=NGWMapServerStyle.type_id,
-                parent=dict(id=self.common.id),
+                parent=dict(id=self.resource_id),
                 display_name=style_name,
             ),
         )

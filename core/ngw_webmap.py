@@ -181,7 +181,7 @@ class NGWWebMap(NGWResource):
             base_maps.append(
                 {
                     "display_name": ngw_base_map.display_name,
-                    "resource_id": ngw_base_map.common.id,
+                    "resource_id": ngw_base_map.resource_id,
                     "enabled": True,
                     "opacity": None,
                 }
@@ -202,7 +202,7 @@ class NGWWebMap(NGWResource):
             resource=dict(
                 cls=NGWWebMap.type_id,
                 display_name=name,
-                parent=dict(id=ngw_group_resource.common.id),
+                parent=dict(id=ngw_group_resource.resource_id),
             ),
             webmap=web_map,
             basemap_webmap=web_map_base_maps,
