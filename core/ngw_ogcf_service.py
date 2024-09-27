@@ -15,20 +15,16 @@ class NGWOgcfService(NGWResource):
         # wfsserver_service
         self.ogcf = dict_to_object(self._json[self.type_id])
         if hasattr(self.ogcf, "collections"):
-            self.ogcf.layers = list_dict_to_list_object(self.ogcf.collections)
+            self.layers = list_dict_to_list_object(self.ogcf.collections)
+        else:
+            self.layers = []
 
-    def get_ogcf_url(self, layer_keyname: str) -> str:
-        layer = next(
-            filter(
-                lambda layer: layer.keyname == layer_keyname, self.ogcf.layers
-            )
-        )
-
+    def params_for_layer(self, layer):
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.connection_id)
 
         uri = QgsDataSourceUri()
-        uri.setParam("typename", layer_keyname)
+        uri.setParam("typename", layer.keyname)
         uri.setParam("srsname", "OGC:CRS84")
         uri.setParam("preferCoordinatesForWfsT11", "false")
         uri.setParam("pagingEnabled", "false")
@@ -37,7 +33,7 @@ class NGWOgcfService(NGWResource):
         uri.setParam("authcfg", connection.auth_config_id)
         uri.setParam("url", self.get_absolute_api_url() + "/ogcf")
 
-        return uri.uri(True)
+        return (uri.uri(True), layer.display_name, "OAPIF")
 
     def get_layers(self):
         return self.ogcf.layers

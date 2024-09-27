@@ -35,21 +35,23 @@ class NGWWfsService(NGWResource):
         # wfsserver_service
         self.wfs = dict_to_object(self._json[self.type_id])
         if hasattr(self.wfs, "layers"):
-            self.wfs.layers = list_dict_to_list_object(self.wfs.layers)
+            self.layers = list_dict_to_list_object(self.wfs.layers)
+        else:
+            self.layers = []
 
-    def get_wfs_url(self, layer_keyname):
+    def params_for_layer(self, layer):
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.connection_id)
 
         uri = QgsDataSourceUri()
         uri.setAuthConfigId(connection.auth_config_id)
-        uri.setParam("typename", layer_keyname)
+        uri.setParam("typename", layer.keyname)
         uri.setParam("srsname", "EPSG:3857")
         uri.setParam("version", "auto")
         uri.setParam("url", self.get_absolute_api_url() + "/wfs")
         uri.setParam("restrictToRequestBBOX", "1")
 
-        return uri.uri(False)
+        return (uri.uri(False), layer.display_name, "WFS")
 
     def get_layers(self):
         return self._json["wfsserver_service"]["layers"]

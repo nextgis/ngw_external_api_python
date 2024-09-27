@@ -18,21 +18,59 @@
  ***************************************************************************/
 """
 
-from .ngw_resource import NGWResource
+from qgis.core import QgsApplication, QgsProviderRegistry
+
+from nextgis_connect.exceptions import ErrorCode, NgwError
+from nextgis_connect.ngw_connection.ngw_connections_manager import (
+    NgwConnectionsManager,
+)
+
+from .ngw_resource import NGWResource, dict_to_object, list_dict_to_list_object
 
 
 class NGWWmsService(NGWResource):
     type_id = "wmsserver_service"
     type_title = "NGW WMS Service"
 
-    def get_url(self):
-        return f"{self.get_absolute_api_url()}/wms"
+    def _construct(self):
+        super()._construct()
 
-    def get_layer_keys(self):
-        layer_keys = []
-        for layer_desc in self._json.get(self.type_id, {}).get("layers", []):
-            layer_keys.append(layer_desc.get("keyname", ""))
-        return layer_keys
+        self.wms = dict_to_object(self._json[self.type_id])
+        if hasattr(self.wms, "layers"):
+            self.layers = list_dict_to_list_object(self.wms.layers)
+        else:
+            self.layers = []
+
+    def params_for_layer(self, layer):
+        if len(self.layers) == 0:
+            user_message = QgsApplication.translate(
+                "Utils",
+                "The WMS service does not contain any layers",
+            )
+            raise NgwError(
+                "WMS layers list is empty",
+                user_message=user_message,
+                code=ErrorCode.InvalidResource,
+            )
+
+        provider_regstry = QgsProviderRegistry.instance()
+        assert provider_regstry is not None
+        wms_metadata = provider_regstry.providerMetadata("wms")
+        assert wms_metadata is not None
+        uri_params = {
+            "format": "image/png",
+            "crs": "EPSG:3857",
+            "url": f"{self.get_absolute_api_url()}/wms",
+            "layers": layer.keyname,
+            "styles": ""
+        }
+
+        connections_manager = NgwConnectionsManager()
+        connection = connections_manager.connection(self.connection_id)
+        connection.update_uri_config(uri_params)
+
+        url = wms_metadata.encodeUri(uri_params)
+        return (url, layer.display_name, "wms")
 
     @classmethod
     def create_in_group(cls, name, ngw_group_resource, ngw_layers_with_style):

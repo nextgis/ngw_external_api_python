@@ -18,12 +18,18 @@
  ***************************************************************************/
 """
 
+from typing import Any, Dict
+
 from .ngw_resource import NGWResource
 
 
 class NGWWmsConnection(NGWResource):
     type_id = "wmsclient_connection"
     type_title = "NGW WMS Connection"
+
+    @property
+    def connection_info(self) -> Dict[str, Any]:
+        return self._json[self.type_id]
 
     def get_connection_url(self):
         return self._json.get(self.type_id, {}).get("url")
