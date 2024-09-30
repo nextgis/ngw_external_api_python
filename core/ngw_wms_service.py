@@ -62,7 +62,7 @@ class NGWWmsService(NGWResource):
             "crs": "EPSG:3857",
             "url": f"{self.get_absolute_api_url()}/wms",
             "layers": layer.keyname,
-            "styles": ""
+            "styles": "",
         }
 
         connections_manager = NgwConnectionsManager()

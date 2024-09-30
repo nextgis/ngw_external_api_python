@@ -16,6 +16,25 @@ class NGWTmsConnection(NGWResource):
     def connection_info(self) -> Dict[str, Any]:
         return self._json[self.type_id]
 
+    @property
+    def layer_params(self) -> Tuple[str, str, str]:
+        layer_info = self._json[self.type_id]
+
+        params = {
+            "type": layer_info.get("scheme"),
+            "url": layer_info["url_template"],
+            "username": layer_info.get("username"),
+            "password": layer_info.get("password"),
+        }
+        params = {
+            key: value for key, value in params.items() if value is not None
+        }
+
+        provider_metadata = QgsProviderRegistry.instance().providerMetadata(
+            "wms"
+        )
+        return (provider_metadata.encodeUri(params), self.display_name, "wms")
+
 
 class NGWTmsLayer(NGWResource):
     type_id = "tmsclient_layer"
@@ -25,6 +44,7 @@ class NGWTmsLayer(NGWResource):
     def service_resource_id(self) -> int:
         return self._json[self.type_id]["connection"]["id"]
 
+    @property
     def layer_params(self) -> Tuple[str, str, str]:
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.connection_id)

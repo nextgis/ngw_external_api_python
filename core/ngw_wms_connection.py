@@ -20,12 +20,31 @@
 
 from typing import Any, Dict
 
-from .ngw_resource import NGWResource
+from qgis.core import QgsApplication, QgsProviderRegistry
+
+from nextgis_connect.exceptions import ErrorCode, NgwError
+
+from .ngw_resource import NGWResource, dict_to_object, list_dict_to_list_object
 
 
 class NGWWmsConnection(NGWResource):
     type_id = "wmsclient_connection"
     type_title = "NGW WMS Connection"
+
+    def _construct(self):
+        super()._construct()
+
+        self.wms = dict_to_object(self._json[self.type_id])
+        self.capcache = None
+        self.layers = []
+        if hasattr(self.wms, "capcache"):
+            self.capcache = dict_to_object(self.wms.capcache)
+
+        if self.capcache is not None and hasattr(self.capcache, "layers"):
+            self.layers = list_dict_to_list_object(self.capcache.layers)
+            for layer in self.layers:
+                layer.keyname = layer.id
+                layer.display_name = layer.title
 
     @property
     def connection_info(self) -> Dict[str, Any]:
@@ -34,16 +53,35 @@ class NGWWmsConnection(NGWResource):
     def get_connection_url(self):
         return self._json.get(self.type_id, {}).get("url")
 
-    def layers(self):
-        layers = (
-            self._json.get(self.type_id, {})
-            .get("capcache", {})
-            .get("layers", {})
-        )
-        layer_ids = [
-            layer.get("id") for layer in layers if layer.get("id") is not None
-        ]
-        return layer_ids
+    def params_for_layer(self, layer):
+        if len(self.layers) == 0:
+            user_message = QgsApplication.translate(
+                "Utils",
+                "The WMS service does not contain any layers",
+            )
+            raise NgwError(
+                "WMS layers list is empty",
+                user_message=user_message,
+                code=ErrorCode.InvalidResource,
+            )
+
+        provider_regstry = QgsProviderRegistry.instance()
+        assert provider_regstry is not None
+        wms_metadata = provider_regstry.providerMetadata("wms")
+        assert wms_metadata is not None
+        uri_params = {
+            "format": "image/png",
+            "crs": "EPSG:3857",
+            "url": self.wms.url,
+            "layers": layer.keyname,
+            "styles": "",
+        }
+        if self.wms.username is not None and self.wms.password is not None:
+            uri_params["username"] = self.wms.username
+            uri_params["password"] = self.wms.password
+
+        url = wms_metadata.encodeUri(uri_params)
+        return (url, layer.display_name, "wms")
 
     @classmethod
     def create_in_group(
