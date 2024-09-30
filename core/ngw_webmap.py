@@ -19,10 +19,12 @@
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from qgis.core import (
     QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsProject,
     QgsRectangle,
     QgsReferencedRectangle,
 )
@@ -64,6 +66,24 @@ class NGWWebMap(NGWResource):
             self.__create_structure()
 
         return self.__basemaps
+
+    @staticmethod
+    def to_webmap_extent(
+        rectangle: QgsReferencedRectangle,
+    ) -> Dict[str, float]:
+        transform = QgsCoordinateTransform(
+            rectangle.crs(),
+            QgsCoordinateReferenceSystem.fromEpsgId(4326),
+            QgsProject.instance(),
+        )
+        extent = transform.transform(rectangle)
+
+        return {
+            "extent_left": max(extent.xMinimum(), -180),
+            "extent_bottom": max(extent.yMinimum(), -90),
+            "extent_right": min(extent.xMaximum(), 180),
+            "extent_top": min(extent.yMaximum(), 90),
+        }
 
     @property
     def extent(self) -> Optional[QgsReferencedRectangle]:
@@ -167,12 +187,26 @@ class NGWWebMap(NGWResource):
         ngw_group_resource,
         ngw_webmap_items,
         ngw_base_maps=None,
-        bbox=None,
+        bbox: Union[
+            Dict[str, float], Tuple[float, float, float, float], None
+        ] = None,
     ):
         if ngw_base_maps is None:
             ngw_base_maps = []
         if bbox is None:
-            bbox = [-180, 180, 90, -90]
+            bbox = {
+                "extent_left": -180.0,
+                "extent_bottom": -90.0,
+                "extent_right": 180.0,
+                "extent_top": 90.0,
+            }
+        elif isinstance(bbox, tuple):
+            bbox = {
+                "extent_left": bbox[0],
+                "extent_bottom": bbox[2],
+                "extent_right": bbox[1],
+                "extent_top": bbox[3],
+            }
 
         connection = ngw_group_resource.res_factory.connection
         url = ngw_group_resource.get_api_collection_url()
@@ -191,13 +225,10 @@ class NGWWebMap(NGWResource):
             basemaps=base_maps,
         )
 
-        web_map = dict(
-            extent_left=bbox[0],
-            extent_right=bbox[1],
-            extent_top=bbox[2],
-            extent_bottom=bbox[3],
+        web_map: Dict[str, Any] = dict(
             root_item=dict(item_type="root", children=ngw_webmap_items),
         )
+        web_map.update(bbox)
 
         params = dict(
             resource=dict(

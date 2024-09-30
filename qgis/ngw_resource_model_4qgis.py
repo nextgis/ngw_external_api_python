@@ -33,6 +33,8 @@ from qgis.core import (
     QgsCoordinateTransform,
     QgsFeature,
     QgsFeatureRequest,
+    QgsField,
+    QgsFields,
     QgsGeometry,
     QgsLayerTree,
     QgsLayerTreeGroup,
@@ -43,6 +45,7 @@ from qgis.core import (
     QgsProject,
     QgsProviderRegistry,
     QgsRasterLayer,
+    QgsReferencedRectangle,
     QgsValueRelationFieldFormatter,
     QgsVectorFileWriter,
     QgsVectorLayer,
@@ -52,6 +55,7 @@ from qgis.gui import QgisInterface, QgsFileWidget
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 
 from nextgis_connect.compat import (
+    FieldType,
     GeometryType,
     LayerType,
     WkbType,
@@ -802,18 +806,24 @@ class QGISResourceJob(NGWResourceModelJob):
         project = QgsProject.instance()
         assert project is not None
 
+        fid_name = "0xFEEDC0DE"
+
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = "GPKG"
         options.layerName = qgs_vector_layer.name()
         options.fileEncoding = "UTF-8"
         options.layerOptions = [
             *QgsVectorFileWriter.defaultDatasetOptions("GPKG"),
+            f"FID={fid_name}",
             "SPATIAL_INDEX=NO",
         ]
 
+        fields = QgsFields(qgs_vector_layer.fields())
+        fields.append(QgsField(fid_name, FieldType.LongLong))
+
         writer = QgsVectorFileWriter.create(
             fileName=tmp_gpkg_path,
-            fields=qgs_vector_layer.fields(),
+            fields=fields,
             geometryType=get_real_wkb_type(qgs_vector_layer),
             transformContext=project.transformContext(),
             srs=destination_srs,
@@ -1555,13 +1565,10 @@ class QGISProjectUploader(QGISResourcesUploader):
     ):
         self._layer_status(ngw_webmap_name, self.tr("creating"))
 
-        rectangle = self.iface.mapCanvas().extent()
-        ct = QgsCoordinateTransform(
+        extent = QgsReferencedRectangle(
+            self.iface.mapCanvas().extent(),
             self.iface.mapCanvas().mapSettings().destinationCrs(),
-            QgsCoordinateReferenceSystem.fromEpsgId(4326),
-            QgsProject.instance(),
         )
-        rectangle = ct.transform(rectangle)
         ngw_webmap_items_as_dicts = [
             item.toDict() for item in ngw_webmap_items
         ]
@@ -1579,12 +1586,7 @@ class QGISProjectUploader(QGISResourcesUploader):
             ngw_resource,
             ngw_webmap_items_as_dicts,
             ngw_webmap_basemaps,
-            [
-                rectangle.xMinimum(),
-                rectangle.xMaximum(),
-                rectangle.yMaximum(),
-                rectangle.yMinimum(),
-            ],
+            NGWWebMap.to_webmap_extent(extent),
         )
 
 
