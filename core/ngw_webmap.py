@@ -142,6 +142,7 @@ class NGWWebMap(NGWResource):
         group = NGWWebMapGroup(
             group_item["display_name"],
             group_item.get("group_expanded", False),
+            group_item.get("group_exclusive", False),
         )
         if group.expanded is None:
             group.expanded = False
@@ -299,10 +300,11 @@ class NGWWebMapLayer(NGWWebMapItem):
 
 
 class NGWWebMapGroup(NGWWebMapItem):
-    def __init__(self, display_name, expanded=True):
+    def __init__(self, display_name, expanded=True, exclusive=False):
         super().__init__(NGWWebMapItem.ITEM_TYPE_GROUP)
         self.display_name = display_name
         self.expanded = expanded
+        self.exclusive = exclusive
 
     def __repr__(self) -> str:
         class_name = self.__class__.__name__
@@ -312,6 +314,7 @@ class NGWWebMapGroup(NGWWebMapItem):
         return dict(
             display_name=self.display_name,
             group_expanded=self.expanded,
+            group_exclusive=self.exclusive,
         )
 
 

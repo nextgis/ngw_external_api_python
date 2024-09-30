@@ -1467,6 +1467,7 @@ class QGISResourcesUploader(QGISResourceJob):
         ngw_webmap_child_group = NGWWebMapGroup(
             ngw_resource_child_group.display_name,
             qgsLayerTreeGroup.isExpanded(),
+            qgsLayerTreeGroup.isMutuallyExclusive(),
         )
         ngw_webmap_item.appendChild(ngw_webmap_child_group)
 
