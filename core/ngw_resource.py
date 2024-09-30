@@ -23,6 +23,7 @@ import urllib.parse
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, List
 
+from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
 
 ICONS_DIR = Path(__file__).parents[1] / "icons"
@@ -82,6 +83,8 @@ class NGWResource:
         """
         :rtype : json obj
         """
+
+        logger.debug(f"Fetch children for id={res_id}")
         return ngw_con.get(f"{API_COLLECTION_URL}?parent={res_id}")
 
     @classmethod

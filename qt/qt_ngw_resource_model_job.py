@@ -231,6 +231,7 @@ class NGWResourceUpdater(NGWResourceModelJob):
     def __init__(
         self,
         ngw_resources: Union[NGWResource, List[NGWResource]],
+        dangling_resources: Union[NGWResource, List[NGWResource]],
         *,
         recursive: bool = False,
     ) -> None:
@@ -240,20 +241,37 @@ class NGWResourceUpdater(NGWResourceModelJob):
         else:
             self.ngw_resources = [ngw_resources]
             self.result.main_resource_id = ngw_resources.resource_id
+
+        if isinstance(dangling_resources, list):
+            self.dangling_resources = dangling_resources
+        else:
+            self.dangling_resources = [dangling_resources]
+            if self.result.main_resource_id is None:
+                self.result.main_resource_id = dangling_resources.resource_id
+
         self.recursive = recursive
 
     def _do(self):
         for ngw_resource in self.ngw_resources:
             self.__get_children(ngw_resource)
 
-    def __get_children(self, ngw_resource: NGWResource):
+        for ngw_resource in self.dangling_resources:
+            self.__get_children(ngw_resource, dangling=True)
+
+    def __get_children(
+        self, ngw_resource: NGWResource, dangling: bool = False
+    ):
         ngw_resource_children = ngw_resource.get_children()
         for ngw_resource_child in ngw_resource_children:
-            self.putAddedResourceToResult(ngw_resource_child)
+            if dangling:
+                self.result.dangling_resources.append(ngw_resource_child)
+            else:
+                self.putAddedResourceToResult(ngw_resource_child)
+
             if self.recursive and isinstance(
                 ngw_resource_child, NGWGroupResource
             ):
-                self.__get_children(ngw_resource_child)
+                self.__get_children(ngw_resource_child, dangling=dangling)
 
 
 class NGWGroupCreater(NGWResourceModelJob):
