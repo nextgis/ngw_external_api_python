@@ -25,6 +25,8 @@ from nextgis_connect.ngw_api.core.ngw_tms_resources import (
     NGWTmsConnection,
     NGWTmsLayer,
 )
+from nextgis_connect.ngw_api.core.ngw_wfs_connection import NGWWfsConnection
+from nextgis_connect.ngw_api.core.ngw_wfs_layer import NGWWfsLayer
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
 
 from .ngw_base_map import NGWBaseMap
@@ -56,6 +58,8 @@ class NGWResourceFactory:
         self.__res_types_register = {
             NGWResource.type_id: NGWResource,
             NGWWfsService.type_id: NGWWfsService,
+            NGWWfsLayer.type_id: NGWWfsLayer,
+            NGWWfsConnection.type_id: NGWWfsConnection,
             NGWOgcfService.type_id: NGWOgcfService,
             NGWWmsService.type_id: NGWWmsService,
             NGWGroupResource.type_id: NGWGroupResource,

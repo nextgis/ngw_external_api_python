@@ -15,6 +15,8 @@ from .ngw_raster_style import NGWRasterStyle
 from .ngw_resource import NGWResource
 from .ngw_vector_layer import NGWVectorLayer
 from .ngw_webmap import NGWWebMap
+from .ngw_wfs_connection import NGWWfsConnection
+from .ngw_wfs_layer import NGWWfsLayer
 from .ngw_wfs_service import NGWWfsService
 from .ngw_wms_connection import NGWWmsConnection
 from .ngw_wms_layer import NGWWmsLayer
@@ -33,6 +35,8 @@ __all__ = [
     "NGWQGISVectorStyle",
     "NGWWebMap",
     "NGWWfsService",
+    "NGWWfsConnection",
+    "NGWWfsLayer",
     "NGWWmsConnection",
     "NGWOgcfService",
     "NGWWmsLayer",

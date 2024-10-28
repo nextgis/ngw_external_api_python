@@ -50,9 +50,6 @@ class NGWWmsConnection(NGWResource):
     def connection_info(self) -> Dict[str, Any]:
         return self._json[self.type_id]
 
-    def get_connection_url(self):
-        return self._json.get(self.type_id, {}).get("url")
-
     def params_for_layer(self, layer):
         if len(self.layers) == 0:
             user_message = QgsApplication.translate(
