@@ -395,8 +395,8 @@ class QgsNgwConnection(QObject):
         self.uploadProgressCallback = callback
 
         file = QFile(filename)
-        if not file.open(QIODevice.ReadOnly):
-            raise Exception("Failed to open file for tus uplod")
+        if not file.open(QIODevice.OpenModeFlag.ReadOnly):
+            raise Exception("Failed to open file for tus upload")
         file_size = file.size()
 
         # Initiate upload process by sending specific "create" request with a
