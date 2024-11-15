@@ -25,7 +25,7 @@ import tempfile
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, cast
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, cast
 
 from osgeo import ogr
 from qgis.core import (
@@ -44,7 +44,9 @@ from qgis.core import (
     QgsPluginLayer,
     QgsProject,
     QgsProviderRegistry,
+    QgsRasterFileWriter,
     QgsRasterLayer,
+    QgsRasterPipe,
     QgsReferencedRectangle,
     QgsValueRelationFieldFormatter,
     QgsVectorFileWriter,
@@ -387,7 +389,10 @@ class QGISResourceJob(NGWResourceModelJob):
 
         layer_provider = qgs_raster_layer.providerType()
         if layer_provider == "gdal":
-            filepath = qgs_raster_layer.source()
+            is_converted, filepath = self.prepareImportRasterFile(
+                qgs_raster_layer
+            )
+
             ngw_raster_layer = ResourceCreator.create_raster_layer(
                 ngw_parent_resource,
                 filepath,
@@ -396,6 +401,9 @@ class QGISResourceJob(NGWResourceModelJob):
                 uploadFileCallback,
                 createLayerCallback,
             )
+
+            if is_converted:
+                os.remove(filepath)
 
             return ngw_raster_layer
 
@@ -439,8 +447,8 @@ class QGISResourceJob(NGWResourceModelJob):
             )
             return None
 
-        filepath, tgt_qgs_layer, rename_fields_map = self.prepareImportFile(
-            qgs_vector_layer
+        filepath, tgt_qgs_layer, rename_fields_map = (
+            self.prepareImportVectorFile(qgs_vector_layer)
         )
         if filepath is None:
             self.errorOccurred.emit(
@@ -509,7 +517,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return ngw_vector_layer
 
-    def prepareImportFile(self, qgs_vector_layer):
+    def prepareImportVectorFile(self, qgs_vector_layer):
         self._layer_status(qgs_vector_layer.name(), self.tr("preparing"))
 
         layer_has_mixed_geoms = False
@@ -551,6 +559,33 @@ class QGISResourceJob(NGWResourceModelJob):
             layer = qgs_vector_layer
 
         return self.prepareAsGPKG(layer), layer, rename_fields_map
+
+    def prepareImportRasterFile(
+        self, qgs_raster_layer: QgsRasterLayer
+    ) -> Tuple[bool, str]:
+        source = qgs_raster_layer.source()
+        if Path(source).exists():
+            return False, source
+
+        self._layer_status(qgs_raster_layer.name(), self.tr("preparing"))
+        output_path = tempfile.mktemp(suffix=".tif")
+
+        raster_writer = QgsRasterFileWriter(output_path)
+        pipe = QgsRasterPipe()
+        if not pipe.set(qgs_raster_layer.dataProvider().clone()):
+            raise RuntimeError
+
+        transform_context = QgsProject.instance().transformContext()
+        raster_writer.writeRaster(
+            pipe,
+            qgs_raster_layer.width(),
+            qgs_raster_layer.height(),
+            qgs_raster_layer.extent(),
+            qgs_raster_layer.crs(),
+            transform_context
+        )
+
+        return True, output_path
 
     def checkGeometry(self, qgs_vector_layer):
         has_simple_geometries = False
@@ -1766,7 +1801,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
                 f"Vector layer '{self.qgis_layer.name()}' has no suitable geometry"
             )
 
-        filepath, _, rename_fields_map = self.prepareImportFile(
+        filepath, _, rename_fields_map = self.prepareImportVectorFile(
             self.qgis_layer
         )
         if filepath is None:
