@@ -468,6 +468,9 @@ class QgsNgwConnection(QObject):
             }
             retries = 0
             while retries < max_retry_count:
+                if retries > 0:
+                    logger.debug(f"Retrying. Attempt №{retries}")
+
                 chunk_req, chunk_rep = self.__request_rep(
                     file_upload_url,
                     "PATCH",
@@ -477,14 +480,22 @@ class QgsNgwConnection(QObject):
                 chunk_rep_code = chunk_rep.attribute(
                     QNetworkRequest.HttpStatusCodeAttribute
                 )
+                if chunk_rep.error() != QNetworkReply.NetworkError.NoError:
+                    logger.warning("An error occured while uploading file")
+                    logger.debug(
+                        f"Status code: {chunk_rep_code}\n"
+                    )
+
                 chunk_rep.deleteLater()
                 del chunk_rep
                 if chunk_rep_code == 204:
                     break
                 retries += 1
-                logger.debug("Retry chunk upload")
 
             if retries == max_retry_count:
+                logger.error(
+                    "Maximum number of attempts reached. TUS uploading is cancelled."
+                )
                 break
 
             bytes_sent += bytes_read
