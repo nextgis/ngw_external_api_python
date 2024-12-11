@@ -13,6 +13,7 @@ from .ngw_qgis_style import (
 from .ngw_raster_layer import NGWRasterLayer
 from .ngw_raster_style import NGWRasterStyle
 from .ngw_resource import NGWResource
+from .ngw_tms_resources import NGWTmsConnection, NGWTmsLayer
 from .ngw_vector_layer import NGWVectorLayer
 from .ngw_webmap import NGWWebMap
 from .ngw_wfs_connection import NGWWfsConnection
@@ -23,25 +24,27 @@ from .ngw_wms_layer import NGWWmsLayer
 from .ngw_wms_service import NGWWmsService
 
 __all__ = [
-    "NGWResource",
+    "NGWAttachment",
     "NGWBaseMap",
+    "NGWError",
     "NGWGroupResource",
     "NGWMapServerStyle",
+    "NGWOgcfService",
+    "NGWPostgisLayer",
+    "NGWQGISRasterStyle",
+    "NGWQGISStyle",
+    "NGWQGISVectorStyle",
     "NGWRasterLayer",
     "NGWRasterStyle",
+    "NGWResource",
+    "NGWTmsConnection",
+    "NGWTmsLayer",
     "NGWVectorLayer",
-    "NGWQGISStyle",
-    "NGWQGISRasterStyle",
-    "NGWQGISVectorStyle",
     "NGWWebMap",
-    "NGWWfsService",
     "NGWWfsConnection",
     "NGWWfsLayer",
+    "NGWWfsService",
     "NGWWmsConnection",
-    "NGWOgcfService",
     "NGWWmsLayer",
     "NGWWmsService",
-    "NGWPostgisLayer",
-    "NGWAttachment",
-    "NGWError",
 ]

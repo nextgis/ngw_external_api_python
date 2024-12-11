@@ -19,7 +19,8 @@
 """
 
 import re
-from typing import List, Union
+from copy import deepcopy
+from typing import List, Optional, Union
 
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
@@ -54,6 +55,7 @@ class NGWResourceModelJobResult:
     deleted_resources: List[NGWResource]
     edited_resources: List[NGWResource]
     dangling_resources: List[NGWResource]
+    found_resources: Optional[List[int]]
     not_permitted_resources: List[int]
     main_resource_id: int
 
@@ -62,6 +64,7 @@ class NGWResourceModelJobResult:
         self.deleted_resources = []
         self.edited_resources = []
         self.dangling_resources = []
+        self.found_resources = None
         self.not_permitted_resources = []
 
         self.main_resource_id = -1
@@ -236,6 +239,7 @@ class NGWResourceUpdater(NGWResourceModelJob):
         recursive: bool = False,
     ) -> None:
         super().__init__()
+        ngw_resources = deepcopy(ngw_resources)
         if isinstance(ngw_resources, list):
             self.ngw_resources = ngw_resources
         else:

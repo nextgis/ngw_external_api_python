@@ -613,3 +613,6 @@ class QgsNgwConnection(QObject):
             raise NgwError(message, code=ErrorCode.IncorrectAnswer) from None
         else:
             return json_response
+
+    def __deepcopy__(self, memo):
+        return QgsNgwConnection(str(self.__connection_id))
