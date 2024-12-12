@@ -186,6 +186,9 @@ class NGWResource:
     @property
     def parent_id(self) -> int:
         return self.common.parent.id
+    @property
+    def grandparent_id(self) -> int:
+        return self.common.parent.parent["id"]
 
     @property
     def resource_id(self) -> int:
