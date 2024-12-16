@@ -37,7 +37,7 @@ class NGWWmsConnection(NGWResource):
         self.wms = dict_to_object(self._json[self.type_id])
         self.capcache = None
         self.layers = []
-        if hasattr(self.wms, "capcache"):
+        if hasattr(self.wms, "capcache") and self.wms.capcache is not None:
             self.capcache = dict_to_object(self.wms.capcache)
 
         if self.capcache is not None and hasattr(self.capcache, "layers"):
