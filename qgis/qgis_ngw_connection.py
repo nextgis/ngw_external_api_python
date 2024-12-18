@@ -24,7 +24,7 @@ import json
 import time
 import urllib.parse
 from http import HTTPStatus
-from typing import Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union
 
 from qgis.core import QgsNetworkAccessManager
 from qgis.PyQt.QtCore import (
@@ -37,7 +37,7 @@ from qgis.PyQt.QtCore import (
     QTimer,
     QUrl,
 )
-from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
+from qgis.PyQt.QtNetwork import QNetworkRequest
 
 from nextgis_connect.exceptions import (
     ErrorCode,
@@ -46,6 +46,7 @@ from nextgis_connect.exceptions import (
     NgwError,
 )
 from nextgis_connect.logging import logger
+from nextgis_connect.network.qt_network_error import QtNetworkError
 from nextgis_connect.ngw_api.core.ngw_error import NGWError
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
@@ -53,6 +54,14 @@ from nextgis_connect.ngw_connection.ngw_connections_manager import (
 from nextgis_connect.settings import NgConnectSettings
 
 from .compat_qgis import CompatQt
+
+if TYPE_CHECKING:
+    from qgis.PyQt.QtNetwork import QNetworkReply as _QNetworkReply
+    class QNetworkReply(_QNetworkReply):
+        def error(self) -> _QNetworkReply.NetworkError: ... # type: ignore
+
+else:
+    from qgis.PyQt.QtNetwork import QNetworkReply
 
 UPLOAD_FILE_URL = "/api/component/file_upload/"
 GET_VERSION_URL = "/api/component/pyramid/pkg_version"
@@ -190,14 +199,14 @@ class QgsNgwConnection(QObject):
 
     def __request_rep(
         self,
-        sub_url,
-        method,
+        sub_url: str,
+        method: str,
         *,
         badata=None,
         params=None,
         headers=None,
         **kwargs,
-    ):
+    ) -> Tuple[QNetworkRequest, QNetworkReply]:
         json_data = None
         if params:
             if isinstance(params, str):
@@ -224,11 +233,11 @@ class QgsNgwConnection(QObject):
                 )
             )
 
-        req = QNetworkRequest(QUrl(url))
-        req.setAttribute(
+        request = QNetworkRequest(QUrl(url))
+        request.setAttribute(
             QNetworkRequest.Attribute.CacheSaveControlAttribute, False
         )
-        req.setAttribute(
+        request.setAttribute(
             QNetworkRequest.Attribute.CacheLoadControlAttribute,
             QNetworkRequest.CacheLoadControl.AlwaysNetwork,
         )
@@ -236,11 +245,11 @@ class QgsNgwConnection(QObject):
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.__connection_id)
         assert connection is not None
-        connection.update_network_request(req)
+        connection.update_network_request(request)
 
         if headers is not None:  # add custom headers
             for name, value in list(headers.items()):
-                req.setRawHeader(name.encode(), value.encode())
+                request.setRawHeader(name.encode(), value.encode())
 
         iodevice = None  # default to None, not to "QBuffer(QByteArray())" - otherwise random crashes at post() in QGIS 3
         if badata is not None:
@@ -248,7 +257,7 @@ class QgsNgwConnection(QObject):
         elif filename is not None:
             iodevice = QFile(filename)
         elif json_data is not None:
-            req.setHeader(
+            request.setHeader(
                 QNetworkRequest.KnownHeaders.ContentTypeHeader,
                 "application/json",
             )
@@ -265,20 +274,22 @@ class QgsNgwConnection(QObject):
             nam.setRedirectPolicy(QNetworkRequest.NoLessSafeRedirectPolicy)
 
         if method == "GET":
-            rep = nam.get(req)
+            reply = nam.get(request)
         elif method == "POST":
-            rep = nam.post(req, iodevice)
+            reply = nam.post(request, iodevice)
         elif method == "DELETE":
             if iodevice is not None:
-                rep = nam.sendCustomRequest(req, b"DELETE", iodevice)
+                reply = nam.sendCustomRequest(request, b"DELETE", iodevice)
             else:
-                rep = nam.deleteResource(req)
+                reply = nam.deleteResource(request)
         else:
-            rep = nam.sendCustomRequest(req, method.encode(), iodevice)
+            reply = nam.sendCustomRequest(request, method.encode(), iodevice)
 
-        rep.finished.connect(loop.quit)
+        assert isinstance(reply, QNetworkReply)
+
+        reply.finished.connect(loop.quit)
         if filename is not None:
-            rep.uploadProgress.connect(self.sendUploadProgress)
+            reply.uploadProgress.connect(self.sendUploadProgress)
 
         # In our current approach we use QEventLoop to wait QNetworkReply finished() signal. This could lead to infinite loop
         # in the case when finished() signal 1) is not fired at all or 2) fired right after isFinished() method but before loop.exec_().
@@ -286,7 +297,7 @@ class QgsNgwConnection(QObject):
         # approach which is actually should be used when dealing with QNetworkAccessManager).
         # NOTE: actualy this is also our client timeout for any single request to NGW. We are able to set it to some not-large value because
         # we use tus uplod for large files => we do not warry that large files will not be uploaded this way.
-        if not rep.isFinished():  # isFinished() checks that finished() is emmited before, but not after this method
+        if not reply.isFinished():  # isFinished() checks that finished() is emmited before, but not after this method
             timer = QTimer()
             timer.setSingleShot(True)
             timer.timeout.connect(loop.quit)
@@ -300,15 +311,17 @@ class QgsNgwConnection(QObject):
 
         # Indicate that request has been timed out by QGIS.
         # TODO: maybe use QgsNetworkAccessManager::requestTimedOut()?
-        if rep.error() == 5:
-            if self.__log_network:
-                logger.debug(
-                    "Connection error qt code: 5 (QNetworkReply::OperationCanceledError)"
-                )
+        if reply.error() == QNetworkReply.NetworkError.OperationCanceledError:
+            network_error = QtNetworkError.from_int(reply.error())  # type: ignore
+            qt_error_info = network_error.value
+            logger.warning(
+                f"Network connection error: {qt_error_info.constant} ({qt_error_info.code})\n"
+                + qt_error_info.description
+            )
             raise NGWError(
                 NGWError.TypeRequestError,
                 "Connection has been aborted or closed",
-                req.url().toString(),
+                request.url().toString(),
                 self.tr(
                     "Connection closed by QGIS. Increase timeout (Settings ->"
                     " Options -> Network) to 300000 and retry."
@@ -316,17 +329,21 @@ class QgsNgwConnection(QObject):
                 need_reconnect=False,
             )
 
-        if rep.error() > 0 and rep.error() < 10:
-            error = NgwError(f"Connection error qt code: {rep.error()}")
-            error.add_note(f"URL: {req.url().toString()}")
+
+        # TODO: Why between those values?
+        elif 0 < reply.error() < 10:
+            qt_error_info = QtNetworkError.from_int(reply.error()).value
+            error = NgwError("Connection error")
+            error.add_note(f"URL: {request.url().toString()}")
+            qt_error_info.add_exception_notes(error)
             raise error
 
-        return req, rep
+        return request, reply
 
     def __request_and_decode(
         self, sub_url, method, params=None, headers=None, **kwargs
     ):
-        req, rep = self.__request_rep(
+        request, reply = self.__request_rep(
             sub_url,
             method,
             badata=None,
@@ -334,16 +351,15 @@ class QgsNgwConnection(QObject):
             headers=headers,
             **kwargs,
         )
-        assert isinstance(rep, QNetworkReply)
 
-        status_code = rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+        status_code = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
         if (
-            rep.error() != QNetworkReply.NetworkError.NoError  # type: ignore
+            reply.error() != QNetworkReply.NetworkError.NoError  # type: ignore
             or (status_code is not None and status_code // 100 != 2)
         ):
             data = None
             with contextlib.suppress(Exception):
-                data = self.__extract_data(rep)
+                data = self.__extract_data(reply)
 
             if self.__log_network:
                 logger.debug(f"Response error\nstatus_code {status_code}")
@@ -363,12 +379,12 @@ class QgsNgwConnection(QObject):
                 HTTPStatus.NOT_FOUND: ErrorCode.NotFound,
             }
             error = NgwError(code=codes.get(status_code, ErrorCode.NgwError))
-            error.add_note(f"Request url: {req.url().toString()}")
-            error.add_note(f"Status code: {status_code}")
+            error.add_note(f"URL: {request.url().toString()}")
+            error.add_note(f"HTTP status code: {status_code}")
             raise error
 
         try:
-            response_data = self.__extract_data(rep)
+            response_data = self.__extract_data(reply)
 
         except NgConnectError:
             raise
@@ -376,7 +392,7 @@ class QgsNgwConnection(QObject):
             message = "Extracting data error"
             raise NgConnectError(message) from error
 
-        return rep, response_data
+        return reply, response_data
 
     def upload_file(self, filename, callback):
         self.uploadProgressCallback = callback
@@ -452,11 +468,7 @@ class QgsNgwConnection(QObject):
 
             if self.__log_network and not is_file_large:
                 logger.debug(
-                    "Upload %d from %s"
-                    % (
-                        bytes_sent,
-                        file_size,
-                    )
+                    f"Upload {bytes_sent} from {file_size}"
                 )
             self.sendUploadProgress(bytes_sent, file_size)
 
@@ -471,23 +483,24 @@ class QgsNgwConnection(QObject):
                 if retries > 0:
                     logger.debug(f"Retrying. Attempt №{retries}")
 
-                chunk_req, chunk_rep = self.__request_rep(
+                chunk_request, chunk_reply = self.__request_rep(
                     file_upload_url,
                     "PATCH",
                     badata=badata,
                     headers=chunk_hdrs,
                 )
-                chunk_rep_code = chunk_rep.attribute(
+                chunk_rep_code = chunk_reply.attribute(
                     QNetworkRequest.HttpStatusCodeAttribute
                 )
-                if chunk_rep.error() != QNetworkReply.NetworkError.NoError:
+                if chunk_reply.error() != QNetworkReply.NetworkError.NoError:
                     logger.warning("An error occured while uploading file")
-                    logger.debug(
-                        f"Status code: {chunk_rep_code}\n"
-                    )
+                    qt_error_info = QtNetworkError.from_int(chunk_reply.error()).value
+                    logger.debug(f"HTTP Status code: {chunk_rep_code}\n")
+                    logger.debug(f"Network error: {qt_error_info.constant}")
+                    logger.debug(f"Error description: {qt_error_info.description}")
 
-                chunk_rep.deleteLater()
-                del chunk_rep
+                chunk_reply.deleteLater()
+                del chunk_reply
                 if chunk_rep_code == 204:
                     break
                 retries += 1
@@ -604,6 +617,7 @@ class QgsNgwConnection(QObject):
         if not is_lunkwill_summary and not is_json:
             return data
 
+        json_string = ""
         try:
             json_string = data.data().decode()
             json_response = json.loads(json_string)
