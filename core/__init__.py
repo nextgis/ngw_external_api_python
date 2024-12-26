@@ -11,6 +11,7 @@ from .ngw_qgis_style import (
     NGWQGISVectorStyle,
 )
 from .ngw_raster_layer import NGWRasterLayer
+from .ngw_raster_mosaic import NGWRasterMosaic
 from .ngw_raster_style import NGWRasterStyle
 from .ngw_resource import NGWResource
 from .ngw_tms_resources import NGWTmsConnection, NGWTmsLayer
@@ -35,6 +36,7 @@ __all__ = [
     "NGWQGISStyle",
     "NGWQGISVectorStyle",
     "NGWRasterLayer",
+    "NGWRasterMosaic",
     "NGWRasterStyle",
     "NGWResource",
     "NGWTmsConnection",
@@ -46,5 +48,5 @@ __all__ = [
     "NGWWfsService",
     "NGWWmsConnection",
     "NGWWmsLayer",
-    "NGWWmsService",
+    "NGWWmsService"
 ]

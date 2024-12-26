@@ -37,6 +37,7 @@ from .ngw_ogcf_service import NGWOgcfService
 from .ngw_postgis_layer import NGWPostgisConnection, NGWPostgisLayer
 from .ngw_qgis_style import NGWQGISRasterStyle, NGWQGISVectorStyle
 from .ngw_raster_layer import NGWRasterLayer
+from .ngw_raster_mosaic import NGWRasterMosaic
 from .ngw_raster_style import NGWRasterStyle
 from .ngw_resource import NGWResource
 from .ngw_vector_layer import NGWVectorLayer
@@ -78,6 +79,7 @@ class NGWResourceFactory:
             NGWTmsConnection.type_id: NGWTmsConnection,
             NGWTmsLayer.type_id: NGWTmsLayer,
             NGWEekoStorage.type_id: NGWEekoStorage,
+            NGWRasterMosaic.type_id: NGWRasterMosaic,
             # Aliases
             "demo_project": NGWGroupResource,
             "gpdobj_group": NGWGroupResource,
