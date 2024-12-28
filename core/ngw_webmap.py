@@ -29,6 +29,8 @@ from qgis.core import (
     QgsReferencedRectangle,
 )
 
+from nextgis_connect.ngw_api.core.ngw_group_resource import NGWGroupResource
+
 from .ngw_resource import NGWResource
 
 
@@ -79,10 +81,10 @@ class NGWWebMap(NGWResource):
         extent = transform.transform(rectangle)
 
         return {
-            "extent_left": max(extent.xMinimum(), -180),
-            "extent_bottom": max(extent.yMinimum(), -90),
-            "extent_right": min(extent.xMaximum(), 180),
-            "extent_top": min(extent.yMaximum(), 90),
+            "extent_left": extent.xMinimum(),
+            "extent_bottom": extent.yMinimum(),
+            "extent_right": extent.xMaximum(),
+            "extent_top": extent.yMaximum(),
         }
 
     @property
@@ -184,8 +186,8 @@ class NGWWebMap(NGWResource):
     def create_in_group(
         cls,
         name,
-        ngw_group_resource,
-        ngw_webmap_items,
+        ngw_group_resource: NGWGroupResource,
+        ngw_webmap_items: List[Dict[str, Any]],
         ngw_base_maps=None,
         bbox: Union[
             Dict[str, float], Tuple[float, float, float, float], None
@@ -193,20 +195,34 @@ class NGWWebMap(NGWResource):
     ):
         if ngw_base_maps is None:
             ngw_base_maps = []
+
         if bbox is None:
-            bbox = {
-                "extent_left": -180.0,
-                "extent_bottom": -90.0,
-                "extent_right": 180.0,
-                "extent_top": 90.0,
-            }
+            left, right, bottom, top = (-180.0, 180.0, -90.0, 90.0)
         elif isinstance(bbox, tuple):
-            bbox = {
-                "extent_left": bbox[0],
-                "extent_bottom": bbox[2],
-                "extent_right": bbox[1],
-                "extent_top": bbox[3],
-            }
+            left, right, bottom, top = bbox
+        else:
+            left, right, bottom, top = (
+                bbox[f"extent_{side}"]
+                for side in ["left", "right", "bottom", "top"]
+            )
+
+        def normalize_longitude(lon: float) -> float:
+            return (lon + 180.0) % 360 - 180.0
+
+        def normalize_latitude(lat: float) -> float:
+            return max(-90.0, min(90.0, lat))
+
+        left = normalize_longitude(left)
+        right = normalize_longitude(right)
+        top = normalize_latitude(top)
+        bottom = normalize_latitude(bottom)
+
+        bbox = {
+            "extent_left": min(left, right),
+            "extent_right": max(left, right),
+            "extent_bottom": min(bottom, top),
+            "extent_top": max(bottom, top),
+        }
 
         connection = ngw_group_resource.res_factory.connection
         url = ngw_group_resource.get_api_collection_url()

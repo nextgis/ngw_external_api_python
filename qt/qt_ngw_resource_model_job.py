@@ -20,7 +20,7 @@
 
 import re
 from copy import deepcopy
-from typing import List, Optional, Union
+from typing import List, Optional, Union, cast
 
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
@@ -29,6 +29,7 @@ from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.core.ngw_error import NGWError
 from nextgis_connect.ngw_api.core.ngw_group_resource import NGWGroupResource
 from nextgis_connect.ngw_api.core.ngw_qgis_style import NGWQGISStyle
+from nextgis_connect.ngw_api.core.ngw_raster_layer import NGWRasterLayer
 from nextgis_connect.ngw_api.core.ngw_resource import NGWResource
 from nextgis_connect.ngw_api.core.ngw_resource_creator import ResourceCreator
 from nextgis_connect.ngw_api.core.ngw_resource_factory import (
@@ -376,8 +377,10 @@ class NGWCreateMapForStyle(NGWResourceModelJob):
         self.ngw_style = ngw_style
 
     def _do(self):
-        ngw_layer = self.ngw_style.get_parent()
-        ngw_group = ngw_layer.get_parent()
+        ngw_layer: Union[NGWVectorLayer, NGWRasterLayer] = (
+            self.ngw_style.get_parent()
+        )
+        ngw_group = cast(NGWGroupResource, ngw_layer.get_parent())
 
         ngw_map_name = self.unique_resource_name(
             self.ngw_style.display_name + "-map", ngw_group
