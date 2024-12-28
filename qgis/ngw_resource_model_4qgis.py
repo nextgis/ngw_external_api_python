@@ -1242,7 +1242,8 @@ class QGISResourcesUploader(QGISResourceJob):
             resources_type.extend(resource_type_for_node(node))
 
         counter = Counter(resources_type)
-        counter["lookup_table"] = len(self._value_relations)
+        if len(self._value_relations) > 0:
+            counter["lookup_table"] = len(self._value_relations)
         if add_map:
             counter["webmap"] = 1
         del counter[None]
