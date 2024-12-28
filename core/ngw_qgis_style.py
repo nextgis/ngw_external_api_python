@@ -18,6 +18,7 @@
  ***************************************************************************/
 """
 
+from pathlib import Path
 from typing import Optional
 
 from qgis.core import QgsNetworkAccessManager
@@ -86,6 +87,7 @@ class NGWQGISStyle(NGWResource):
 
         url = self.get_relative_api_url()
         connection.put(url, params=params)
+        self.__qml = Path(qml).read_text()
         self.update()
 
 
