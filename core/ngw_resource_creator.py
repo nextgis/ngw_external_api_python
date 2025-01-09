@@ -20,6 +20,8 @@
 
 from typing import Any, Dict, Iterable
 
+from nextgis_connect.settings import NgConnectSettings
+
 from .ngw_group_resource import NGWGroupResource
 from .ngw_ogcf_service import NGWOgcfService
 from .ngw_raster_layer import NGWRasterLayer
@@ -82,6 +84,8 @@ class ResourceCreator:
                 skip_errors=True,
             ),
         )
+        if NgConnectSettings().upload_vector_with_versioning:
+            params["feature_layer"] = dict(versioning=dict(enabled=True))
 
         create_callback()  # show "Create" status
 
