@@ -4,22 +4,22 @@
 <context>
     <name>NGWUpdateVectorLayer</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1785"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1786"/>
         <source>uploading ({}%)</source>
         <translation>загрузка ({}%)</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1829"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1830"/>
         <source>replacing features</source>
         <translation>замена объектов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1858"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1859"/>
         <source>finishing</source>
         <translation>завершение</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1849"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1850"/>
         <source>adding aliases</source>
         <translation>добавление псевдонимов</translation>
     </message>
@@ -27,12 +27,12 @@
 <context>
     <name>QGISProjectUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1601"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1602"/>
         <source>creating</source>
         <translation>создание</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1611"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1612"/>
         <source>Failed to load any resource to the NextGIS Web. Webmap will not be created</source>
         <translation>При загрузке ресурсов в NextGIS Web произошла ошибка. Веб-карта не будет создана</translation>
     </message>
@@ -113,12 +113,12 @@
 <context>
     <name>QGISResourcesUploader</name>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1323"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1324"/>
         <source>A group tree is being created</source>
         <translation>Создаётся дерево ресурсов</translation>
     </message>
     <message>
-        <location filename="../ngw_resource_model_4qgis.py" line="1258"/>
+        <location filename="../ngw_resource_model_4qgis.py" line="1259"/>
         <source>Maximum number of resources exceeded</source>
         <translation>Превышено максимальное количество ресурсов</translation>
     </message>
@@ -126,12 +126,12 @@
 <context>
     <name>QgsNgwConnection</name>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="418"/>
+        <location filename="../qgis_ngw_connection.py" line="434"/>
         <source>File is too large for uploading</source>
         <translation>Загружаемый файл слишком большой</translation>
     </message>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="308"/>
+        <location filename="../qgis_ngw_connection.py" line="321"/>
         <source>Connection closed by QGIS. Increase timeout (Settings -&gt; Options -&gt; Network) to 300000 and retry.</source>
         <translation>Соединение прервано QGIS. Увеличьте таймаут для сетевых запросов (Установки -&gt; Параметры -&gt; Сеть) до 300000 и повторите попытку.</translation>
     </message>
