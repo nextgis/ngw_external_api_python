@@ -31,7 +31,7 @@ class NGWResourceModelJobError(NgConnectError):
 
     @property
     def user_msg(self) -> Optional[str]:
-        return self.__user_message
+        return self.user_message
 
 
 class JobError(NGWResourceModelJobError):
