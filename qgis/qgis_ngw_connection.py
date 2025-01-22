@@ -579,8 +579,15 @@ class QgsNgwConnection(QObject):
                 time.sleep(wait_ms)
                 try:
                     sub_url = f"/api/lunkwill/{request_id}/summary"
-                    lunkwill_summary = self.get(sub_url)
+                    answer = self.get(sub_url)
                     summary_failed = 0
+
+                    if not isinstance(answer, dict):
+                        error = NgwConnectionError("Unexpected summary answer")
+                        raise error
+
+                    lunkwill_summary = answer
+
                 except Exception:
                     if self.__log_network:
                         logger.debug(
