@@ -1257,9 +1257,10 @@ class QGISResourcesUploader(QGISResourceJob):
                 return
 
             raise NgwError(
-                "Maximum number of resources exceeded",
-                user_message=self.tr("Maximum number of resources exceeded"),
+                "You have reached the maximum limit of layers allowed",
+                user_message=self.tr("You have reached the maximum limit of layers allowed"),
                 detail=error.log_message,
+                code=ErrorCode.QuotaExceeded
             ) from None
 
         except Exception as error:
