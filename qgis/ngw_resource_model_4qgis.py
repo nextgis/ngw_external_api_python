@@ -61,7 +61,6 @@ from nextgis_connect.compat import (
     GeometryType,
     LayerType,
     WkbType,
-    parse_version,
 )
 from nextgis_connect.exceptions import ErrorCode, NgConnectError, NgwError
 from nextgis_connect.logging import logger
@@ -102,8 +101,6 @@ from nextgis_connect.ngw_api.qt.qt_ngw_resource_model_job_error import (
 from nextgis_connect.settings import NgConnectSettings
 
 from .compat_qgis import CompatQt
-
-NGW_AUTORENAME_FIELDS_VERS = "4.1.0.dev5"
 
 
 def getQgsMapLayerEPSG(qgs_map_layer):
@@ -215,8 +212,6 @@ class QGISResourceJob(NGWResourceModelJob):
         self._value_relations = set()
         self._lookup_tables_id = {}
         self._groups = {}
-
-        self.sanitize_fields_names = ["id", "geom"]
 
     def _layer_status(self, layer_name, status):
         self.statusChanged.emit(f""""{layer_name}" - {status}""")
@@ -447,7 +442,7 @@ class QGISResourceJob(NGWResourceModelJob):
             )
             return None
 
-        filepath, tgt_qgs_layer, rename_fields_map = (
+        filepath, tgt_qgs_layer = (
             self.prepareImportVectorFile(qgs_vector_layer)
         )
         if filepath is None:
@@ -484,7 +479,7 @@ class QGISResourceJob(NGWResourceModelJob):
             if len(alias) == 0 and lookup_table is None:
                 continue
 
-            field_name = rename_fields_map.get(field.name(), field.name())
+            field_name = field.name()
 
             if len(alias) > 0:
                 fields_aliases[field_name] = dict(display_name=alias)
@@ -521,44 +516,22 @@ class QGISResourceJob(NGWResourceModelJob):
         self._layer_status(qgs_vector_layer.name(), self.tr("preparing"))
 
         layer_has_mixed_geoms = False
-        layer_has_bad_fields = False
         fids_with_notvalid_geom = []
 
         # Do not check geometries (rely on NGW):
         # if NgConnectPlugin.fix_incorrect_geometries
         #    layer_has_mixed_geoms, fids_with_notvalid_geom = self.checkGeometry(qgs_vector_layer)
 
-        # Check specific fields.
-        if (
-            NgConnectSettings().rename_forbidden_fields
-            and self.hasBadFields(qgs_vector_layer)
-            and not self.ngwSupportsAutoRenameFields()
-        ):
-            logger.debug(
-                "Incorrect fields of layer will be renamed by NextGIS Connect"
-            )
-            layer_has_bad_fields = True
-        else:
-            logger.debug(
-                "Incorrect fields of layer will NOT be renamed by NextGIS Connect"
-            )
-
-        rename_fields_map = {}
-        if (
-            layer_has_mixed_geoms
-            or layer_has_bad_fields
-            or (len(fids_with_notvalid_geom) > 0)
-        ):
-            layer, rename_fields_map = self.createLayer4Upload(
+        if layer_has_mixed_geoms or len(fids_with_notvalid_geom) > 0:
+            layer = self.createLayer4Upload(
                 qgs_vector_layer,
                 fids_with_notvalid_geom,
                 layer_has_mixed_geoms,
-                layer_has_bad_fields,
             )
         else:
             layer = qgs_vector_layer
 
-        return self.prepareAsGPKG(layer), layer, rename_fields_map
+        return self.prepareAsGPKG(layer), layer
 
     def prepareImportRasterFile(
         self, qgs_raster_layer: QgsRasterLayer
@@ -582,7 +555,7 @@ class QGISResourceJob(NGWResourceModelJob):
             qgs_raster_layer.height(),
             qgs_raster_layer.extent(),
             qgs_raster_layer.crs(),
-            transform_context
+            transform_context,
         )
 
         return True, output_path
@@ -657,59 +630,15 @@ class QGISResourceJob(NGWResourceModelJob):
             fids_with_not_valid_geom,
         )
 
-    def hasBadFields(self, qgs_vector_layer):
-        exist_fields_names = [
-            field.name().lower() for field in qgs_vector_layer.fields()
-        ]
-        common_fields = list(
-            set(exist_fields_names).intersection(self.sanitize_fields_names)
-        )
-
-        return len(common_fields) > 0
-
-    def ngwSupportsAutoRenameFields(self):
-        if self.ngw_version is None:
-            return False
-
-        current_ngw_version = parse_version(self.ngw_version)
-        ngw_version_with_support = parse_version(NGW_AUTORENAME_FIELDS_VERS)
-        vers_ok = current_ngw_version >= ngw_version_with_support
-
-        if vers_ok:
-            logger.debug(
-                f'Assume that NGW of version "{self.ngw_version}" supports auto-renaming fields'
-            )
-            return True
-        logger.debug(
-            f'Assume that NGW of version "{self.ngw_version}" does NOT support auto-renaming fields'
-        )
-
-        return False
-
     def createLayer4Upload(
         self,
         qgs_vector_layer_src,
         fids_with_notvalid_geom,
         has_mixed_geoms,
-        has_bad_fields,
     ):
         geometry_type = self.determineGeometry4MemoryLayer(
             qgs_vector_layer_src, has_mixed_geoms
         )
-
-        field_name_map = {}
-        if has_bad_fields:
-            field_name_map = self.getFieldsForRename(qgs_vector_layer_src)
-
-            if len(field_name_map) != 0:
-                msg = QCoreApplication.translate(
-                    "QGISResourceJob",
-                    "We've renamed fields {0} for layer '{1}'. Style for this layer may become invalid.",
-                ).format(
-                    list(field_name_map.keys()), qgs_vector_layer_src.name()
-                )
-
-                self.warningOccurred.emit(JobWarning(msg))
 
         import_crs = QgsCoordinateReferenceSystem.fromEpsgId(4326)
         qgs_vector_layer_dst = QgsVectorLayer(
@@ -721,9 +650,6 @@ class QGISResourceJob(NGWResourceModelJob):
         qgs_vector_layer_dst.startEditing()
 
         for field in qgs_vector_layer_src.fields():
-            field.setName(  # TODO: does it work? At least qgs_vector_layer_src is not in edit mode now. Also we obviously don't want to change source layer names here
-                field_name_map.get(field.name(), field.name())
-            )
             qgs_vector_layer_dst.addAttribute(field)
 
         qgs_vector_layer_dst.commitChanges()
@@ -762,7 +688,7 @@ class QGISResourceJob(NGWResourceModelJob):
             new_feature = QgsFeature(qgs_vector_layer_dst.fields())
             new_feature.setGeometry(new_geometry)
             for field in qgs_vector_layer_src.fields():
-                fname = field_name_map.get(field.name(), field.name())
+                fname = field.name()
                 fval = feature[field.name()]
                 new_feature.setAttribute(fname, fval)
             qgs_vector_layer_dst.addFeature(new_feature)
@@ -790,7 +716,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
             self.warningOccurred.emit(JobWarning(msg))
 
-        return qgs_vector_layer_dst, field_name_map
+        return qgs_vector_layer_dst
 
     def determineGeometry4MemoryLayer(self, qgs_vector_layer, has_mixed_geoms):
         geometry_type = None
@@ -800,6 +726,8 @@ class QGISResourceJob(NGWResourceModelJob):
             geometry_type = "linestring"
         elif qgs_vector_layer.geometryType() == GeometryType.Polygon:
             geometry_type = "polygon"
+        else:
+            raise NgConnectError("Unsupported geometry")
 
         # if has_multipart_geometries:
         if has_mixed_geoms:
@@ -814,23 +742,6 @@ class QGISResourceJob(NGWResourceModelJob):
                 break
 
         return geometry_type
-
-    def getFieldsForRename(self, qgs_vector_layer):
-        field_name_map = {}
-
-        exist_fields_names = [
-            field.name() for field in qgs_vector_layer.fields()
-        ]
-        for field in qgs_vector_layer.fields():
-            if field.name().lower() in self.sanitize_fields_names:
-                new_field_name = field.name()
-                suffix = 1
-                while new_field_name in exist_fields_names:
-                    new_field_name = field.name() + str(suffix)
-                    suffix += 1
-                field_name_map.update({field.name(): new_field_name})
-
-        return field_name_map
 
     def prepareAsGPKG(self, qgs_vector_layer: QgsVectorLayer):
         tmp_gpkg_path = tempfile.mktemp(".gpkg")
@@ -872,7 +783,9 @@ class QGISResourceJob(NGWResourceModelJob):
                 source_srs, destination_srs, QgsProject.instance()
             )
 
-        for feature in qgs_vector_layer.getFeatures():
+        for feature in cast(
+            Iterable[QgsFeature], qgs_vector_layer.getFeatures()
+        ):
             try:
                 if transform is not None:
                     geometry = feature.geometry()
@@ -984,7 +897,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return None
 
-    def _defStyleForVector(self, ngw_layer):
+    def _defStyleForVector(self, ngw_layer) -> Optional[NGWResource]:
         qml = self.getQMLDefaultStyle()
 
         if qml is None:
@@ -1055,7 +968,9 @@ class QGISResourceJob(NGWResourceModelJob):
                     else Path()
                 )
 
-                for finx, ftr in enumerate(qgs_vector_layer.getFeatures()):
+                for finx, ftr in enumerate(
+                    cast(Iterable[QgsFeature], qgs_vector_layer.getFeatures())
+                ):
                     file_path = ftr.attributes()[attrInx]
                     if not isinstance(file_path, str):
                         continue
@@ -1801,7 +1716,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
                 f"Vector layer '{self.qgis_layer.name()}' has no suitable geometry"
             )
 
-        filepath, _, rename_fields_map = self.prepareImportVectorFile(
+        filepath, _ = self.prepareImportVectorFile(
             self.qgis_layer
         )
         if filepath is None:
@@ -1842,8 +1757,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
             if len(alias) == 0:
                 continue
 
-            field_name = rename_fields_map.get(field.name(), field.name())
-            fields_aliases[field_name] = dict(display_name=alias)
+            fields_aliases[field.name()] = dict(display_name=alias)
 
         if len(fields_aliases) > 0:
             self._layer_status(
