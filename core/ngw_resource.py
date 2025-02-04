@@ -21,7 +21,7 @@
 import re
 import urllib.parse
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
@@ -72,7 +72,7 @@ class NGWResource:
 
     # STATIC
     @classmethod
-    def receive_resource_obj(cls, ngw_con, res_id):
+    def receive_resource_obj(cls, ngw_con, res_id) -> Dict[str, Any]:
         """
         :rtype : json obj
         """
@@ -186,6 +186,7 @@ class NGWResource:
     @property
     def parent_id(self) -> int:
         return self.common.parent.id
+
     @property
     def grandparent_id(self) -> int:
         return self.common.parent.parent["id"]
@@ -227,15 +228,16 @@ class NGWResource:
         connection.put(url, params=params)
         self.update()
 
-    def update(self):
+    def update(self, *, skip_children: bool = False):
         self._json = self.receive_resource_obj(
             self.res_factory.connection, self.resource_id
         )
 
         self._construct()
 
-        children = self.get_children()
-        self.set_children_count(len(children))
+        if not skip_children:
+            children = self.get_children()
+            self.set_children_count(len(children))
 
     def generate_unique_child_name(self, name: str):
         chd_names = [ch.display_name for ch in self.get_children()]
