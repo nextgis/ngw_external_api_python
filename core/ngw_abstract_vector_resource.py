@@ -58,12 +58,6 @@ class NGWAbstractVectorResource(ABC, NGWResource):
     def __init__(self, resource_factory, resource_json):
         super().__init__(resource_factory, resource_json)
 
-        self.__features_count = None
-
-        self.__fields = NgwFields.from_json(
-            self._json.get("feature_layer", {}).get("fields", [])
-        )
-
     @property
     def fields(self) -> NgwFields:
         return self.__fields
@@ -168,3 +162,10 @@ class NGWAbstractVectorResource(ABC, NGWResource):
         )
 
         return ngw_resource
+
+    def _construct(self):
+        super()._construct()
+        self.__features_count = None
+        self.__fields = NgwFields.from_json(
+            self._json.get("feature_layer", {}).get("fields", [])
+        )
