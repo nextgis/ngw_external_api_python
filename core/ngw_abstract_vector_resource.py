@@ -69,7 +69,7 @@ class NGWAbstractVectorResource(ABC, NGWResource):
         return self.__fields
 
     def field(self, name: str) -> Optional[NgwField]:
-        return self.__fields.find_with(name=name)
+        return self.__fields.find_with(keyname=name)
 
     @property
     def qgs_fields(self) -> QgsFields:
