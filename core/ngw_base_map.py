@@ -47,6 +47,8 @@ class NGWBaseMap(NGWResource):
             params["url"] = decoded_qms["url"]
             params["zmin"] = decoded_qms.get("z_min")
             params["zmax"] = decoded_qms.get("z_max")
+            if "epsg" in decoded_qms:
+                params["crs"] = f"EPSG:{decoded_qms['epsg']}"
 
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.connection_id)
