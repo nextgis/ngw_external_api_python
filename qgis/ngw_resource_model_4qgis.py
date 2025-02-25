@@ -537,7 +537,7 @@ class QGISResourceJob(NGWResourceModelJob):
         self, qgs_raster_layer: QgsRasterLayer
     ) -> Tuple[bool, str]:
         source = qgs_raster_layer.source()
-        if Path(source).exists():
+        if Path(source).exists() and Path(source).suffix in (".tif", ".tiff"):
             return False, source
 
         self._layer_status(qgs_raster_layer.name(), self.tr("preparing"))
