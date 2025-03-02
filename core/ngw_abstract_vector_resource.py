@@ -10,7 +10,8 @@ from qgis.core import (
 
 from nextgis_connect.compat import GeometryType, WkbType
 from nextgis_connect.ngw_api.core.ngw_qgis_style import NGWQGISVectorStyle
-from nextgis_connect.resources.ngw_field import NgwField, NgwFields
+from nextgis_connect.resources.ngw_field import NgwField
+from nextgis_connect.resources.ngw_fields import NgwFields
 
 from .ngw_resource import NGWResource
 

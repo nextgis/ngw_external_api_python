@@ -88,7 +88,7 @@ class NGWVectorLayer(NGWAbstractVectorResource):
         json_feature = {}
 
         for field_name, pyvalue in list(attributes.items()):
-            field_type = self.field(field_name).datatype_name
+            field_type = self.field(field_name).field_type.name
             field_value = None
             if field_type == NGWVectorLayer.FieldTypeDate:
                 if isinstance(pyvalue, datetime.date):
