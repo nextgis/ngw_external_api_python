@@ -55,6 +55,23 @@ class ResourceCreator:
         return ngw_resource
 
     @staticmethod
+    def create_empty_vector_layer(
+        parent_ngw_resource,
+        vector_layer: Dict[str, Any],
+    ) -> NGWVectorLayer:
+        connection = parent_ngw_resource.res_factory.connection
+
+        url = parent_ngw_resource.get_api_collection_url()
+        result = connection.post(url, params=vector_layer, is_lunkwill=True)
+
+        ngw_resource = NGWResource.receive_resource_obj(
+            connection, result["id"]
+        )
+
+        parent_ngw_resource.common.children = True
+        return NGWVectorLayer(parent_ngw_resource.res_factory, ngw_resource)
+
+    @staticmethod
     def create_vector_layer(
         parent_ngw_resource,
         filename,

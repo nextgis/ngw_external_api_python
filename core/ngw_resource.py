@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Dict, List
 
 from nextgis_connect.logging import logger
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
+from nextgis_connect.resources.utils import generate_unique_name
 
 ICONS_DIR = Path(__file__).parents[1] / "icons"
 
@@ -239,18 +240,6 @@ class NGWResource:
             children = self.get_children()
             self.set_children_count(len(children))
 
-    def generate_unique_child_name(self, name: str):
+    def generate_unique_child_name(self, name: str) -> str:
         chd_names = [ch.display_name for ch in self.get_children()]
-        if name not in chd_names:
-            return name
-
-        if re.search(r"\(\d\)$", name):
-            name = name[:-3]
-        new_name = name
-        new_name_with_space = None
-        id = 1
-        while new_name in chd_names or new_name_with_space in chd_names:
-            new_name = f"{name}({id})"
-            new_name_with_space = f"{name} ({id})"
-            id += 1
-        return new_name if new_name_with_space is None else new_name_with_space
+        return generate_unique_name(name, chd_names)

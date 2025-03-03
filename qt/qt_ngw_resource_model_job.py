@@ -18,9 +18,8 @@
  ***************************************************************************/
 """
 
-import re
 from copy import deepcopy
-from typing import List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
@@ -42,6 +41,7 @@ from nextgis_connect.ngw_api.core.ngw_webmap import (
     NGWWebMapRoot,
 )
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
+from nextgis_connect.resources.utils import generate_unique_name
 from nextgis_connect.settings import NgConnectSettings
 
 from .qt_ngw_resource_model_job_error import (
@@ -109,30 +109,13 @@ class NGWResourceModelJob(QObject):
 
         self.result = NGWResourceModelJobResult()
 
-    def generate_unique_name(self, name, present_names):
-        if name not in present_names:
-            return name
-
-        if re.search(r"\(\d\)$", name):
-            name = name[:-3]
-        new_name = name
-        new_name_with_space = None
-        suffix_id = 1
-        while (
-            new_name in present_names or new_name_with_space in present_names
-        ):
-            new_name = f"{name}({suffix_id})"
-            new_name_with_space = f"{name} ({suffix_id})"
-            suffix_id += 1
-        return new_name if new_name_with_space is None else new_name_with_space
-
     def unique_resource_name(
         self, resource_name: str, ngw_group: NGWGroupResource
     ) -> str:
         children_names = [
             children.display_name for children in ngw_group.get_children()
         ]
-        unique_resource_name = self.generate_unique_name(
+        unique_resource_name = generate_unique_name(
             resource_name, children_names
         )
         return unique_resource_name
@@ -309,6 +292,25 @@ class NGWResourceDelete(NGWResourceModelJob):
         NGWResource.delete_resource(self.ngw_resource)
 
         self.putDeletedResourceToResult(self.ngw_resource)
+
+
+class NGWCreateVectorLayer(NGWResourceModelJob):
+    def __init__(
+        self,
+        parent_resource: NGWGroupResource,
+        vector_layer: Dict[str, Any],
+    ):
+        super().__init__()
+        self.parent_resource = parent_resource
+        self.vector_layer = vector_layer
+
+    def _do(self):
+        vector_resource = ResourceCreator.create_empty_vector_layer(
+            self.parent_resource, self.vector_layer
+        )
+
+        self.putAddedResourceToResult(vector_resource, is_main=True)
+        self.parent_resource.update()
 
 
 class NGWCreateWfsOrOgcfService(NGWResourceModelJob):
