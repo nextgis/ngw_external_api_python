@@ -1666,10 +1666,10 @@ class QGISStyleAdder(QGISResourceJob):
         self.putAddedResourceToResult(ngw_style)
 
 
-class NGWCreateWMSForVector(QGISResourceJob):
-    def __init__(self, ngw_vector_layer, ngw_group_resource, ngw_style_id):
+class NGWCreateWMSService(QGISResourceJob):
+    def __init__(self, ngw_layer, ngw_group_resource, ngw_style_id):
         super().__init__()
-        self.ngw_layer = ngw_vector_layer
+        self.ngw_layer = ngw_layer
         self.ngw_group_resource = ngw_group_resource
         self.ngw_style_id = ngw_style_id
 

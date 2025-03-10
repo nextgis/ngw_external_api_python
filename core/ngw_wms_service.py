@@ -81,7 +81,7 @@ class NGWWmsService(NGWResource):
         for ngw_layer, ngw_style_id in ngw_layers_with_style:
             params_layer = dict(
                 display_name=ngw_layer.display_name,
-                keyname="ngw_id_%d" % ngw_layer.resource_id,
+                keyname=f"ngw_id_{ngw_style_id}",
                 resource_id=ngw_style_id,
                 min_scale_denom=None,
                 max_scale_denom=None,
