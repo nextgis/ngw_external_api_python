@@ -98,6 +98,7 @@ from nextgis_connect.ngw_api.qt.qt_ngw_resource_model_job_error import (
     JobError,
     JobWarning,
 )
+from nextgis_connect.resources.ngw_data_type import NgwDataType
 from nextgis_connect.settings import NgConnectSettings
 
 from .compat_qgis import CompatQt
@@ -442,8 +443,8 @@ class QGISResourceJob(NGWResourceModelJob):
             )
             return None
 
-        filepath, tgt_qgs_layer = (
-            self.prepareImportVectorFile(qgs_vector_layer)
+        filepath, old_fid_name, tgt_qgs_layer = self.prepareImportVectorFile(
+            qgs_vector_layer
         )
         if filepath is None:
             self.errorOccurred.emit(
@@ -457,6 +458,7 @@ class QGISResourceJob(NGWResourceModelJob):
             ngw_parent_resource,
             filepath,
             new_layer_name,
+            old_fid_name,
             uploadFileCallback,
             createLayerCallback,
         )
@@ -531,7 +533,9 @@ class QGISResourceJob(NGWResourceModelJob):
         else:
             layer = qgs_vector_layer
 
-        return self.prepareAsGPKG(layer), layer
+        gpkg_path, old_fid_name = self.prepareAsGPKG(layer)
+
+        return gpkg_path, old_fid_name, layer
 
     def prepareImportRasterFile(
         self, qgs_raster_layer: QgsRasterLayer
@@ -743,7 +747,9 @@ class QGISResourceJob(NGWResourceModelJob):
 
         return geometry_type
 
-    def prepareAsGPKG(self, qgs_vector_layer: QgsVectorLayer):
+    def prepareAsGPKG(
+        self, qgs_vector_layer: QgsVectorLayer
+    ) -> Tuple[str, Optional[str]]:
         tmp_gpkg_path = tempfile.mktemp(".gpkg")
 
         source_srs = qgs_vector_layer.sourceCrs()
@@ -751,6 +757,16 @@ class QGISResourceJob(NGWResourceModelJob):
 
         project = QgsProject.instance()
         assert project is not None
+
+        old_fid_name = None
+        pk_attributes = qgs_vector_layer.primaryKeyAttributes()
+        if len(pk_attributes) == 1:
+            pk_field = qgs_vector_layer.fields().at(pk_attributes[0])
+            if pk_field.type() in (
+                NgwDataType.INTEGER.qt_value,
+                NgwDataType.BIGINT.qt_value,
+            ):
+                old_fid_name = pk_field.name()
 
         fid_name = "0xFEEDC0DE"
 
@@ -804,7 +820,7 @@ class QGISResourceJob(NGWResourceModelJob):
 
         del writer  # save changes
 
-        return tmp_gpkg_path
+        return tmp_gpkg_path, old_fid_name
 
     def upload_qml_file(
         self, ngw_layer_resource, qml_filename, style_name=None
@@ -1716,9 +1732,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
                 f"Vector layer '{self.qgis_layer.name()}' has no suitable geometry"
             )
 
-        filepath, _ = self.prepareImportVectorFile(
-            self.qgis_layer
-        )
+        filepath, old_fid_name, _ = self.prepareImportVectorFile(self.qgis_layer)
         if filepath is None:
             raise JobError(f'Can\'t prepare layer "{self.qgis_layer.name()}"')
 
@@ -1726,6 +1740,10 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         vector_file_desc = connection.tus_upload_file(
             filepath, uploadFileCallback
         )
+
+        fid_fields = ["ngw_id", "id"]
+        if old_fid_name is not None:
+            fid_fields.append(old_fid_name)
 
         url = self.ngw_layer.get_absolute_api_url()
         params = dict(
@@ -1737,7 +1755,7 @@ class NGWUpdateVectorLayer(QGISResourceJob):
                 skip_errors=True,
                 skip_other_geometry_types=False,
                 fid_source="AUTO",
-                fid_field="ngw_id, id",
+                fid_field=",".join(fid_fields),
             ),
         )
 

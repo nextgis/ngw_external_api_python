@@ -76,6 +76,7 @@ class ResourceCreator:
         parent_ngw_resource,
         filename,
         layer_name,
+        old_fid_name,
         upload_callback,
         create_callback,
     ) -> NGWVectorLayer:
@@ -86,6 +87,9 @@ class ResourceCreator:
         vector_file_desc = connection.tus_upload_file(
             filename, upload_callback
         )
+        fid_fields = ["ngw_id", "id"]
+        if old_fid_name is not None:
+            fid_fields.append(old_fid_name)
 
         url = parent_ngw_resource.get_api_collection_url()
         params = dict(
@@ -99,6 +103,8 @@ class ResourceCreator:
                 source=vector_file_desc,
                 fix_errors="LOSSY",
                 skip_errors=True,
+                fid_source="AUTO",
+                fid_field=",".join(fid_fields),
             ),
         )
         if NgConnectSettings().upload_vector_with_versioning:
