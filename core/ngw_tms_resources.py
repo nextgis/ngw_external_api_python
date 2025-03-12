@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple
 
 from qgis.core import QgsProviderRegistry
 
+from nextgis_connect.exceptions import ErrorCode, NgwError
 from nextgis_connect.ngw_api.core.ngw_resource import NGWResource
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
@@ -19,6 +20,9 @@ class NGWTmsConnection(NGWResource):
     @property
     def layer_params(self) -> Tuple[str, str, str]:
         layer_info = self._json[self.type_id]
+
+        if "url_template" not in layer_info or layer_info["url_template"] is None:
+            raise NgwError("Missing URL template parameter", code=ErrorCode.PermissionsError)
 
         params = {
             "type": layer_info.get("scheme"),
@@ -48,9 +52,17 @@ class NGWTmsLayer(NGWResource):
     def layer_params(self) -> Tuple[str, str, str]:
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.connection_id)
-        assert connection is not None
+        if connection is None:
+            raise NgwError(
+                "Can't get connection params", code=ErrorCode.PermissionsError
+            )
 
         layer_info = self._json[self.type_id]
+
+        if self.resource_id is None:
+            raise NgwError(
+                "Missing resource ID", code=ErrorCode.PermissionsError
+            )
 
         url = (
             f"{connection.url}/api/component/render/tile?"
