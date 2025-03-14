@@ -240,17 +240,17 @@ class QGISResourceJob(NGWResourceModelJob):
 
         if layer_type == LayerType.Raster:
             layer_data_provider = qgs_map_layer.dataProvider().name()
-            if layer_data_provider == "gdal":
-                return [
-                    self.importQgsRasterLayer(
-                        qgs_map_layer, ngw_parent_resource
-                    )
-                ]
 
             if layer_data_provider == "wms":
                 return self.importQgsWMSLayer(
                     qgs_map_layer, ngw_parent_resource
                 )
+
+            return [
+                self.importQgsRasterLayer(
+                    qgs_map_layer, ngw_parent_resource
+                )
+            ]
 
         elif layer_type == LayerType.Plugin:
             return self.importQgsPluginLayer(
@@ -383,27 +383,23 @@ class QGISResourceJob(NGWResourceModelJob):
         def createLayerCallback():
             self._layer_status(qgs_raster_layer.name(), self.tr("creating"))
 
-        layer_provider = qgs_raster_layer.providerType()
-        if layer_provider == "gdal":
-            is_converted, filepath = self.prepareImportRasterFile(
-                qgs_raster_layer
-            )
+        is_converted, filepath = self.prepareImportRasterFile(
+            qgs_raster_layer
+        )
 
-            ngw_raster_layer = ResourceCreator.create_raster_layer(
-                ngw_parent_resource,
-                filepath,
-                new_layer_name,
-                NgConnectSettings().upload_raster_as_cog,
-                uploadFileCallback,
-                createLayerCallback,
-            )
+        ngw_raster_layer = ResourceCreator.create_raster_layer(
+            ngw_parent_resource,
+            filepath,
+            new_layer_name,
+            NgConnectSettings().upload_raster_as_cog,
+            uploadFileCallback,
+            createLayerCallback,
+        )
 
-            if is_converted:
-                os.remove(filepath)
+        if is_converted:
+            os.remove(filepath)
 
-            return ngw_raster_layer
-
-        return None
+        return ngw_raster_layer
 
     def importQgsVectorLayer(
         self,
@@ -1139,8 +1135,6 @@ class QGISResourcesUploader(QGISResourceJob):
                 return "vector_layer"
             if isinstance(layer, QgsRasterLayer):
                 data_provider = layer.dataProvider().name()  # type: ignore
-                if data_provider == "gdal":
-                    return "raster_layer"
                 if data_provider == "wms":
                     registry = QgsProviderRegistry.instance()
                     provider_metadata = registry.providerMetadata("wms")
@@ -1150,6 +1144,7 @@ class QGISResourcesUploader(QGISResourceJob):
                         if parameters.get("type") == "xyz"
                         else "wmsclient_layer"
                     )
+                return "raster_layer"
             if isinstance(layer, QgsPluginLayer):
                 return "basemap_layer"
             return None
