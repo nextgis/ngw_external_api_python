@@ -21,7 +21,7 @@ class NGWTmsConnection(NGWResource):
     def layer_params(self) -> Tuple[str, str, str]:
         layer_info = self._json[self.type_id]
 
-        if "url_template" not in layer_info or layer_info["url_template"] is None:
+        if layer_info.get("url_template") is None:
             raise NgwError("Missing URL template parameter", code=ErrorCode.PermissionsError)
 
         params = {
@@ -52,17 +52,9 @@ class NGWTmsLayer(NGWResource):
     def layer_params(self) -> Tuple[str, str, str]:
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.connection_id)
-        if connection is None:
-            raise NgwError(
-                "Can't get connection params", code=ErrorCode.PermissionsError
-            )
+        assert connection is not None
 
         layer_info = self._json[self.type_id]
-
-        if self.resource_id is None:
-            raise NgwError(
-                "Missing resource ID", code=ErrorCode.PermissionsError
-            )
 
         url = (
             f"{connection.url}/api/component/render/tile?"
