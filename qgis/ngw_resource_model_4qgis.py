@@ -29,6 +29,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, cast
 
 from osgeo import ogr
 from qgis.core import (
+    QgsApplication,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsFeature,
@@ -247,9 +248,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 )
 
             return [
-                self.importQgsRasterLayer(
-                    qgs_map_layer, ngw_parent_resource
-                )
+                self.importQgsRasterLayer(qgs_map_layer, ngw_parent_resource)
             ]
 
         elif layer_type == LayerType.Plugin:
@@ -301,7 +300,10 @@ class QGISResourceJob(NGWResourceModelJob):
         logger.debug(f'<b>Uploading WMS layer</b> "{qgs_wms_layer.name()}"')
 
         self._layer_status(
-            qgs_wms_layer.name(), self.tr("create WMS connection")
+            qgs_wms_layer.name(),
+            QgsApplication.translate(
+                "QGISResourceJob", "create WMS connection"
+            ),
         )
 
         layer_source = qgs_wms_layer.source()
@@ -344,7 +346,10 @@ class QGISResourceJob(NGWResourceModelJob):
             )
 
             self._layer_status(
-                qgs_wms_layer.name(), self.tr("creating WMS layer")
+                qgs_wms_layer.name(),
+                QgsApplication.translate(
+                    "QGISResourceJob", "creating WMS layer"
+                ),
             )
 
             ngw_wms_layer_name = self.unique_resource_name(
@@ -377,15 +382,18 @@ class QGISResourceJob(NGWResourceModelJob):
                 value = round(readed_size * 100 / total_size)
             self._layer_status(
                 qgs_raster_layer.name(),
-                self.tr("uploading ({}%)").format(value),
+                QgsApplication.translate(
+                    "QGISResourceJob", "uploading ({}%)"
+                ).format(value),
             )
 
         def createLayerCallback():
-            self._layer_status(qgs_raster_layer.name(), self.tr("creating"))
+            self._layer_status(
+                qgs_raster_layer.name(),
+                QgsApplication.translate("QGISResourceJob", "creating"),
+            )
 
-        is_converted, filepath = self.prepareImportRasterFile(
-            qgs_raster_layer
-        )
+        is_converted, filepath = self.prepareImportRasterFile(qgs_raster_layer)
 
         ngw_raster_layer = ResourceCreator.create_raster_layer(
             ngw_parent_resource,
@@ -416,7 +424,9 @@ class QGISResourceJob(NGWResourceModelJob):
         def uploadFileCallback(total_size, readed_size, value=None):
             self._layer_status(
                 qgs_vector_layer.name(),
-                self.tr("uploading ({}%)").format(
+                QgsApplication.translate(
+                    "QGISResourceJob", "uploading ({}%)"
+                ).format(
                     int(
                         readed_size * 100 / total_size
                         if value is None
@@ -426,7 +436,10 @@ class QGISResourceJob(NGWResourceModelJob):
             )
 
         def createLayerCallback():
-            self._layer_status(qgs_vector_layer.name(), self.tr("creating"))
+            self._layer_status(
+                qgs_vector_layer.name(),
+                QgsApplication.translate("QGISResourceJob", "creating"),
+            )
 
         if (
             self.isSuitableLayer(qgs_vector_layer)
@@ -488,7 +501,8 @@ class QGISResourceJob(NGWResourceModelJob):
 
         if len(fields_aliases) > 0:
             self._layer_status(
-                qgs_vector_layer.name(), self.tr("adding aliases")
+                qgs_vector_layer.name(),
+                QgsApplication.translate("QGISResourceJob", "adding aliases"),
             )
 
             try:
@@ -498,20 +512,29 @@ class QGISResourceJob(NGWResourceModelJob):
 
         if len(fields_lookup_table) > 0:
             self._layer_status(
-                qgs_vector_layer.name(), self.tr("adding lookup tables")
+                qgs_vector_layer.name(),
+                QgsApplication.translate(
+                    "QGISResourceJob", "adding lookup tables"
+                ),
             )
             try:
                 ngw_vector_layer.update_fields_params(fields_lookup_table)
             except Exception as error:
                 self.warningOccurred.emit(error)
 
-        self._layer_status(qgs_vector_layer.name(), self.tr("finishing"))
+        self._layer_status(
+            qgs_vector_layer.name(),
+            QgsApplication.translate("QGISResourceJob", "finishing"),
+        )
         os.remove(filepath)
 
         return ngw_vector_layer
 
     def prepareImportVectorFile(self, qgs_vector_layer):
-        self._layer_status(qgs_vector_layer.name(), self.tr("preparing"))
+        self._layer_status(
+            qgs_vector_layer.name(),
+            QgsApplication.translate("QGISResourceJob", "preparing"),
+        )
 
         layer_has_mixed_geoms = False
         fids_with_notvalid_geom = []
@@ -540,7 +563,10 @@ class QGISResourceJob(NGWResourceModelJob):
         if Path(source).exists() and Path(source).suffix in (".tif", ".tiff"):
             return False, source
 
-        self._layer_status(qgs_raster_layer.name(), self.tr("preparing"))
+        self._layer_status(
+            qgs_raster_layer.name(),
+            QgsApplication.translate("QGISResourceJob", "preparing"),
+        )
         output_path = tempfile.mktemp(suffix=".tif")
 
         raster_writer = QgsRasterFileWriter(output_path)
@@ -576,7 +602,9 @@ class QGISResourceJob(NGWResourceModelJob):
                 progress = v
                 self._layer_status(
                     qgs_vector_layer.name(),
-                    self.tr("checking geometry ({}%)").format(progress),
+                    QgsApplication.translate(
+                        "QGISResourceJob", "checking geometry ({}%)"
+                    ).format(progress),
                 )
 
             fid, geom = feature.geometry(), feature.id()
@@ -698,7 +726,9 @@ class QGISResourceJob(NGWResourceModelJob):
                 progress = v
                 self._layer_status(
                     qgs_vector_layer_src.name(),
-                    self.tr("preparing layer ({}%)").format(progress),
+                    QgsApplication.translate(
+                        "QGISResourceJob", "preparing layer ({}%)"
+                    ).format(progress),
                 )
 
         qgs_vector_layer_dst.commitChanges()
@@ -805,13 +835,17 @@ class QGISResourceJob(NGWResourceModelJob):
                     feature.setGeometry(geometry)
                 writer.addFeature(feature)
             except Exception:
+                # fmt: off
                 self.warningOccurred.emit(
                     JobWarning(
-                        self.tr(
-                            "Feature {} haven't been added. Please check geometry"
+                        QgsApplication.translate(
+                            "QGISResourceJob",
+                            "Feature {} haven't been added."
+                            " Please check geometry"
                         ).format(feature.id())
                     )
                 )
+                # fmt: on
                 continue
 
         del writer  # save changes
@@ -823,13 +857,13 @@ class QGISResourceJob(NGWResourceModelJob):
     ):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                self.tr('Style for "{}"').format(
-                    ngw_layer_resource.display_name
-                )
+                QgsApplication.translate(
+                    "QGISResourceJob", 'Style for "{}"'
+                ).format(ngw_layer_resource.display_name)
                 + " - "
-                + self.tr("uploading ({}%)").format(
-                    int(readed_size * 100 / total_size)
-                )
+                + QgsApplication.translate(
+                    "QGISResourceJob", "uploading ({}%)"
+                ).format(int(readed_size * 100 / total_size))
             )
 
         return ngw_layer_resource.create_qml_style(
@@ -880,13 +914,13 @@ class QGISResourceJob(NGWResourceModelJob):
     def updateQMLStyle(self, qml, ngw_layer_resource):
         def uploadFileCallback(total_size, readed_size):
             self.statusChanged.emit(
-                self.tr('Style for "{}"').format(
-                    ngw_layer_resource.display_name
-                )
+                QgsApplication.translate(
+                    "QGISResourceJob", 'Style for "{}"'
+                ).format(ngw_layer_resource.display_name)
                 + " - "
-                + self.tr("uploading ({}%)").format(
-                    int(readed_size * 100 / total_size)
-                )
+                + QgsApplication.translate(
+                    "QGISResourceJob", "uploading ({}%)"
+                ).format(int(readed_size * 100 / total_size))
             )
 
         ngw_layer_resource.update_qml(qml, uploadFileCallback)
@@ -935,7 +969,9 @@ class QGISResourceJob(NGWResourceModelJob):
         def uploadFileCallback(total_size, readed_size, value=None):
             self._layer_status(
                 full_path,
-                self.tr("uploading ({}%)").format(
+                QgsApplication.translate(
+                    "QGISResourceJob", "uploading ({}%)"
+                ).format(
                     int(
                         readed_size * 100 / total_size
                         if value is None
@@ -1022,7 +1058,9 @@ class QGISResourceJob(NGWResourceModelJob):
 
         self._layer_status(
             ngw_layer_resource.display_name,
-            self.tr("removing all features"),
+            QgsApplication.translate(
+                "QGISResourceJob", "removing all features"
+            ),
         )
         ngw_layer_resource.delete_all_features()
 
@@ -1039,7 +1077,9 @@ class QGISResourceJob(NGWResourceModelJob):
                 progress = v
                 self._layer_status(
                     ngw_layer_resource.display_name,
-                    self.tr("adding features ({}%)").format(progress),
+                    QgsApplication.translate(
+                        "QGISResourceJob", "adding features ({}%)"
+                    ).format(progress),
                 )
 
     def getFeaturesPart(self, qgs_map_layer, ngw_layer_resource, pack_size):
@@ -1246,7 +1286,11 @@ class QGISResourcesUploader(QGISResourceJob):
                 )
 
     def _add_group_tree(self) -> None:
-        self.statusChanged.emit(self.tr("A group tree is being created"))
+        self.statusChanged.emit(
+            QgsApplication.translate(
+                "QGISResourceJob", "A group tree is being created"
+            )
+        )
         for node in self.qgs_layer_tree_nodes:
             if not QgsLayerTree.isGroup(node):
                 continue
@@ -1524,7 +1568,10 @@ class QGISProjectUploader(QGISResourcesUploader):
         ngw_webmap_items,
         ngw_webmap_basemaps,
     ):
-        self._layer_status(ngw_webmap_name, self.tr("creating"))
+        self._layer_status(
+            ngw_webmap_name,
+            QgsApplication.translate("QGISResourceJob", "creating"),
+        )
 
         extent = QgsReferencedRectangle(
             self.iface.mapCanvas().extent(),
@@ -1534,13 +1581,14 @@ class QGISProjectUploader(QGISResourcesUploader):
             item.toDict() for item in ngw_webmap_items
         ]
         if len(ngw_webmap_items) == 0 and len(ngw_webmap_basemaps) == 0:
-            raise NgwError(
-                "Can't create webmap",
-                user_message=self.tr(
-                    "Failed to load any resource to the NextGIS Web."
-                    " Webmap will not be created"
-                ),
+            # fmt: off
+            user_message = QgsApplication.translate(
+                "QGISResourceJob",
+                "Failed to load any resource to the NextGIS Web."
+                " Webmap will not be created"
             )
+            # fmt: on
+            raise NgwError("Can't create webmap", user_message=user_message)
 
         return NGWWebMap.create_in_group(
             ngw_webmap_name,
@@ -1710,7 +1758,9 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         def uploadFileCallback(total_size, readed_size, value=None):
             self._layer_status(
                 self.qgis_layer.name(),
-                self.tr("uploading ({}%)").format(
+                QgsApplication.translate(
+                    "QGISResourceJob", "uploading ({}%)"
+                ).format(
                     int(
                         readed_size * 100 / total_size
                         if value is None
@@ -1727,7 +1777,9 @@ class NGWUpdateVectorLayer(QGISResourceJob):
                 f"Vector layer '{self.qgis_layer.name()}' has no suitable geometry"
             )
 
-        filepath, old_fid_name, _ = self.prepareImportVectorFile(self.qgis_layer)
+        filepath, old_fid_name, _ = self.prepareImportVectorFile(
+            self.qgis_layer
+        )
         if filepath is None:
             raise JobError(f'Can\'t prepare layer "{self.qgis_layer.name()}"')
 
@@ -1755,7 +1807,8 @@ class NGWUpdateVectorLayer(QGISResourceJob):
         )
 
         self._layer_status(
-            self.ngw_layer.display_name, self.tr("replacing features")
+            self.ngw_layer.display_name,
+            QgsApplication.translate("QGISResourceJob", "replacing features"),
         )
 
         connection.put(url, params=params, is_lunkwill=True)
@@ -1774,7 +1827,8 @@ class NGWUpdateVectorLayer(QGISResourceJob):
 
         if len(fields_aliases) > 0:
             self._layer_status(
-                self.ngw_layer.display_name, self.tr("adding aliases")
+                self.ngw_layer.display_name,
+                QgsApplication.translate("QGISResourceJob", "adding aliases"),
             )
 
             try:
@@ -1782,7 +1836,10 @@ class NGWUpdateVectorLayer(QGISResourceJob):
             except Exception as error:
                 self.warningOccurred.emit(error)
 
-        self._layer_status(self.ngw_layer.display_name, self.tr("finishing"))
+        self._layer_status(
+            self.ngw_layer.display_name,
+            QgsApplication.translate("QGISResourceJob", "finishing"),
+        )
         os.remove(filepath)
 
 
