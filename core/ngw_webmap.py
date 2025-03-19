@@ -212,10 +212,10 @@ class NGWWebMap(NGWResource):
         def normalize_latitude(lat: float) -> float:
             return max(-90.0, min(90.0, lat))
 
-        left = normalize_longitude(left)
-        right = normalize_longitude(right)
-        top = normalize_latitude(top)
-        bottom = normalize_latitude(bottom)
+        left = normalize_longitude(left) if left is not None else -180.0
+        right = normalize_longitude(right) if right is not None else 180.0
+        bottom = normalize_latitude(bottom) if bottom is not None else -90.0
+        top = normalize_latitude(top) if top is not None else 90.0
 
         bbox = {
             "extent_left": min(left, right),
