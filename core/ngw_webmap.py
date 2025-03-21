@@ -109,8 +109,9 @@ class NGWWebMap(NGWResource):
 
         return QgsReferencedRectangle(rectangle, crs)
 
-    def get_display_url(self):
-        return "{}/{}".format(self.get_absolute_url(), "display")
+    @property
+    def preview_url(self):
+        return f"{self.get_absolute_url()}/display"
 
     def __create_structure(self) -> None:
         basemap_webmap = self._json.get("basemap_webmap", {})

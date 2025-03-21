@@ -90,9 +90,6 @@ class NGWQGISStyle(NGWResource):
         self.__qml = Path(qml).read_text()
         self.update()
 
-    def get_display_url(self):
-        return "{}/{}".format(self.get_absolute_url(), "preview")
-
 
 class NGWQGISVectorStyle(NGWQGISStyle):
     type_id = "qgis_vector_style"

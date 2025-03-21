@@ -204,6 +204,10 @@ class NGWResource:
     def description(self) -> str:
         return self.common.description
 
+    @property
+    def preview_url(self):
+        return f"{self.get_absolute_url()}/preview"
+
     def change_name(self, name):
         new_name = self.generate_unique_child_name(name)
         params = dict(
