@@ -205,6 +205,23 @@ class NGWResource:
         return self.common.description
 
     @property
+    def is_preview_supported(self) -> bool:
+        return self.type_id in (
+            "raster_layer",
+            "basemap_layer",
+            "webmap",
+        ) or any(
+            context
+            in (
+                "IFeatureLayer",
+                "IRenderableStyle",
+                "RasterLayer",
+                "BasemapLayer",
+            )
+            for context in self.common.interfaces
+        )
+
+    @property
     def preview_url(self):
         return f"{self.get_absolute_url()}/preview"
 
