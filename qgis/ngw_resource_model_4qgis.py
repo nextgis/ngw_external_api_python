@@ -48,6 +48,7 @@ from qgis.core import (
     QgsRasterFileWriter,
     QgsRasterLayer,
     QgsRasterPipe,
+    QgsRasterProjector,
     QgsReferencedRectangle,
     QgsValueRelationFieldFormatter,
     QgsVectorFileWriter,
@@ -560,27 +561,61 @@ class QGISResourceJob(NGWResourceModelJob):
         self, qgs_raster_layer: QgsRasterLayer
     ) -> Tuple[bool, str]:
         source = qgs_raster_layer.source()
-        if Path(source).exists() and Path(source).suffix in (".tif", ".tiff"):
+        source_crs = qgs_raster_layer.crs()
+        if (
+            Path(source).exists()
+            and Path(source).suffix in (".tif", ".tiff")
+            and source_crs.postgisSrid() == 3857
+        ):
             return False, source
+
+        logger.debug(
+            f"<b>Transform</b> raster layer {qgs_raster_layer.name()}"
+        )
 
         self._layer_status(
             qgs_raster_layer.name(),
             QgsApplication.translate("QGISResourceJob", "preparing"),
         )
+
+        if not source_crs.isValid():
+            raise NgwError(code=ErrorCode.SpatialReferenceError)
+
         output_path = tempfile.mktemp(suffix=".tif")
 
-        raster_writer = QgsRasterFileWriter(output_path)
         pipe = QgsRasterPipe()
         if not pipe.set(qgs_raster_layer.dataProvider().clone()):
             raise RuntimeError
 
+        extent = qgs_raster_layer.extent()
+
+        output_crs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
         transform_context = QgsProject.instance().transformContext()
+
+        if source_crs != output_crs:
+            projector = QgsRasterProjector()
+            projector.setCrs(source_crs, output_crs, transform_context)
+            if not pipe.insert(1, projector):
+                raise NgwError(
+                    "Cannot set pipe projector",
+                    code=ErrorCode.SpatialReferenceError,
+                )
+
+            transform = QgsCoordinateTransform(
+                source_crs, output_crs, QgsProject.instance()
+            )
+            transform.setBallparkTransformsAreAppropriate(True)
+            extent = transform.transformBoundingBox(extent)
+
+        raster_writer = QgsRasterFileWriter(output_path)
+        raster_writer.setOutputFormat("GTiff")
+
         raster_writer.writeRaster(
             pipe,
-            qgs_raster_layer.width(),
-            qgs_raster_layer.height(),
-            qgs_raster_layer.extent(),
-            qgs_raster_layer.crs(),
+            qgs_raster_layer.dataProvider().xSize(),
+            qgs_raster_layer.dataProvider().ySize(),
+            extent,
+            output_crs,
             transform_context,
         )
 
