@@ -493,7 +493,7 @@ class QgsNgwConnection(QObject):
                     QNetworkRequest.HttpStatusCodeAttribute
                 )
                 if chunk_reply.error() != QNetworkReply.NetworkError.NoError:
-                    logger.warning("An error occured while uploading file")
+                    logger.warning("An error occurred during uploading file")
                     qt_error_info = QtNetworkError.from_int(chunk_reply.error()).value
                     logger.debug(f"HTTP Status code: {chunk_rep_code}\n")
                     logger.debug(f"Network error: {qt_error_info.constant}")

@@ -1903,7 +1903,7 @@ class ResourcesDownloader(QGISResourceJob):
                     raise
 
                 logger.warning(
-                    "An permission error occured while fetching resource"
+                    "An permission error occurred during fetching resource"
                     f" (id={resource_id})"
                 )
 
