@@ -312,22 +312,19 @@ class QgsNgwConnection(QObject):
         # Indicate that request has been timed out by QGIS.
         # TODO: maybe use QgsNetworkAccessManager::requestTimedOut()?
         if reply.error() == QNetworkReply.NetworkError.OperationCanceledError:
-            network_error = QtNetworkError.from_int(reply.error())  # type: ignore
-            qt_error_info = network_error.value
-            logger.warning(
-                f"Network connection error: {qt_error_info.constant} ({qt_error_info.code})\n"
-                + qt_error_info.description
-            )
-            raise NGWError(
-                NGWError.TypeRequestError,
+            qt_error_info = QtNetworkError.from_int(reply.error()).value  # type: ignore
+            error = NgwError(
                 "Connection has been aborted or closed",
-                request.url().toString(),
-                self.tr(
-                    "Connection closed by QGIS. Increase timeout (Settings ->"
-                    " Options -> Network) to 300000 and retry."
+                code=ErrorCode.QgisTimeoutError,
+                detail=self.tr(
+                    "Connection was closed by QGIS. Please check your internet"
+                    " connection or increase timeout"
+                    " (Settings -> Options -> Network) and retry."
                 ),
-                need_reconnect=False,
             )
+            error.add_note(f"URL: {request.url().toString()}")
+            qt_error_info.add_exception_notes(error)
+            raise error
 
 
         # TODO: Why between those values?
