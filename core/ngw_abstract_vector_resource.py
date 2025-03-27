@@ -68,7 +68,7 @@ class NGWAbstractVectorResource(ABC, NGWResource):
 
     @property
     def qgs_fields(self) -> QgsFields:
-        return self.fields.to_qgs_fields()
+        return self.fields.qgs_fields
 
     @property
     def features_count(self) -> int:
