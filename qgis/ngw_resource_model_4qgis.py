@@ -29,6 +29,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, cast
 
 from osgeo import ogr
 from qgis.core import (
+    Qgis,
     QgsApplication,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
@@ -59,6 +60,7 @@ from qgis.gui import QgisInterface, QgsFileWidget
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 
 from nextgis_connect.compat import (
+    QGIS_3_42,
     FieldType,
     GeometryType,
     LayerType,
@@ -144,6 +146,9 @@ def get_wkt(qgis_geometry: QgsGeometry):
 
 
 def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer) -> WkbType:
+    if Qgis.versionInt() >= QGIS_3_42:
+        return qgs_vector_layer.wkbType()
+
     MAPINFO_DRIVER = "MapInfo File"
     if qgs_vector_layer.storageType() != MAPINFO_DRIVER:
         return qgs_vector_layer.wkbType()
