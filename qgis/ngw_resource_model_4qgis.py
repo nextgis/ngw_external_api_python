@@ -29,6 +29,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, cast
 
 from osgeo import ogr
 from qgis.core import (
+    Qgis,
     QgsApplication,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
@@ -59,6 +60,7 @@ from qgis.gui import QgisInterface, QgsFileWidget
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 
 from nextgis_connect.compat import (
+    QGIS_3_42,
     FieldType,
     GeometryType,
     LayerType,
@@ -144,42 +146,45 @@ def get_wkt(qgis_geometry: QgsGeometry):
 
 
 def get_real_wkb_type(qgs_vector_layer: QgsVectorLayer) -> WkbType:
-    MAPINFO_DRIVER = "MapInfo File"
-    if qgs_vector_layer.storageType() != MAPINFO_DRIVER:
+    if Qgis.versionInt() >= QGIS_3_42:
         return qgs_vector_layer.wkbType()
+    else:
+        MAPINFO_DRIVER = "MapInfo File"
+        if qgs_vector_layer.storageType() != MAPINFO_DRIVER:
+            return qgs_vector_layer.wkbType()
 
-    layer_path = qgs_vector_layer.source().split("|")[0]
-    driver: ogr.Driver = ogr.GetDriverByName(MAPINFO_DRIVER)
-    datasource: Optional[ogr.DataSource] = driver.Open(layer_path)
-    assert datasource is not None
-    layer: Optional[ogr.Layer] = datasource.GetLayer()
-    assert layer is not None
+        layer_path = qgs_vector_layer.source().split("|")[0]
+        driver: ogr.Driver = ogr.GetDriverByName(MAPINFO_DRIVER)
+        datasource: Optional[ogr.DataSource] = driver.Open(layer_path)
+        assert datasource is not None
+        layer: Optional[ogr.Layer] = datasource.GetLayer()
+        assert layer is not None
 
-    wkb_type: int = layer.GetGeomType()
-    wkb_type_2d: int = (wkb_type & ~ogr.wkb25DBit) % 1000
+        wkb_type: int = layer.GetGeomType()
+        wkb_type_2d: int = (wkb_type & ~ogr.wkb25DBit) % 1000
 
-    is_multi = False
-    has_z = False
+        is_multi = False
+        has_z = False
 
-    for feature in layer:
-        geometry: Optional[ogr.Geometry] = feature.GetGeometryRef()
-        if geometry is None:
-            continue
+        for feature in layer:
+            geometry: Optional[ogr.Geometry] = feature.GetGeometryRef()
+            if geometry is None:
+                continue
 
-        feature_wkb_type = geometry.GetGeometryType()
-        feature_wkb_type_2d = (feature_wkb_type & ~ogr.wkb25DBit) % 1000
-        is_multi = is_multi or wkb_type_2d + 3 == feature_wkb_type_2d
-        has_z = has_z or bool(feature_wkb_type & ogr.wkb25DBit)
+            feature_wkb_type = geometry.GetGeometryType()
+            feature_wkb_type_2d = (feature_wkb_type & ~ogr.wkb25DBit) % 1000
+            is_multi = is_multi or wkb_type_2d + 3 == feature_wkb_type_2d
+            has_z = has_z or bool(feature_wkb_type & ogr.wkb25DBit)
 
-        if is_multi and has_z:
-            break
+            if is_multi and has_z:
+                break
 
-    if is_multi:
-        wkb_type += 3
-    if has_z:
-        wkb_type |= ogr.wkb25DBit
+        if is_multi:
+            wkb_type += 3
+        if has_z:
+            wkb_type |= ogr.wkb25DBit
 
-    return WkbType(wkb_type)
+        return WkbType(wkb_type)
 
 
 @dataclass(frozen=True)
