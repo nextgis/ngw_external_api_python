@@ -25,11 +25,18 @@ elif COMPAT_PY_VERSION == 3:
     from urllib.parse import unquote_plus
     from urllib.parse import urlparse
     from urllib.parse import parse_qs
-
-    from pkg_resources import packaging
-
 else:
     raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)
+
+try:
+    from packaging import version
+
+    parse_version = version.parse
+
+except Exception:
+    import pkg_resources
+
+    parse_version = pkg_resources.parse_version  # type: ignore
 
 
 class CompatPy:
@@ -58,7 +65,7 @@ class CompatPy:
         if COMPAT_PY_VERSION == 2:
             return None
         elif COMPAT_PY_VERSION == 3:
-            return packaging.version.parse(vers_left) >= packaging.version.parse(vers_right)
+            return parse_version(vers_left) >= parse_version(vers_right)
         else:
             raise NotImplementedError(COMPAT_PY_UNSUPPORTED_MSG)
 
