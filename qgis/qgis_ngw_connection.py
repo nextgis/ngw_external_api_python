@@ -271,7 +271,7 @@ class QgsNgwConnection(QObject):
         nam = QgsNetworkAccessManager.instance()
 
         if CompatQt.has_redirect_policy():
-            nam.setRedirectPolicy(QNetworkRequest.NoLessSafeRedirectPolicy)
+            nam.setRedirectPolicy(QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy)
 
         if method == "GET":
             reply = nam.get(request)
@@ -349,7 +349,7 @@ class QgsNgwConnection(QObject):
             **kwargs,
         )
 
-        status_code = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+        status_code = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
         if (
             reply.error() != QNetworkReply.NetworkError.NoError  # type: ignore
             or (status_code is not None and status_code // 100 != 2)
@@ -425,7 +425,7 @@ class QgsNgwConnection(QObject):
             TUS_UPLOAD_FILE_URL, "POST", headers=create_hdrs
         )
         create_rep_code = create_rep.attribute(
-            QNetworkRequest.HttpStatusCodeAttribute
+            QNetworkRequest.Attribute.HttpStatusCodeAttribute
         )
         if create_rep_code == 413:
             raise NGWError(
@@ -487,7 +487,7 @@ class QgsNgwConnection(QObject):
                     headers=chunk_hdrs,
                 )
                 chunk_rep_code = chunk_reply.attribute(
-                    QNetworkRequest.HttpStatusCodeAttribute
+                    QNetworkRequest.Attribute.HttpStatusCodeAttribute
                 )
                 if chunk_reply.error() != QNetworkReply.NetworkError.NoError:
                     logger.warning("An error occurred during uploading file")
