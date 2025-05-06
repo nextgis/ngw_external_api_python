@@ -45,7 +45,7 @@ from nextgis_connect.exceptions import (
     NgwConnectionError,
     NgwError,
 )
-from nextgis_connect.logging import logger
+from nextgis_connect.logging import escape_html, format_container_data, logger
 from nextgis_connect.network.qt_network_error import QtNetworkError
 from nextgis_connect.ngw_api.core.ngw_error import NGWError
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
@@ -192,7 +192,7 @@ class QgsNgwConnection(QObject):
             result = self.__wait_for_answer(result)
 
         if self.__log_network and isinstance(result, (dict, list)):
-            escaped_result = html.escape(str(result))
+            escaped_result = escape_html(format_container_data(result))
             logger.debug(f"\nReply:\n{escaped_result}\n")
 
         return result
@@ -361,7 +361,7 @@ class QgsNgwConnection(QObject):
             if self.__log_network:
                 logger.debug(f"Response error\nstatus_code {status_code}")
                 if isinstance(data, (dict, list)):
-                    escaped_data = html.escape(str(data))
+                    escaped_data = escape_html(format_container_data(data))
                     logger.debug(f"\nReply:\n{escaped_data}\n")
 
             if isinstance(data, dict):
