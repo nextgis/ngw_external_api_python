@@ -85,7 +85,7 @@ class NGWResource:
         :rtype : json obj
         """
 
-        logger.debug(f"⬇️ Fetch children for id={res_id}")
+        logger.debug(f"↓ Fetch children for id={res_id}")
         return ngw_con.get(f"{API_COLLECTION_URL}?parent={res_id}")
 
     @classmethod

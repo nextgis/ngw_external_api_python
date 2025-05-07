@@ -272,7 +272,7 @@ class QGISResourceJob(NGWResourceModelJob):
             and hasattr(qgs_plugin_layer.layerDef, "serviceUrl")
         ):
             logger.debug(
-                f'<b>⬆️ Uploading plugin layer</b> "{qgs_plugin_layer.name()}"'
+                f'<b>↑ Uploading plugin layer</b> "{qgs_plugin_layer.name()}"'
             )
 
             new_layer_name = self.unique_resource_name(
@@ -303,7 +303,7 @@ class QGISResourceJob(NGWResourceModelJob):
         return []
 
     def importQgsWMSLayer(self, qgs_wms_layer, ngw_group):
-        logger.debug(f'<b>⬆️ Uploading WMS layer</b> "{qgs_wms_layer.name()}"')
+        logger.debug(f'<b>↑ Uploading WMS layer</b> "{qgs_wms_layer.name()}"')
 
         self._layer_status(
             qgs_wms_layer.name(),
@@ -380,7 +380,7 @@ class QGISResourceJob(NGWResourceModelJob):
             qgs_raster_layer.name(), ngw_parent_resource
         )
         logger.debug(
-            f'<b>⬆️ Uploading raster layer</b> "{qgs_raster_layer.name()}" (with the name "{new_layer_name}")'
+            f'<b>↑ Uploading raster layer</b> "{qgs_raster_layer.name()}" (with the name "{new_layer_name}")'
         )
 
         def uploadFileCallback(total_size, readed_size, value=None):
@@ -424,7 +424,7 @@ class QGISResourceJob(NGWResourceModelJob):
             qgs_vector_layer.name(), ngw_parent_resource
         )
         logger.debug(
-            f'<b>⬆️ Uploading vector layer</b> "{qgs_vector_layer.name()}" (with the name "{new_layer_name}")'
+            f'<b>↑ Uploading vector layer</b> "{qgs_vector_layer.name()}" (with the name "{new_layer_name}")'
         )
 
         def uploadFileCallback(total_size, readed_size, value=None):

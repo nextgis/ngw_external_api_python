@@ -535,7 +535,7 @@ class QgsNgwConnection(QObject):
 
     def get_ngw_components(self):
         if self.__ngw_components is None:
-            logger.debug("⬇️ Get versions")
+            logger.debug("↓ Get versions")
             result = self.get(GET_VERSION_URL)
             if not isinstance(result, dict):
                 raise NgwConnectionError("Unexpected versions result")
@@ -544,7 +544,7 @@ class QgsNgwConnection(QObject):
             domain = urllib.parse.urlparse(self.server_url).hostname
             version = self.__ngw_components.get("nextgisweb")
             logger.debug(
-                f"<b>🌐  Connected</b> to {domain} (NGW version: {version})"
+                f"<b>↔ Connected</b> to {domain} (NGW version: {version})"
             )
 
         return self.__ngw_components
