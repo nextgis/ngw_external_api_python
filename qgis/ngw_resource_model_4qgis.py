@@ -846,8 +846,10 @@ class QGISResourceJob(NGWResourceModelJob):
             "SPATIAL_INDEX=NO",
         ]
 
-        fields = QgsFields(qgs_vector_layer.fields())
+        fields = QgsFields()
         fields.append(QgsField(fid_name, FieldType.LongLong))
+        for field in qgs_vector_layer.fields().toList():
+            fields.append(field)
 
         writer = QgsVectorFileWriter.create(
             fileName=tmp_gpkg_path,
@@ -869,11 +871,15 @@ class QGISResourceJob(NGWResourceModelJob):
             Iterable[QgsFeature], qgs_vector_layer.getFeatures()
         ):
             try:
+                target_feature = QgsFeature(fields)
+                geometry = feature.geometry()
                 if transform is not None:
-                    geometry = feature.geometry()
                     geometry.transform(transform)
-                    feature.setGeometry(geometry)
-                writer.addFeature(feature)
+                target_feature.setGeometry(geometry)
+
+                target_feature.setAttributes([None, *feature.attributes()])
+
+                writer.addFeature(target_feature)
             except Exception:
                 # fmt: off
                 self.warningOccurred.emit(
