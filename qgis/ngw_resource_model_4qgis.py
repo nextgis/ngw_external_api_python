@@ -489,6 +489,9 @@ class QGISResourceJob(NGWResourceModelJob):
                 related_layer = QgsValueRelationFieldFormatter.resolveLayer(
                     config, QgsProject.instance()
                 )
+                if related_layer is None:
+                    continue
+
                 config["Layer"] = related_layer.id()
                 value_relation = ValueRelation.from_config(config)
                 lookup_table = self._lookup_tables_id[value_relation]
@@ -1293,6 +1296,13 @@ class QGISResourcesUploader(QGISResourceJob):
                 related_layer = QgsValueRelationFieldFormatter.resolveLayer(
                     config, QgsProject.instance()
                 )
+
+                if related_layer is None:
+                    related_layer_name = config.get("LayerName", "")
+                    logger.warning(
+                        f"Missing layer form dependency: layer '{layer.name()}' requires layer '{related_layer_name}'"
+                    )
+                    continue
 
                 config["Layer"] = related_layer.id()
                 self._value_relations.add(ValueRelation.from_config(config))
