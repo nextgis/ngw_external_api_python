@@ -196,11 +196,12 @@ class ValueRelation:
 
     @staticmethod
     def from_config(config: Dict[str, Any]) -> "ValueRelation":
+        filter_expression = config.get("FilterExpression")
         return ValueRelation(
             config["Layer"],
             config["Key"],
             config["Value"],
-            config["FilterExpression"].strip(),
+            filter_expression.strip() if filter_expression else "",
         )
 
 
