@@ -14,6 +14,7 @@ from .ngw_raster_layer import NGWRasterLayer
 from .ngw_raster_mosaic import NGWRasterMosaic
 from .ngw_raster_style import NGWRasterStyle
 from .ngw_resource import NGWResource
+from .ngw_tileset import NGWTileset
 from .ngw_tms_resources import NGWTmsConnection, NGWTmsLayer
 from .ngw_vector_layer import NGWVectorLayer
 from .ngw_webmap import NGWWebMap
@@ -39,6 +40,7 @@ __all__ = [
     "NGWRasterMosaic",
     "NGWRasterStyle",
     "NGWResource",
+    "NGWTileset",
     "NGWTmsConnection",
     "NGWTmsLayer",
     "NGWVectorLayer",

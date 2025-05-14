@@ -40,6 +40,7 @@ from .ngw_raster_layer import NGWRasterLayer
 from .ngw_raster_mosaic import NGWRasterMosaic
 from .ngw_raster_style import NGWRasterStyle
 from .ngw_resource import NGWResource
+from .ngw_tileset import NGWTileset
 from .ngw_vector_layer import NGWVectorLayer
 from .ngw_webmap import NGWWebMap
 from .ngw_wfs_service import NGWWfsService
@@ -78,6 +79,7 @@ class NGWResourceFactory:
             NGWPostgisLayer.type_id: NGWPostgisLayer,
             NGWTmsConnection.type_id: NGWTmsConnection,
             NGWTmsLayer.type_id: NGWTmsLayer,
+            NGWTileset.type_id: NGWTileset,
             NGWEekoStorage.type_id: NGWEekoStorage,
             NGWRasterMosaic.type_id: NGWRasterMosaic,
             # Aliases
