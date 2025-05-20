@@ -202,11 +202,31 @@ class QgsNgwConnection(QObject):
         sub_url: str,
         method: str,
         *,
-        badata=None,
-        params=None,
-        headers=None,
+        badata: Optional[QByteArray] = None,
+        params: Optional[Any] = None,
+        headers: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> Tuple[QNetworkRequest, QNetworkReply]:
+        """
+        Send a network request to the NGW server and return the request and reply objects.
+
+        :param sub_url: The sub-URL to send the request to.
+        :type sub_url: str
+        :param method: HTTP method (GET, POST, PATCH, DELETE, etc.).
+        :type method: str
+        :param badata: Optional raw byte data to send in the request body.
+        :type badata: Optional[QByteArray]
+        :param params: Optional parameters to include in the request.
+        :type params: Optional[Any]
+        :param headers: Optional dictionary of HTTP headers.
+        :type headers: Optional[Dict[str, str]]
+        :param kwargs: Additional keyword arguments.
+
+        :return: Tuple of QNetworkRequest and QNetworkReply.
+        :rtype: Tuple[QNetworkRequest, QNetworkReply]
+
+        :raises NgwError: On network or server error.
+        """
         json_data = None
         if params:
             if isinstance(params, str):
@@ -312,7 +332,7 @@ class QgsNgwConnection(QObject):
         # Indicate that request has been timed out by QGIS.
         # TODO: maybe use QgsNetworkAccessManager::requestTimedOut()?
         if reply.error() == QNetworkReply.NetworkError.OperationCanceledError:
-            qt_error_info = QtNetworkError.from_int(reply.error()).value  # type: ignore
+            qt_error_info = QtNetworkError.from_qt(reply.error()).value  # type: ignore
             error = NgwError(
                 "Connection has been aborted or closed",
                 code=ErrorCode.QgisTimeoutError,
@@ -326,10 +346,18 @@ class QgsNgwConnection(QObject):
             qt_error_info.add_exception_notes(error)
             raise error
 
-
-        # TODO: Why between those values?
-        elif 0 < reply.error() < 10:
-            qt_error_info = QtNetworkError.from_int(reply.error()).value
+        # Network-related errors indicating connection issues, timeouts, or system/network-level failures.
+        elif reply.error() in {
+            QNetworkReply.NetworkError.ConnectionRefusedError,
+            QNetworkReply.NetworkError.RemoteHostClosedError,
+            QNetworkReply.NetworkError.HostNotFoundError,
+            QNetworkReply.NetworkError.TimeoutError,
+            QNetworkReply.NetworkError.SslHandshakeFailedError,
+            QNetworkReply.NetworkError.TemporaryNetworkFailureError,
+            QNetworkReply.NetworkError.NetworkSessionFailedError,
+            QNetworkReply.NetworkError.BackgroundRequestNotAllowedError,
+        }:
+            qt_error_info = QtNetworkError.from_qt(reply.error()).value
             error = NgwError("Connection error")
             error.add_note(f"URL: {request.url().toString()}")
             qt_error_info.add_exception_notes(error)
@@ -395,12 +423,26 @@ class QgsNgwConnection(QObject):
         self.uploadProgressCallback = callback
         return self.put(UPLOAD_FILE_URL, file=filename)
 
-    def tus_upload_file(self, filename, callback):
+    def tus_upload_file(self, filename: str, callback: Any) -> Any:
         """
         Implements tus protocol to upload a file to NGW.
         Note: This method internally uses self methods to send synchronous
         HTTP requests (which internally use QgsNetworkAccessManager) so we
         cannot put it to some separate class or module.
+
+        This method uploads a file in chunks using the TUS protocol, providing
+        progress updates via the callback. Raises an exception if the upload fails.
+
+        :param filename: Path to the file to upload.
+        :type filename: str
+        :param callback: Callback function for upload progress.
+        :type callback: Any
+
+        :return: NGW server response after successful upload.
+        :rtype: Any
+
+        :raises Exception: If file cannot be opened or upload fails.
+        :raises NGWError: If the server returns an error.
         """
         callback(
             0, 0, 0
@@ -491,7 +533,7 @@ class QgsNgwConnection(QObject):
                 )
                 if chunk_reply.error() != QNetworkReply.NetworkError.NoError:
                     logger.warning("An error occurred during uploading file")
-                    qt_error_info = QtNetworkError.from_int(chunk_reply.error()).value
+                    qt_error_info = QtNetworkError.from_qt(chunk_reply.error()).value
                     logger.debug(f"HTTP Status code: {chunk_rep_code}\n")
                     logger.debug(f"Network error: {qt_error_info.constant}")
                     logger.debug(f"Error description: {qt_error_info.description}")

@@ -23,7 +23,7 @@ from typing import Optional
 
 from qgis.core import QgsNetworkAccessManager
 from qgis.PyQt.QtCore import QUrl
-from qgis.PyQt.QtNetwork import QNetworkRequest
+from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 
 from nextgis_connect.exceptions import NgwError
 from nextgis_connect.logging import logger
@@ -44,6 +44,15 @@ class NGWQGISStyle(NGWResource):
         return self.__qml is not None
 
     def populate_qml(self) -> None:
+        """
+        Download and populate the QML style content for this resource.
+
+        If the QML content is already populated, the method does nothing.
+        Downloads the QML style from the server using the resource's connection
+        and stores it in the internal attribute.
+
+        :raises NgwError: If the QML style could not be downloaded.
+        """
         if self.__qml is not None:
             return
 
@@ -59,7 +68,7 @@ class NGWQGISStyle(NGWResource):
         dwn_qml_manager = QgsNetworkAccessManager()
         reply_content = dwn_qml_manager.blockingGet(qml_req, forceRefresh=True)
 
-        if reply_content.error():
+        if reply_content.error() != QNetworkReply.NetworkError.NoError:
             raise NgwError(
                 f"Failed to download QML: {reply_content.errorString()}"
             )
