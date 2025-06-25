@@ -92,12 +92,12 @@
 <context>
     <name>QgsNgwConnection</name>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="431"/>
+        <location filename="../qgis_ngw_connection.py" line="473"/>
         <source>File is too large for uploading</source>
         <translation>Загружаемый файл слишком большой</translation>
     </message>
     <message>
-        <location filename="../qgis_ngw_connection.py" line="316"/>
+        <location filename="../qgis_ngw_connection.py" line="336"/>
         <source>Connection was closed by QGIS. Please check your internet connection or increase timeout (Settings -&gt; Options -&gt; Network) and retry.</source>
         <translation>Соединение было закрыто QGIS. Пожалуйста, проверьте настройки вашего интернет-соединения или увеличьте таймаут для сетевых запросов (Установки -&gt; Параметры -&gt; Сеть) и повторите попытку.</translation>
     </message>
