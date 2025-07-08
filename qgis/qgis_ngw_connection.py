@@ -19,10 +19,10 @@
 """
 
 import contextlib
-import html
 import json
 import time
 import urllib.parse
+from base64 import b64encode
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union
 
@@ -57,8 +57,9 @@ from .compat_qgis import CompatQt
 
 if TYPE_CHECKING:
     from qgis.PyQt.QtNetwork import QNetworkReply as _QNetworkReply
+
     class QNetworkReply(_QNetworkReply):
-        def error(self) -> _QNetworkReply.NetworkError: ... # type: ignore
+        def error(self) -> _QNetworkReply.NetworkError: ...  # type: ignore
 
 else:
     from qgis.PyQt.QtNetwork import QNetworkReply
@@ -291,7 +292,9 @@ class QgsNgwConnection(QObject):
         nam = QgsNetworkAccessManager.instance()
 
         if CompatQt.has_redirect_policy():
-            nam.setRedirectPolicy(QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy)
+            nam.setRedirectPolicy(
+                QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy
+            )
 
         if method == "GET":
             reply = nam.get(request)
@@ -377,7 +380,9 @@ class QgsNgwConnection(QObject):
             **kwargs,
         )
 
-        status_code = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+        status_code = reply.attribute(
+            QNetworkRequest.Attribute.HttpStatusCodeAttribute
+        )
         if (
             reply.error() != QNetworkReply.NetworkError.NoError  # type: ignore
             or (status_code is not None and status_code // 100 != 2)
@@ -456,12 +461,13 @@ class QgsNgwConnection(QObject):
 
         # Initiate upload process by sending specific "create" request with a
         # void body.
+        encoded_filename = b64encode(file.fileName().encode()).decode()
         create_hdrs = {
             "Tus-Resumable": TUS_VERSION,
             "Content-Length": "0",
             #'Upload-Defer-Length': ,
             "Upload-Length": str(file_size),
-            #'Upload-Metadata': 'name {}'.format(base64name)
+            "Upload-Metadata": f"filename {encoded_filename}",
         }
         create_req, create_rep = self.__request_rep(
             TUS_UPLOAD_FILE_URL, "POST", headers=create_hdrs
@@ -506,9 +512,7 @@ class QgsNgwConnection(QObject):
             bytes_read = badata.size()
 
             if self.__log_network and not is_file_large:
-                logger.debug(
-                    f"Upload {bytes_sent} from {file_size}"
-                )
+                logger.debug(f"Upload {bytes_sent} from {file_size}")
             self.sendUploadProgress(bytes_sent, file_size)
 
             chunk_hdrs = {
@@ -533,10 +537,14 @@ class QgsNgwConnection(QObject):
                 )
                 if chunk_reply.error() != QNetworkReply.NetworkError.NoError:
                     logger.warning("An error occurred during uploading file")
-                    qt_error_info = QtNetworkError.from_qt(chunk_reply.error()).value
+                    qt_error_info = QtNetworkError.from_qt(
+                        chunk_reply.error()
+                    ).value
                     logger.debug(f"HTTP Status code: {chunk_rep_code}\n")
                     logger.debug(f"Network error: {qt_error_info.constant}")
-                    logger.debug(f"Error description: {qt_error_info.description}")
+                    logger.debug(
+                        f"Error description: {qt_error_info.description}"
+                    )
 
                 chunk_reply.deleteLater()
                 del chunk_reply
