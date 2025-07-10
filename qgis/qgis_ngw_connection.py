@@ -467,7 +467,7 @@ class QgsNgwConnection(QObject):
             "Content-Length": "0",
             #'Upload-Defer-Length': ,
             "Upload-Length": str(file_size),
-            "Upload-Metadata": f"filename {encoded_filename}",
+            "Upload-Metadata": f"name {encoded_filename}",
         }
         create_req, create_rep = self.__request_rep(
             TUS_UPLOAD_FILE_URL, "POST", headers=create_hdrs
