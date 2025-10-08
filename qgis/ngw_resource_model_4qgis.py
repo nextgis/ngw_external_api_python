@@ -589,7 +589,12 @@ class QGISResourceJob(NGWResourceModelJob):
         )
 
         if not source_crs.isValid():
-            raise NgwError(code=ErrorCode.SpatialReferenceError)
+            raise NgwError(
+                QgsApplication.translate(
+                    "QGISResourceJob", "Tile has no spatial reference."
+                ),
+                code=ErrorCode.SpatialReferenceError,
+            )
 
         output_path = tempfile.mktemp(suffix=".tif")
 
