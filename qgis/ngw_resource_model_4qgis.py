@@ -938,7 +938,8 @@ class QGISResourceJob(NGWResourceModelJob):
         temp_filename = tempfile.mktemp(suffix=".qml")
         with open(temp_filename, "w") as qml_file:
             qml_data = style_manager.style(style_name).xmlData()
-            qml_data = QMLProcessor(qml_data, qgs_map_layer).process()
+            if isinstance(qgs_map_layer, QgsVectorLayer):
+                qml_data = QMLProcessor(qml_data, qgs_map_layer).process()
             qml_file.write(qml_data)
 
         if style_manager.isDefault(style_name):
@@ -1937,3 +1938,100 @@ class ResourcesDownloader(QGISResourceJob):
                 )
 
                 self.result.not_permitted_resources.append(resource_id)
+
+
+class NGWUpdateRasterLayer(QGISResourceJob):
+    """
+    Update NextGIS Web raster layer by replacing its source with a new file.
+
+    :param ngw_raster_layer: NGW raster layer resource to be updated.
+    :type ngw_raster_layer: NGWRasterLayer
+    :param qgs_map_layer: QGIS raster layer providing new data.
+    :type qgs_map_layer: QgsRasterLayer
+    """
+
+    def __init__(
+        self, ngw_raster_layer: NGWRasterLayer, qgs_map_layer: QgsRasterLayer
+    ) -> None:
+        """
+        Initialize update job for a raster layer.
+        """
+        super().__init__()
+        self.ngw_layer = ngw_raster_layer
+        self.qgis_layer = qgs_map_layer
+
+    def _do(self) -> None:
+        """
+        Prepare raster file, upload it and instruct NGW to replace the layer.
+        """
+        logger.debug(
+            f'<b>Replace "{self.ngw_layer.display_name}" layer features</b> '
+            f'from layer "{self.qgis_layer.name()}")'
+        )
+
+        def upload_file_callback(
+            total_size: int, readed_size: int, value: Optional[int] = None
+        ) -> None:
+            percent = (
+                int(readed_size * 100 / total_size)
+                if value is None
+                else value
+            )
+            self._layer_status(
+                self.qgis_layer.name(),
+                QgsApplication.translate(
+                    "QGISResourceJob", "uploading ({}%)"
+                ).format(percent),
+            )
+
+        if not self.qgis_layer.crs().isValid():
+            raise JobError(
+                f"Raster layer '{self.qgis_layer.name()}' has no spatial "
+                "reference"
+            )
+
+        is_ok, file_path = self.prepareImportRasterFile(self.qgis_layer)
+        if not is_ok:
+            raise JobError(
+                f'Can\'t prepare layer "{self.qgis_layer.name()}"'
+            )
+
+        connection = self.ngw_layer.res_factory.connection
+        raster_file_desc = connection.tus_upload_file(
+            file_path, upload_file_callback
+        )
+
+        url = self.ngw_layer.get_absolute_api_url()
+        params = dict(
+            resource=dict(),
+            raster_layer=dict(
+                srs=dict(id=3857),
+                source=raster_file_desc,
+                fix_errors="LOSSY",
+                skip_errors=True,
+                fid_source="AUTO",
+            ),
+        )
+
+        self._layer_status(
+            self.ngw_layer.display_name,
+            QgsApplication.translate(
+                "QGISResourceJob", "replacing features"
+            ),
+        )
+
+        connection.put(url, params=params, is_lunkwill=True)
+
+        self.ngw_layer = self.ngw_layer.res_factory.get_resource(
+            self.ngw_layer.resource_id
+        )
+
+        self._layer_status(
+            self.ngw_layer.display_name,
+            QgsApplication.translate("QGISResourceJob", "finishing"),
+        )
+
+        # remove temporary file if it exists
+        p = Path(file_path)
+        if p.exists():
+            p.unlink()
