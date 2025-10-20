@@ -90,8 +90,8 @@
     </message>
     <message>
         <location filename="../ngw_resource_model_4qgis.py" line="592"/>
-        <source>Tile has no spatial reference.</source>
-        <translation>Тайл без пространственной привязки.</translation>
+        <source>Raster layer has no spatial reference.</source>
+        <translation>Растровый слой без пространственной привязки.</translation>
     </message>
 </context>
 <context>
