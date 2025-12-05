@@ -363,7 +363,7 @@ class QGISResourceJob(NGWResourceModelJob):
                 wms_connection.display_name + "_layer", ngw_group
             )
 
-            layer_ids = parameters.get("layers", wms_connection.layers())
+            layer_ids = parameters.get("layers", wms_connection.layers)
             if not isinstance(layer_ids, list):
                 layer_ids = [layer_ids]
 
