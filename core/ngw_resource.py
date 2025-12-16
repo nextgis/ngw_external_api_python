@@ -18,14 +18,17 @@
  ***************************************************************************/
 """
 
-import re
 import urllib.parse
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List
 
 from nextgis_connect.logging import logger
-from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
 from nextgis_connect.resources.utils import generate_unique_name
+
+if TYPE_CHECKING:
+    from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import (
+        QgsNgwConnection,
+    )
 
 ICONS_DIR = Path(__file__).parents[1] / "icons"
 
@@ -177,7 +180,7 @@ class NGWResource:
         return self.res_factory.connection.connection_id
 
     @property
-    def connection(self) -> QgsNgwConnection:
+    def connection(self) -> "QgsNgwConnection":
         return self.res_factory.connection
 
     @classmethod
