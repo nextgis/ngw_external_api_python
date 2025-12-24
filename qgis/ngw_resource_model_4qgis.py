@@ -546,25 +546,8 @@ class QGISResourceJob(NGWResourceModelJob):
             QgsApplication.translate("QGISResourceJob", "preparing"),
         )
 
-        layer_has_mixed_geoms = False
-        fids_with_notvalid_geom = []
-
-        # Do not check geometries (rely on NGW):
-        # if NgConnectPlugin.fix_incorrect_geometries
-        #    layer_has_mixed_geoms, fids_with_notvalid_geom = self.checkGeometry(qgs_vector_layer)
-
-        if layer_has_mixed_geoms or len(fids_with_notvalid_geom) > 0:
-            layer = self.createLayer4Upload(
-                qgs_vector_layer,
-                fids_with_notvalid_geom,
-                layer_has_mixed_geoms,
-            )
-        else:
-            layer = qgs_vector_layer
-
-        gpkg_path, old_fid_name = self.prepareAsGPKG(layer)
-
-        return gpkg_path, old_fid_name, layer
+        gpkg_path, old_fid_name = self.prepareAsGPKG(qgs_vector_layer)
+        return gpkg_path, old_fid_name, qgs_vector_layer
 
     def prepareImportRasterFile(
         self, qgs_raster_layer: QgsRasterLayer
