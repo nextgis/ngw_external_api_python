@@ -578,7 +578,9 @@ class QGISResourceJob(NGWResourceModelJob):
                 code=ErrorCode.SpatialReferenceError,
             )
 
-        output_path = tempfile.mktemp(suffix=".tif")
+        output_fd, output_path = tempfile.mkstemp(suffix=".tif")
+        os.close(output_fd)
+        Path(output_path).unlink(missing_ok=True)
 
         pipe = QgsRasterPipe()
         if not pipe.set(qgs_raster_layer.dataProvider().clone()):
@@ -808,7 +810,9 @@ class QGISResourceJob(NGWResourceModelJob):
     def prepareAsGPKG(
         self, qgs_vector_layer: QgsVectorLayer
     ) -> Tuple[str, Optional[str]]:
-        tmp_gpkg_path = tempfile.mktemp(".gpkg")
+        tmp_gpkg_fd, tmp_gpkg_path = tempfile.mkstemp(suffix=".gpkg")
+        os.close(tmp_gpkg_fd)
+        Path(tmp_gpkg_path).unlink(missing_ok=True)
 
         source_srs = qgs_vector_layer.sourceCrs()
         destination_srs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
@@ -917,8 +921,10 @@ class QGISResourceJob(NGWResourceModelJob):
         style_manager = qgs_map_layer.styleManager()
         assert style_manager is not None
 
-        temp_filename = tempfile.mktemp(suffix=".qml")
-        with open(temp_filename, "w") as qml_file:
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".qml", delete=False
+        ) as qml_file:
+            temp_filename = qml_file.name
             qml_data = style_manager.style(style_name).xmlData()
             qml_file.write(qml_data)
 
@@ -940,8 +946,10 @@ class QGISResourceJob(NGWResourceModelJob):
 
         current_style = style_manager.currentStyle()
 
-        temp_filename = tempfile.mktemp(suffix=".qml")
-        with open(temp_filename, "w") as qml_file:
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".qml", delete=False
+        ) as qml_file:
+            temp_filename = qml_file.name
             qml_data = style_manager.style(current_style).xmlData()
             qml_file.write(qml_data)
 
