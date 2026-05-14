@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, cast
 
-from osgeo import ogr
+from osgeo import gdal, ogr
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -411,6 +411,8 @@ class QGISResourceJob(NGWResourceModelJob):
             createLayerCallback,
         )
 
+        logger.debug(f'↑ Raster layer "{qgs_raster_layer.name()}" was uploaded with id {ngw_raster_layer.resource_id}')
+
         if is_converted:
             os.remove(filepath)
 
@@ -574,8 +576,11 @@ class QGISResourceJob(NGWResourceModelJob):
         if (
             Path(source).exists()
             and Path(source).suffix in (".tif", ".tiff")
-            and source_crs.postgisSrid() == 3857
+            and source_crs.postgisSrid() != 0
         ):
+            logger.debug(
+                f"Raster layer {qgs_raster_layer.name()} is suitable for upload without transformation"
+            )
             return False, source
 
         logger.debug(
@@ -596,14 +601,24 @@ class QGISResourceJob(NGWResourceModelJob):
 
         pipe = QgsRasterPipe()
         if not pipe.set(qgs_raster_layer.dataProvider().clone()):
-            raise RuntimeError
+            raise NgConnectError(
+                "Cannot set pipe raster data provider for layer "
+                f"{qgs_raster_layer.name()}"
+            )
 
         extent = qgs_raster_layer.extent()
 
-        output_crs = QgsCoordinateReferenceSystem.fromEpsgId(3857)
+        output_crs = (
+            QgsCoordinateReferenceSystem.fromEpsgId(3857)
+            if source_crs.postgisSrid() == 0
+            else source_crs
+        )
         transform_context = QgsProject.instance().transformContext()
 
         if source_crs != output_crs:
+            logger.debug(
+                f"Raster layer {qgs_raster_layer.name()} will be reprojected from {source_crs.authid()} to {output_crs.authid()}"
+            )
             projector = QgsRasterProjector()
             projector.setCrs(source_crs, output_crs, transform_context)
             if not pipe.insert(1, projector):
@@ -629,6 +644,26 @@ class QGISResourceJob(NGWResourceModelJob):
             output_crs,
             transform_context,
         )
+
+        if source_crs.postgisSrid() == 0:
+            logger.debug(
+                f"Raster layer {qgs_raster_layer.name()} datatype will be fixed"
+            )
+            broken_datasource = gdal.Open(output_path)
+            if not broken_datasource:
+                raise NgConnectError(
+                    "Cannot open raster file with GDAL for fixing georeference",
+                )
+
+            fixed_output = output_path.replace(".tif", "_fixed.tif")
+            gdal.Translate(
+                fixed_output,
+                broken_datasource,
+                outputType=qgs_raster_layer.dataProvider().dataType(1),
+            )
+            broken_datasource = None
+
+            os.replace(fixed_output, output_path)
 
         return True, output_path
 
