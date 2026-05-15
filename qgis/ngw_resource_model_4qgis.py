@@ -95,6 +95,9 @@ from nextgis_connect.ngw_api.core.ngw_wms_connection import NGWWmsConnection
 from nextgis_connect.ngw_api.core.ngw_wms_layer import NGWWmsLayer
 from nextgis_connect.ngw_api.core.ngw_wms_service import NGWWmsService
 from nextgis_connect.ngw_api.qgis.qgis_ngw_connection import QgsNgwConnection
+from nextgis_connect.ngw_api.qgis.raster_upload_preparer import (
+    RasterUploadPreparer,
+)
 from nextgis_connect.ngw_api.qt.qt_ngw_resource_model_job import (
     NGWResourceModelJob,
 )
@@ -411,7 +414,9 @@ class QGISResourceJob(NGWResourceModelJob):
             createLayerCallback,
         )
 
-        logger.debug(f'↑ Raster layer "{qgs_raster_layer.name()}" was uploaded with id {ngw_raster_layer.resource_id}')
+        logger.debug(
+            f'↑ Raster layer "{qgs_raster_layer.name()}" was uploaded with id {ngw_raster_layer.resource_id}'
+        )
 
         if is_converted:
             os.remove(filepath)
@@ -571,101 +576,21 @@ class QGISResourceJob(NGWResourceModelJob):
     def prepareImportRasterFile(
         self, qgs_raster_layer: QgsRasterLayer
     ) -> Tuple[bool, str]:
-        source = qgs_raster_layer.source()
-        source_crs = qgs_raster_layer.crs()
-        if (
-            Path(source).exists()
-            and Path(source).suffix in (".tif", ".tiff")
-            and source_crs.postgisSrid() != 0
-        ):
-            logger.debug(
-                f"Raster layer {qgs_raster_layer.name()} is suitable for upload without transformation"
-            )
-            return False, source
-
-        logger.debug(
-            f"<b>Transform</b> raster layer {qgs_raster_layer.name()}"
-        )
-
         self._layer_status(
             qgs_raster_layer.name(),
             QgsApplication.translate("QGISResourceJob", "preparing"),
         )
 
-        if not source_crs.isValid():
-            raise NgwError(code=ErrorCode.SpatialReferenceError)
+        preparer = RasterUploadPreparer()
+        prepared_file = preparer.prepare(qgs_raster_layer)
 
-        output_fd, output_path = tempfile.mkstemp(suffix=".tif")
-        os.close(output_fd)
-        Path(output_path).unlink(missing_ok=True)
-
-        pipe = QgsRasterPipe()
-        if not pipe.set(qgs_raster_layer.dataProvider().clone()):
-            raise NgConnectError(
-                "Cannot set pipe raster data provider for layer "
-                f"{qgs_raster_layer.name()}"
-            )
-
-        extent = qgs_raster_layer.extent()
-
-        output_crs = (
-            QgsCoordinateReferenceSystem.fromEpsgId(3857)
-            if source_crs.postgisSrid() == 0
-            else source_crs
-        )
-        transform_context = QgsProject.instance().transformContext()
-
-        if source_crs != output_crs:
-            logger.debug(
-                f"Raster layer {qgs_raster_layer.name()} will be reprojected from {source_crs.authid()} to {output_crs.authid()}"
-            )
-            projector = QgsRasterProjector()
-            projector.setCrs(source_crs, output_crs, transform_context)
-            if not pipe.insert(1, projector):
-                raise NgwError(
-                    "Cannot set pipe projector",
-                    code=ErrorCode.SpatialReferenceError,
-                )
-
-            transform = QgsCoordinateTransform(
-                source_crs, output_crs, QgsProject.instance()
-            )
-            transform.setBallparkTransformsAreAppropriate(True)
-            extent = transform.transformBoundingBox(extent)
-
-        raster_writer = QgsRasterFileWriter(output_path)
-        raster_writer.setOutputFormat("GTiff")
-
-        raster_writer.writeRaster(
-            pipe,
-            qgs_raster_layer.dataProvider().xSize(),
-            qgs_raster_layer.dataProvider().ySize(),
-            extent,
-            output_crs,
-            transform_context,
+        logger.debug(
+            "Raster layer %s prepared for upload: %s",
+            qgs_raster_layer.name(),
+            prepared_file.upload_path,
         )
 
-        if source_crs.postgisSrid() == 0:
-            logger.debug(
-                f"Raster layer {qgs_raster_layer.name()} datatype will be fixed"
-            )
-            broken_datasource = gdal.Open(output_path)
-            if not broken_datasource:
-                raise NgConnectError(
-                    "Cannot open raster file with GDAL for fixing georeference",
-                )
-
-            fixed_output = output_path.replace(".tif", "_fixed.tif")
-            gdal.Translate(
-                fixed_output,
-                broken_datasource,
-                outputType=qgs_raster_layer.dataProvider().dataType(1),
-            )
-            broken_datasource = None
-
-            os.replace(fixed_output, output_path)
-
-        return True, output_path
+        return prepared_file.is_temporary, str(prepared_file.upload_path)
 
     def checkGeometry(self, qgs_vector_layer):
         has_simple_geometries = False
