@@ -26,7 +26,7 @@ from base64 import b64encode
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Union
 
-from qgis.core import QgsNetworkAccessManager
+from qgis.core import Enum, QgsNetworkAccessManager
 from qgis.PyQt.QtCore import (
     QBuffer,
     QByteArray,
@@ -39,6 +39,7 @@ from qgis.PyQt.QtCore import (
 )
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
+from nextgis_connect.compat import parse_version
 from nextgis_connect.exceptions import (
     ErrorCode,
     NgConnectError,
@@ -79,6 +80,10 @@ def is_lunkwill_reply(reply: QNetworkReply) -> bool:
     if not isinstance(header, str):
         return False
     return header.startswith(lunkwill_type)
+
+
+class NgwFeature(Enum):
+    BOOLEAN_TYPE = ("nextgisweb", parse_version("5.5.0.dev1"))
 
 
 class QgsNgwConnection(QObject):
@@ -130,6 +135,29 @@ class QgsNgwConnection(QObject):
     def invalidate_cached_ngw_components(self) -> None:
         self.__ngw_components = None
         self.clear_cached_ngw_components(self.connection_id)
+
+    def has_support_for_feature(self, feature: NgwFeature) -> bool:
+        ngw_components = self.get_ngw_components()
+        component_version = ngw_components.get(feature.value[0])
+        if not component_version:
+            raise NgwConnectionError(
+                f"Component {feature.value[0]} version is not available in NGW versions response"
+            )
+
+        logger.debug(
+            f"NGW component {feature.value[0]} version is {component_version}"
+        )
+
+        ngw_version = parse_version(component_version)
+        required_version = feature.value[1]
+        result = ngw_version >= required_version
+        if not result:
+            logger.debug(
+                f"Feature {feature.name} requires version {required_version} "
+                f"of component {feature.value[0]} but actual version is {ngw_version}"
+            )
+
+        return result
 
     def get(
         self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
