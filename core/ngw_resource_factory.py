@@ -120,4 +120,4 @@ class NGWResourceFactory:
         return self.get_resource(0)
 
     def get_ngw_verson(self):
-        return self.__conn.get(API_NGW_VERSION)
+        return self.__conn.get_ngw_components()
