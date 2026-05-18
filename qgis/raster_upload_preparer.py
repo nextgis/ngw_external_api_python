@@ -114,14 +114,6 @@ class RasterUploadPreparer:
                 is_archive=False,
             )
 
-        sidecar_names = ", ".join(str(path.name) for path in sidecar_paths)
-
-        logger.debug(
-            "Raster layer %s will be uploaded as an archive with sidecars: %s",
-            layer.name(),
-            sidecar_names,
-        )
-
         archive_path = self._build_archive(
             main_path=main_path,
             sidecar_paths=sidecar_paths,
@@ -332,13 +324,22 @@ class RasterUploadPreparer:
         """Build a ZIP archive with raster dataset files."""
         archive_path = self._temporary_path(".zip", keep_file=True)
 
+        sidecar_names = []
+
         entries: Dict[str, Path] = {main_path.name: main_path}
         for sidecar_path in sidecar_paths:
             entries.setdefault(sidecar_path.name, sidecar_path)
+            sidecar_names.append(sidecar_path.name)
 
         crs_archive_name = f"{main_path.stem}{CRS_SIDECAR_SUFFIX}"
         if crs is not None:
             entries.pop(crs_archive_name, None)
+            sidecar_names.append(crs_archive_name)
+
+        logger.debug(
+            "Raster layer will be uploaded as an archive with sidecars: %s",
+            ", ".join(sidecar_names),
+        )
 
         with zipfile.ZipFile(
             str(archive_path),
