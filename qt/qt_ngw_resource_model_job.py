@@ -21,6 +21,7 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Union, cast
 
+from qgis.core import QgsFeedback
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 from nextgis_connect.exceptions import NgConnectError
@@ -108,6 +109,7 @@ class NGWResourceModelJob(QObject):
         self.id = self.__class__.__name__
 
         self.result = NGWResourceModelJobResult()
+        self._feedback: Optional[QgsFeedback] = None
 
     def unique_resource_name(
         self, resource_name: str, ngw_group: NGWGroupResource
@@ -196,6 +198,12 @@ class NGWResourceModelJob(QObject):
         self.dataReceived.emit(self.result)
         self.finished.emit()
 
+    def cancel(self) -> None:
+        if self._feedback is None:
+            return
+
+        self._feedback.cancel()
+
     def _do(self):
         pass
 
@@ -206,11 +214,14 @@ class NGWRootResourcesLoader(NGWResourceModelJob):
     def __init__(self, ngw_connection: QgsNgwConnection):
         super().__init__()
         self.ngw_connection = ngw_connection
+        self._feedback = QgsFeedback()
 
     def _do(self):
         rsc_factory = NGWResourceFactory(self.ngw_connection)
 
-        ngw_root_resource = rsc_factory.get_root_resource()
+        ngw_root_resource = rsc_factory.get_root_resource(
+            feedback=self._feedback
+        )
         self.putAddedResourceToResult(ngw_root_resource, is_main=True)
 
 
@@ -223,6 +234,7 @@ class NGWResourceUpdater(NGWResourceModelJob):
         recursive: bool = False,
     ) -> None:
         super().__init__()
+        self._feedback = QgsFeedback()
         ngw_resources = deepcopy(ngw_resources)
         if isinstance(ngw_resources, list):
             self.ngw_resources = ngw_resources
@@ -249,7 +261,9 @@ class NGWResourceUpdater(NGWResourceModelJob):
     def __get_children(
         self, ngw_resource: NGWResource, dangling: bool = False
     ):
-        ngw_resource_children = ngw_resource.get_children()
+        ngw_resource_children = ngw_resource.get_children(
+            feedback=self._feedback
+        )
         for ngw_resource_child in ngw_resource_children:
             if dangling:
                 self.result.dangling_resources.append(ngw_resource_child)

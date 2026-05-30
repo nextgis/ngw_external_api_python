@@ -20,7 +20,9 @@
 
 import urllib.parse
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from qgis.core import QgsFeedback
 
 from nextgis_connect.logging import logger
 from nextgis_connect.resources.utils import generate_unique_name
@@ -76,20 +78,35 @@ class NGWResource:
 
     # STATIC
     @classmethod
-    def receive_resource_obj(cls, ngw_con, res_id) -> Dict[str, Any]:
+    def receive_resource_obj(
+        cls,
+        ngw_con,
+        res_id,
+        *,
+        feedback: Optional[QgsFeedback] = None,
+    ) -> Dict[str, Any]:
         """
         :rtype : json obj
         """
-        return ngw_con.get(API_RESOURCE_URL(res_id))
+        return ngw_con.get(API_RESOURCE_URL(res_id), feedback=feedback)
 
     @classmethod
-    def receive_resource_children(cls, ngw_con, res_id):
+    def receive_resource_children(
+        cls,
+        ngw_con,
+        res_id,
+        *,
+        feedback: Optional[QgsFeedback] = None,
+    ):
         """
         :rtype : json obj
         """
 
         logger.debug(f"↓ Fetch children for id={res_id}")
-        return ngw_con.get(f"{API_COLLECTION_URL}?parent={res_id}")
+        return ngw_con.get(
+            f"{API_COLLECTION_URL}?parent={res_id}",
+            feedback=feedback,
+        )
 
     @classmethod
     def delete_resource(cls, ngw_resource):
@@ -144,12 +161,18 @@ class NGWResource:
         else:
             return None
 
-    def get_children(self) -> List["NGWResource"]:
+    def get_children(
+        self,
+        *,
+        feedback: Optional[QgsFeedback] = None,
+    ) -> List["NGWResource"]:
         if not self.common.children:
             return []
 
         children_json = NGWResource.receive_resource_children(
-            self.res_factory.connection, self.resource_id
+            self.res_factory.connection,
+            self.resource_id,
+            feedback=feedback,
         )
         children: List[NGWResource] = []
         for child_json in children_json:
@@ -253,15 +276,22 @@ class NGWResource:
         connection.put(url, params=params)
         self.update()
 
-    def update(self, *, skip_children: bool = False):
+    def update(
+        self,
+        *,
+        skip_children: bool = False,
+        feedback: Optional[QgsFeedback] = None,
+    ):
         self._json = self.receive_resource_obj(
-            self.res_factory.connection, self.resource_id
+            self.res_factory.connection,
+            self.resource_id,
+            feedback=feedback,
         )
 
         self._construct()
 
         if not skip_children:
-            children = self.get_children()
+            children = self.get_children(feedback=feedback)
             self.set_children_count(len(children))
 
     def generate_unique_child_name(self, name: str) -> str:
