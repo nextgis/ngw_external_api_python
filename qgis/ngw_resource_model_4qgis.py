@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, cast
 
-from osgeo import gdal, ogr
+from osgeo import ogr
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -35,6 +35,7 @@ from qgis.core import (
     QgsCoordinateTransform,
     QgsFeature,
     QgsFeatureRequest,
+    QgsFeedback,
     QgsField,
     QgsFields,
     QgsGeometry,
@@ -46,10 +47,7 @@ from qgis.core import (
     QgsPluginLayer,
     QgsProject,
     QgsProviderRegistry,
-    QgsRasterFileWriter,
     QgsRasterLayer,
-    QgsRasterPipe,
-    QgsRasterProjector,
     QgsReferencedRectangle,
     QgsValueRelationFieldFormatter,
     QgsVectorFileWriter,
@@ -1876,6 +1874,7 @@ class ResourcesDownloader(QGISResourceJob):
         super().__init__()
         self.__connection_id = connection_id
         self.__resources_id = resources_id
+        self._feedback = QgsFeedback()
 
     def _do(self):
         ngw_connection = QgsNgwConnection(self.__connection_id)
@@ -1883,7 +1882,10 @@ class ResourcesDownloader(QGISResourceJob):
         for resource_id in self.__resources_id:
             try:
                 self.result.dangling_resources.append(
-                    resources_factory.get_resource(resource_id)
+                    resources_factory.get_resource(
+                        resource_id,
+                        feedback=self._feedback,
+                    )
                 )
             except NgwError as error:
                 if error.code not in (

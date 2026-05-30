@@ -26,7 +26,7 @@ from base64 import b64encode
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Union
 
-from qgis.core import Enum, QgsNetworkAccessManager
+from qgis.core import Enum, QgsFeedback, QgsNetworkAccessManager
 from qgis.PyQt.QtCore import (
     QBuffer,
     QByteArray,
@@ -49,6 +49,7 @@ from nextgis_connect.exceptions import (
 from nextgis_connect.logging import escape_html, format_container_data, logger
 from nextgis_connect.network.qt_network_error import QtNetworkError
 from nextgis_connect.ngw_api.core.ngw_error import NGWError
+from nextgis_connect.ngw_connection.ngw_connection import NgwConnection
 from nextgis_connect.ngw_connection.ngw_connections_manager import (
     NgwConnectionsManager,
 )
@@ -94,29 +95,49 @@ class QgsNgwConnection(QObject):
     ] = {}
 
     __connection_id: str
+    __connection: Optional[NgwConnection]
     __log_network: bool
 
     __ngw_components: Optional[Dict[str, Any]]
 
     def __init__(
-        self, connection_id: str, parent: Optional[QObject] = None
+        self,
+        connection: Union[str, NgwConnection],
+        log_network: Optional[bool] = None,
+        parent: Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
-        self.__connection_id = connection_id
-        self.__log_network = NgConnectSettings().is_network_debug_enabled
+        self.__log_network = (
+            NgConnectSettings().is_network_debug_enabled
+            if log_network is None
+            else log_network
+        )
+        self.__connection = None
 
-        connections_manager = NgwConnectionsManager()
-        if not connections_manager.is_valid(connection_id):
-            raise NgwConnectionError(code=ErrorCode.InvalidConnection)
+        if isinstance(connection, NgwConnection):
+            self.__connection_id = connection.id
+            self.__connection = connection
+        else:
+            self.__connection_id = connection
+            connections_manager = NgwConnectionsManager()
+            if not connections_manager.is_valid(connection):
+                raise NgwConnectionError(code=ErrorCode.InvalidConnection)
 
         self.__ngw_components = None
 
     @property
-    def server_url(self) -> str:
+    def connection(self) -> NgwConnection:
+        if self.__connection is not None:
+            return self.__connection
+
         connections_manager = NgwConnectionsManager()
         connection = connections_manager.connection(self.__connection_id)
         assert connection is not None
-        return connection.url
+        return connection
+
+    @property
+    def server_url(self) -> str:
+        return self.connection.url
 
     @property
     def connection_id(self) -> str:
@@ -160,47 +181,109 @@ class QgsNgwConnection(QObject):
         return result
 
     def get(
-        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+        self,
+        sub_url: str,
+        params=None,
+        *,
+        is_lunkwill: bool = False,
+        feedback: Optional[QgsFeedback] = None,
+        **kwargs,
     ) -> Any:
         return self.__request(
-            sub_url, "GET", params, is_lunkwill=is_lunkwill, **kwargs
+            sub_url,
+            "GET",
+            params,
+            is_lunkwill=is_lunkwill,
+            feedback=feedback,
+            **kwargs,
         )
 
     def post(
-        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+        self,
+        sub_url: str,
+        params=None,
+        *,
+        is_lunkwill: bool = False,
+        feedback: Optional[QgsFeedback] = None,
+        **kwargs,
     ) -> Any:
         return self.__request(
-            sub_url, "POST", params, is_lunkwill=is_lunkwill, **kwargs
+            sub_url,
+            "POST",
+            params,
+            is_lunkwill=is_lunkwill,
+            feedback=feedback,
+            **kwargs,
         )
 
     def put(
-        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+        self,
+        sub_url: str,
+        params=None,
+        *,
+        is_lunkwill: bool = False,
+        feedback: Optional[QgsFeedback] = None,
+        **kwargs,
     ) -> Any:
         return self.__request(
-            sub_url, "PUT", params, is_lunkwill=is_lunkwill, **kwargs
+            sub_url,
+            "PUT",
+            params,
+            is_lunkwill=is_lunkwill,
+            feedback=feedback,
+            **kwargs,
         )
 
     def patch(
-        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+        self,
+        sub_url: str,
+        params=None,
+        *,
+        is_lunkwill: bool = False,
+        feedback: Optional[QgsFeedback] = None,
+        **kwargs,
     ) -> Any:
         return self.__request(
-            sub_url, "PATCH", params, is_lunkwill=is_lunkwill, **kwargs
+            sub_url,
+            "PATCH",
+            params,
+            is_lunkwill=is_lunkwill,
+            feedback=feedback,
+            **kwargs,
         )
 
     def delete(
-        self, sub_url: str, params=None, *, is_lunkwill: bool = False, **kwargs
+        self,
+        sub_url: str,
+        params=None,
+        *,
+        is_lunkwill: bool = False,
+        feedback: Optional[QgsFeedback] = None,
+        **kwargs,
     ) -> Any:
         return self.__request(
-            sub_url, "DELETE", params, is_lunkwill=is_lunkwill, **kwargs
+            sub_url,
+            "DELETE",
+            params,
+            is_lunkwill=is_lunkwill,
+            feedback=feedback,
+            **kwargs,
         )
 
     def download(
         self,
         sub_url: str,
         path: str,
+        *,
+        feedback: Optional[QgsFeedback] = None,
         **kwargs,
     ) -> None:
-        data = self.get(sub_url, is_lunkwill=True, **kwargs)
+        data = self.get(
+            sub_url,
+            is_lunkwill=True,
+            feedback=feedback,
+            **kwargs,
+        )
 
         file = QFile(path)
         if not file.open(QIODevice.OpenModeFlag.WriteOnly):
@@ -217,6 +300,7 @@ class QgsNgwConnection(QObject):
         params=None,
         *,
         is_lunkwill: bool = False,
+        feedback: Optional[QgsFeedback] = None,
         **kwargs,
     ):
         headers = None
@@ -228,6 +312,7 @@ class QgsNgwConnection(QObject):
             method,
             params=params,
             headers=headers,
+            feedback=feedback,
             **kwargs,
         )
 
@@ -236,7 +321,9 @@ class QgsNgwConnection(QObject):
         del reply
 
         if is_lunkwill_supported:
-            result = self.__wait_for_answer(result)
+            if not isinstance(result, dict):
+                raise NgwConnectionError("Unexpected lunkwill summary reply")
+            result = self.__wait_for_answer(result, feedback=feedback)
 
         if self.__log_network and isinstance(result, (dict, list)):
             escaped_result = escape_html(format_container_data(result))
@@ -252,28 +339,9 @@ class QgsNgwConnection(QObject):
         badata: Optional[QByteArray] = None,
         params: Optional[Any] = None,
         headers: Optional[Dict[str, str]] = None,
+        feedback: Optional[QgsFeedback] = None,
         **kwargs,
     ) -> Tuple[QNetworkRequest, QNetworkReply]:
-        """
-        Send a network request to the NGW server and return the request and reply objects.
-
-        :param sub_url: The sub-URL to send the request to.
-        :type sub_url: str
-        :param method: HTTP method (GET, POST, PATCH, DELETE, etc.).
-        :type method: str
-        :param badata: Optional raw byte data to send in the request body.
-        :type badata: Optional[QByteArray]
-        :param params: Optional parameters to include in the request.
-        :type params: Optional[Any]
-        :param headers: Optional dictionary of HTTP headers.
-        :type headers: Optional[Dict[str, str]]
-        :param kwargs: Additional keyword arguments.
-
-        :return: Tuple of QNetworkRequest and QNetworkReply.
-        :rtype: Tuple[QNetworkRequest, QNetworkReply]
-
-        :raises NgwError: On network or server error.
-        """
         json_data = None
         if params:
             if isinstance(params, str):
@@ -285,7 +353,10 @@ class QgsNgwConnection(QObject):
 
         filename = kwargs.get("file")
 
-        url = urllib.parse.urljoin(self.server_url, sub_url)
+        parsed_url = urllib.parse.urlparse(sub_url)
+        url = sub_url
+        if not parsed_url.scheme or not parsed_url.netloc:
+            url = urllib.parse.urljoin(self.server_url, sub_url)
 
         if self.__log_network:
             logger.debug(
@@ -309,10 +380,7 @@ class QgsNgwConnection(QObject):
             QNetworkRequest.CacheLoadControl.AlwaysNetwork,
         )
 
-        connections_manager = NgwConnectionsManager()
-        connection = connections_manager.connection(self.__connection_id)
-        assert connection is not None
-        connection.update_network_request(request)
+        self.connection.update_network_request(request)
 
         if headers is not None:  # add custom headers
             for name, value in list(headers.items()):
@@ -334,7 +402,6 @@ class QgsNgwConnection(QObject):
         if iodevice is not None:
             iodevice.open(QIODevice.OpenModeFlag.ReadOnly)
 
-        loop = QEventLoop()  # loop = QEventLoop(self)
         nam = QgsNetworkAccessManager.instance()
 
         if CompatQt.has_redirect_policy():
@@ -356,6 +423,24 @@ class QgsNgwConnection(QObject):
 
         assert isinstance(reply, QNetworkReply)
 
+        if feedback is not None:
+            feedback.canceled.connect(reply.abort)
+            reply.downloadProgress.connect(
+                lambda received, total: self.__update_feedback_progress(
+                    feedback,
+                    received,
+                    total,
+                )
+            )
+            reply.uploadProgress.connect(
+                lambda sent, total: self.__update_feedback_progress(
+                    feedback,
+                    sent,
+                    total,
+                )
+            )
+
+        loop = QEventLoop()
         reply.finished.connect(loop.quit)
         if filename is not None:
             reply.uploadProgress.connect(self.sendUploadProgress)
@@ -378,6 +463,9 @@ class QgsNgwConnection(QObject):
         if iodevice is not None:
             iodevice.close()
 
+        if feedback is not None and feedback.isCanceled():
+            raise NgConnectError("Request was canceled")
+
         # Indicate that request has been timed out by QGIS.
         # TODO: maybe use QgsNetworkAccessManager::requestTimedOut()?
         if reply.error() == QNetworkReply.NetworkError.OperationCanceledError:
@@ -396,18 +484,42 @@ class QgsNgwConnection(QObject):
             raise error
 
         # Network-related errors indicating connection issues, timeouts, or system/network-level failures.
+        elif reply.error() == QNetworkReply.NetworkError.SslHandshakeFailedError:
+            qt_error_info = QtNetworkError.from_qt(reply.error()).value
+            error = NgwError(
+                "SSL/TLS handshake failed",
+                user_message=self.tr(
+                    "The SSL/TLS handshake failed and the encrypted channel could not be established."
+                ),
+                detail=qt_error_info.description,
+                code=ErrorCode.SslHandshakeError,
+            )
+            error.add_note(f"URL: {request.url().toString()}")
+            qt_error_info.add_exception_notes(error)
+            raise error
+
         elif reply.error() in {
             QNetworkReply.NetworkError.ConnectionRefusedError,
             QNetworkReply.NetworkError.RemoteHostClosedError,
             QNetworkReply.NetworkError.HostNotFoundError,
             QNetworkReply.NetworkError.TimeoutError,
-            QNetworkReply.NetworkError.SslHandshakeFailedError,
             QNetworkReply.NetworkError.TemporaryNetworkFailureError,
             QNetworkReply.NetworkError.NetworkSessionFailedError,
             QNetworkReply.NetworkError.BackgroundRequestNotAllowedError,
+            QNetworkReply.NetworkError.ProxyConnectionRefusedError,
+            QNetworkReply.NetworkError.ProxyConnectionClosedError,
+            QNetworkReply.NetworkError.ProxyNotFoundError,
+            QNetworkReply.NetworkError.ProxyTimeoutError,
+            QNetworkReply.NetworkError.ProxyAuthenticationRequiredError,
+            QNetworkReply.NetworkError.UnknownProxyError,
         }:
             qt_error_info = QtNetworkError.from_qt(reply.error()).value
-            error = NgwError("Connection error")
+            error = NgwError(
+                "Connection error",
+                user_message=qt_error_info.description,
+                detail=qt_error_info.description,
+                code=ErrorCode.NetworkError,
+            )
             error.add_note(f"URL: {request.url().toString()}")
             qt_error_info.add_exception_notes(error)
             raise error
@@ -415,7 +527,13 @@ class QgsNgwConnection(QObject):
         return request, reply
 
     def __request_and_decode(
-        self, sub_url, method, params=None, headers=None, **kwargs
+        self,
+        sub_url,
+        method,
+        params=None,
+        headers=None,
+        feedback: Optional[QgsFeedback] = None,
+        **kwargs,
     ):
         request, reply = self.__request_rep(
             sub_url,
@@ -423,6 +541,7 @@ class QgsNgwConnection(QObject):
             badata=None,
             params=params,
             headers=headers,
+            feedback=feedback,
             **kwargs,
         )
 
@@ -470,11 +589,17 @@ class QgsNgwConnection(QObject):
 
         return reply, response_data
 
-    def upload_file(self, filename, callback):
+    def upload_file(self, filename, callback, *, feedback=None):
         self.uploadProgressCallback = callback
-        return self.put(UPLOAD_FILE_URL, file=filename)
+        return self.put(UPLOAD_FILE_URL, file=filename, feedback=feedback)
 
-    def tus_upload_file(self, filename: str, callback: Any) -> Any:
+    def tus_upload_file(
+        self,
+        filename: str,
+        callback: Any,
+        *,
+        feedback: Optional[QgsFeedback] = None,
+    ) -> Any:
         """
         Implements tus protocol to upload a file to NGW.
         Note: This method internally uses self methods to send synchronous
@@ -515,8 +640,11 @@ class QgsNgwConnection(QObject):
             "Upload-Length": str(file_size),
             "Upload-Metadata": f"name {encoded_filename}",
         }
-        create_req, create_rep = self.__request_rep(
-            TUS_UPLOAD_FILE_URL, "POST", headers=create_hdrs
+        _, create_rep = self.__request_rep(
+            TUS_UPLOAD_FILE_URL,
+            "POST",
+            headers=create_hdrs,
+            feedback=feedback,
         )
         create_rep_code = create_rep.attribute(
             QNetworkRequest.Attribute.HttpStatusCodeAttribute
@@ -532,7 +660,7 @@ class QgsNgwConnection(QObject):
         if create_rep_code != 201:
             raise Exception("Failed to start tus uploading")
         location_hdr = b"Location"
-        location = bytes(create_rep.rawHeader(location_hdr)).decode()
+        location = create_rep.rawHeader(location_hdr).data().decode()
         create_rep.deleteLater()
         del create_rep
 
@@ -552,6 +680,9 @@ class QgsNgwConnection(QObject):
 
         # Upload file chunk-by-chunk.
         while True:
+            if feedback is not None and feedback.isCanceled():
+                raise NgConnectError("Request was canceled")
+
             badata = QByteArray(file.read(TUS_CHUNK_SIZE))
             if badata.isEmpty():  # end of data OR some error
                 break
@@ -572,11 +703,12 @@ class QgsNgwConnection(QObject):
                 if retries > 0:
                     logger.debug(f"Retrying. Attempt №{retries}")
 
-                chunk_request, chunk_reply = self.__request_rep(
+                _, chunk_reply = self.__request_rep(
                     file_upload_url,
                     "PATCH",
                     badata=badata,
                     headers=chunk_hdrs,
+                    feedback=feedback,
                 )
                 chunk_rep_code = chunk_reply.attribute(
                     QNetworkRequest.Attribute.HttpStatusCodeAttribute
@@ -621,6 +753,17 @@ class QgsNgwConnection(QObject):
         # Finally GET and return NGW result of uploaded file.
         return self.get(file_upload_url)
 
+    def __update_feedback_progress(
+        self,
+        feedback: QgsFeedback,
+        current: int,
+        total: int,
+    ) -> None:
+        if total <= 0:
+            return
+
+        feedback.setProgress(current * 100 / total)
+
     def sendUploadProgress(self, sent, total):
         # For Qt 5 the uploadProgress signal is sometimes emited when
         # sent and total are 0.
@@ -662,7 +805,12 @@ class QgsNgwConnection(QObject):
         ngw_components = self.get_ngw_components()
         return ngw_components.get("nextgisweb")
 
-    def __wait_for_answer(self, lunkwill_summary: Dict[str, Any]) -> Any:
+    def __wait_for_answer(
+        self,
+        lunkwill_summary: Dict[str, Any],
+        *,
+        feedback: Optional[QgsFeedback] = None,
+    ) -> Any:
         # Send "summary" requests periodically to check long request's status.
         # Make final "response" request with usual NGW json response after
         # receiving "ready" status.
@@ -674,6 +822,9 @@ class QgsNgwConnection(QObject):
         request_id = lunkwill_summary["id"]
 
         while True:
+            if feedback is not None and feedback.isCanceled():
+                raise NgConnectError("Request was canceled")
+
             status = lunkwill_summary["status"]
             delay_ms = lunkwill_summary.get("delay_ms", default_wait_ms)
             retry_ms = lunkwill_summary.get("retry_ms", default_wait_ms)
@@ -690,7 +841,7 @@ class QgsNgwConnection(QObject):
                 time.sleep(wait_ms)
                 try:
                     sub_url = f"/api/lunkwill/{request_id}/summary"
-                    answer = self.get(sub_url)
+                    answer = self.get(sub_url, feedback=feedback)
                     summary_failed = 0
 
                     if not isinstance(answer, dict):
@@ -708,7 +859,7 @@ class QgsNgwConnection(QObject):
 
             elif status == "ready":
                 sub_url = f"/api/lunkwill/{request_id}/response"
-                lunkwill_summary = self.get(sub_url)
+                lunkwill_summary = self.get(sub_url, feedback=feedback)
                 break
 
             else:
@@ -747,4 +898,13 @@ class QgsNgwConnection(QObject):
             return json_response
 
     def __deepcopy__(self, memo):
-        return QgsNgwConnection(str(self.__connection_id))
+        if self.__connection is not None:
+            return QgsNgwConnection(
+                self.__connection,
+                log_network=self.__log_network,
+            )
+
+        return QgsNgwConnection(
+            str(self.__connection_id),
+            log_network=self.__log_network,
+        )
