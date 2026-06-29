@@ -23,10 +23,11 @@ import json
 import time
 import urllib.parse
 from base64 import b64encode
+from enum import Enum
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Union
 
-from qgis.core import Enum, QgsNetworkAccessManager
+from qgis.core import QgsNetworkAccessManager
 from qgis.PyQt.QtCore import (
     QBuffer,
     QByteArray,
